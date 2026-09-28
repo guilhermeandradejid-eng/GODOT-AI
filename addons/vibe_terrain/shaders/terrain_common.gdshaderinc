@@ -221,7 +221,8 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 		vec2 my = dpdy.xz * inv * k;
 		vec4 alb_m = textureGrad(alb_tex, uv_m, mx, my);
 		vec4 avg = textureLod(alb_tex, vec2(0.5), 14.0);
-		alb_m.rgb = mix(alb_m.rgb, avg.rgb, 0.3 + 0.45 * smoothstep(0.5, 1.0, far));
+		// Fully the average color at the far end: no repetition on the horizon.
+		alb_m = mix(alb_m, avg, 0.3 + 0.7 * smoothstep(0.35, 1.0, far));
 		vec4 nr_m = has_normal ? textureGrad(nrm_tex, uv_m, mx, my) : vec4(0.5, 0.5, 1.0, fallback_rough);
 		float fm = smoothstep(0.0, 0.6, far);
 		alb = mix(alb, alb_m, fm);
@@ -257,8 +258,11 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 }
 
 // One grass layer painted over the ground color. hard = 1 gives flat,
-// crisp-edged patches (toon / cel / low poly).
-vec3 grass_over(vec3 col, inout float amount, sampler2D map, vec4 near_c, vec4 far_c, float range, float dist, vec2 uv, float hard) {
+// crisp-edged patches (toon / cel / low poly). variation (0..1, e.g. the
+// texture height) keeps some light/dark detail under the tint; it does not
+// depend on the color space (Compatibility runs fragment() in sRGB, Forward+
+// in linear), so both renderers look alike.
+vec3 grass_over(vec3 col, inout float amount, sampler2D map, vec4 near_c, vec4 far_c, float range, float dist, vec2 uv, float hard, float variation) {
 	if (far_c.a <= 0.0) {
 		return col;
 	}
@@ -267,19 +271,17 @@ vec3 grass_over(vec3 col, inout float amount, sampler2D map, vec4 near_c, vec4 f
 	vec4 c = mix(near_c, far_c, smoothstep(range * 0.3, range * 0.95, dist));
 	float a = cover * c.a;
 	amount = max(amount, a);
-	// Keep some of the ground texture's light/dark variation under the tint.
-	float luma = dot(col, vec3(0.3, 0.59, 0.11));
-	vec3 target = c.rgb * mix(1.0, clamp(luma * 6.0, 0.55, 1.45), 0.5 * (1.0 - hard));
+	vec3 target = c.rgb * mix(1.0, 0.8 + 0.4 * variation, 1.0 - hard);
 	return mix(col, target, a);
 }
 
 // Ground color where grass grows, so the terrain reads as grass from afar
 // (where blades are no longer drawn). amount = strongest grass coverage.
-vec3 apply_grass(vec3 col, float dist, vec2 uv, float hard, out float amount) {
+vec3 apply_grass(vec3 col, float dist, vec2 uv, float hard, float variation, out float amount) {
 	amount = 0.0;
-	col = grass_over(col, amount, grass_map_0, grass_near_0, grass_far_0, grass_range_0, dist, uv, hard);
-	col = grass_over(col, amount, grass_map_1, grass_near_1, grass_far_1, grass_range_1, dist, uv, hard);
-	col = grass_over(col, amount, grass_map_2, grass_near_2, grass_far_2, grass_range_2, dist, uv, hard);
+	col = grass_over(col, amount, grass_map_0, grass_near_0, grass_far_0, grass_range_0, dist, uv, hard, variation);
+	col = grass_over(col, amount, grass_map_1, grass_near_1, grass_far_1, grass_range_1, dist, uv, hard, variation);
+	col = grass_over(col, amount, grass_map_2, grass_near_2, grass_far_2, grass_range_2, dist, uv, hard, variation);
 	return col;
 }
 

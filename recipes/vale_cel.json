@@ -1,0 +1,68 @@
+{
+  "scene": "res://demos/vale_cel.tscn",
+  "style": "cel",
+  "environment": "day",
+  "terrain": {
+    "preset": "valley",
+    "size": 256,
+    "seed": 14,
+    "palette": "temperate",
+    "height_multiplier": 0.8,
+    "features": [
+      {
+        "type": "river",
+        "width": 7,
+        "depth": 3
+      }
+    ]
+  },
+  "grass": [
+    {
+      "preset": "lush",
+      "density": 0.9
+    },
+    {
+      "preset": "wheat",
+      "name": "Trigo",
+      "density": 0.8,
+      "rules": {
+        "max_slope": 12,
+        "patchiness": 0.6,
+        "patch_scale": 30
+      }
+    },
+    {
+      "preset": "flowers",
+      "name": "Flores",
+      "density": 0.3
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "leaves"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Vale anime",
+          "subtitle": "cel shading · dia · rio, trigo e folhas",
+          "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Vale anime",
+    "subtitle": "cel shading · dia · rio, trigo e folhas",
+    "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando"
+  }
+}

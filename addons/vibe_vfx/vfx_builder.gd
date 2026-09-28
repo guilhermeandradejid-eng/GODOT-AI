@@ -214,7 +214,8 @@ static func _build_emitter(layer: Dictionary, preset: Dictionary, style: String,
 	p.one_shot = bool(preset.get("one_shot", false))
 	p.explosiveness = float(layer.get("explosiveness", 0.0))
 	p.randomness = float(layer.get("randomness", 0.2))
-	p.preprocess = float(layer.get("preprocess", 0.0))
+	# Continuous effects start "warmed up" (full flame/smoke on the first frame).
+	p.preprocess = float(layer.get("preprocess", 0.0 if p.one_shot else minf(p.lifetime, 3.0)))
 	p.local_coords = bool(layer.get("local_coords", false))
 	p.fixed_fps = 0
 	p.position = _v3(layer.get("offset", null)) * scale

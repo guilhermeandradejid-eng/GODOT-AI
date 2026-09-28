@@ -1,0 +1,57 @@
+{
+  "scene": "res://demos/deserto_canion.tscn",
+  "style": "stylized",
+  "environment": "sunset",
+  "terrain": {
+    "preset": "canyon",
+    "size": 256,
+    "seed": 21,
+    "palette": "canyon",
+    "features": [
+      {
+        "type": "river",
+        "width": 8,
+        "depth": 5
+      }
+    ]
+  },
+  "grass": [
+    {
+      "preset": "dry",
+      "density": 0.45
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "dust"
+    },
+    {
+      "preset": "campfire",
+      "name": "Fogueira",
+      "at": "flat"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Cânion no deserto",
+          "subtitle": "stylized · entardecer · rio esculpido",
+          "prompt": "cânion vermelho no entardecer com um rio, capim seco, poeira e uma fogueira"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Cânion no deserto",
+    "subtitle": "stylized · entardecer · rio esculpido",
+    "prompt": "cânion vermelho no entardecer com um rio, capim seco, poeira e uma fogueira"
+  }
+}

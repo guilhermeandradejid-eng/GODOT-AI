@@ -83,5 +83,6 @@ void fragment() {
 
 void light() {
 	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
-	DIFFUSE_LIGHT += mix(0.6, 1.0, step(0.3, ndl)) * LIGHT_COLOR / PI;
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	DIFFUSE_LIGHT += mix(0.6 * floor_k, 1.0, step(0.3, ndl)) * LIGHT_COLOR / PI;
 }

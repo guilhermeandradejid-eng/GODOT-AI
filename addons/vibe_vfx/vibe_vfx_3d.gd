@@ -66,6 +66,9 @@ const GROUP := &"vibe_vfx"
 @export var auto_free := false
 ## Replays one-shot effects every few seconds while editing, as a preview.
 @export var preview_loop_in_editor := true
+## Replays one-shot effects every N seconds while the game runs (0 = never).
+## Handy for showcases and ambient explosions.
+@export_range(0.0, 60.0, 0.1, "suffix:s") var loop_interval := 0.0
 
 var _built := {}
 var _def := {}
@@ -230,8 +233,13 @@ func _process(delta: float) -> void:
 		finished.emit()
 		if auto_free and not Engine.is_editor_hint():
 			queue_free()
-	if Engine.is_editor_hint() and is_one_shot() and preview_loop_in_editor and _time > float(_def.get("duration", 2.0)) + 1.0:
-		play()
+	if is_one_shot() and not _playing:
+		var dur := float(_def.get("duration", 2.0))
+		if Engine.is_editor_hint():
+			if preview_loop_in_editor and _time > dur + 1.0:
+				play()
+		elif loop_interval > 0.0 and _time > maxf(loop_interval, dur):
+			play()
 
 
 func _update_lightning(fx: MeshInstance3D, delta: float) -> void:

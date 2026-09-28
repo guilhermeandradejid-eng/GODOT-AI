@@ -1,0 +1,58 @@
+{
+  "scene": "res://demos/ilha_tropical.tscn",
+  "style": "realistic",
+  "environment": "sunset",
+  "terrain": {
+    "preset": "island",
+    "size": 256,
+    "seed": 11,
+    "palette": "tropical",
+    "water": true
+  },
+  "grass": [
+    {
+      "preset": "lush",
+      "density": 0.9
+    },
+    {
+      "preset": "flowers",
+      "name": "Flores",
+      "density": 0.3
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "campfire",
+      "name": "Fogueira",
+      "at": "beach"
+    },
+    {
+      "preset": "fireflies",
+      "count": 2,
+      "at": "flat"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Ilha tropical",
+          "subtitle": "realistic · pôr do sol · ilha + mar",
+          "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Ilha tropical",
+    "subtitle": "realistic · pôr do sol · ilha + mar",
+    "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores"
+  }
+}

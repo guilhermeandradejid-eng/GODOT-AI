@@ -60,7 +60,7 @@ void fragment() {
 
 	// Grass layers tint the ground so meadows still read as grass far away.
 	float grass = 0.0;
-	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, grass);
+	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, mix(height, 0.5, far), grass);
 	wn = normalize(mix(wn, n_ws, grass * 0.6));
 	rough = mix(rough, 0.95, grass);
 	height = mix(height, 0.45, grass);

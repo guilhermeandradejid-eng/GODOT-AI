@@ -1,0 +1,76 @@
+{
+  "scene": "res://demos/campo_noturno.tscn",
+  "style": "toon",
+  "environment": "night",
+  "terrain": {
+    "preset": "hills",
+    "size": 256,
+    "seed": 8,
+    "palette": "temperate",
+    "height_multiplier": 0.6,
+    "features": [
+      {
+        "type": "lake",
+        "at": "valley",
+        "radius": 28
+      },
+      {
+        "type": "flatten",
+        "at": "center",
+        "radius": 10
+      }
+    ]
+  },
+  "grass": [
+    {
+      "preset": "meadow",
+      "density": 1.0
+    },
+    {
+      "preset": "flowers",
+      "name": "Flores",
+      "density": 0.35
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "campfire",
+      "name": "Fogueira",
+      "at": "center"
+    },
+    {
+      "preset": "fireflies",
+      "count": 4,
+      "at": "flat"
+    },
+    {
+      "preset": "portal",
+      "name": "Portal",
+      "at": "north",
+      "color": "purple"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Campo noturno",
+          "subtitle": "toon · noite · lago, vagalumes e portal",
+          "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Campo noturno",
+    "subtitle": "toon · noite · lago, vagalumes e portal",
+    "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo"
+  }
+}

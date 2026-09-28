@@ -1,0 +1,56 @@
+{
+  "scene": "res://demos/vulcao.tscn",
+  "style": "realistic",
+  "environment": "stormy",
+  "terrain": {
+    "preset": "volcano",
+    "size": 256,
+    "seed": 5,
+    "palette": "volcanic",
+    "water": true
+  },
+  "vfx": [
+    {
+      "preset": "volcano_plume",
+      "name": "Pluma",
+      "at": "peak"
+    },
+    {
+      "preset": "embers",
+      "at": "peak",
+      "scale": 2.0
+    },
+    {
+      "preset": "lightning",
+      "at": "random"
+    },
+    {
+      "preset": "smoke",
+      "at": "random",
+      "count": 2
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Ilha vulcânica",
+          "subtitle": "realistic · tempestade · lava, pluma e raios",
+          "prompt": "ilha vulcânica em erupção durante uma tempestade, com lava, brasas e raios"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Ilha vulcânica",
+    "subtitle": "realistic · tempestade · lava, pluma e raios",
+    "prompt": "ilha vulcânica em erupção durante uma tempestade, com lava, brasas e raios"
+  }
+}

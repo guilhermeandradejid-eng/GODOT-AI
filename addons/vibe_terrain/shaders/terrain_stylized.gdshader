@@ -22,19 +22,20 @@ void fragment() {
 	vec3 emission = c0.rgb * layer0_emission * hb.x + c1.rgb * layer1_emission * hb.y
 		+ c2.rgb * layer2_emission * hb.z + c3.rgb * layer3_emission * hb.w;
 	float grass = 0.0;
-	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, grass);
+	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, dot(vec4(c0.a, c1.a, c2.a, c3.a), hb), grass);
 	float m = t_fbm(v_local * 0.01);
 	albedo = mix(albedo * vec3(0.92, 0.95, 1.06), albedo * vec3(1.08, 1.04, 0.92), m);
-	albedo *= 1.08;
 	ALBEDO = brush_overlay(albedo, emission);
 	ROUGHNESS = 1.0;
 	EMISSION = emission;
 }
 
 void light() {
-	float hl = dot(NORMAL, LIGHT) * 0.5 + 0.5;
-	float lit = smoothstep(0.2, 0.8, hl) * ATTENUATION;
-	vec3 shade = mix(shadow_tint * 0.4, vec3(1.0), lit);
+	// Soft wrap: painterly, but slopes still show their form.
+	float lit = smoothstep(-0.15, 0.75, dot(NORMAL, LIGHT)) * ATTENUATION;
+	// The tinted shadow floor only applies inside a local light's range.
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	vec3 shade = mix(shadow_tint * 0.4 * floor_k, vec3(1.0), lit);
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0) * rim_strength * lit;
 	DIFFUSE_LIGHT += (shade + rim) * LIGHT_COLOR / PI;
 }

@@ -1,0 +1,53 @@
+{
+  "scene": "res://demos/arquipelago_lowpoly.tscn",
+  "style": "lowpoly",
+  "environment": "day",
+  "terrain": {
+    "preset": "archipelago",
+    "size": 256,
+    "seed": 4,
+    "palette": "tropical",
+    "water": true
+  },
+  "grass": [
+    {
+      "preset": "meadow",
+      "density": 0.8
+    },
+    {
+      "preset": "flowers",
+      "name": "Flores",
+      "density": 0.25
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "campfire",
+      "at": "beach",
+      "count": 2
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Arquipélago low poly",
+          "subtitle": "lowpoly · dia · ilhas facetadas",
+          "prompt": "arquipélago low poly com mar azul, grama e fogueiras nas praias"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Arquipélago low poly",
+    "subtitle": "lowpoly · dia · ilhas facetadas",
+    "prompt": "arquipélago low poly com mar azul, grama e fogueiras nas praias"
+  }
+}

@@ -21,5 +21,7 @@ void fragment() {
 void light() {
 	float ndl = clamp(dot(NORMAL, LIGHT) * 0.5 + 0.5, 0.0, 1.0) * ATTENUATION;
 	float stepped = floor(ndl * bands + 0.5) / bands;
-	DIFFUSE_LIGHT += vec3(mix(0.35, 1.0, stepped)) * LIGHT_COLOR / PI;
+	// The shadow floor only applies inside a local light's range.
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	DIFFUSE_LIGHT += vec3(mix(0.35 * floor_k, 1.0, stepped)) * LIGHT_COLOR / PI;
 }

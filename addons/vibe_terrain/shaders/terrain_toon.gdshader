@@ -38,7 +38,7 @@ void fragment() {
 	vec3 emission = c0.rgb * layer0_emission * hb.x + c1.rgb * layer1_emission * hb.y
 		+ c2.rgb * layer2_emission * hb.z + c3.rgb * layer3_emission * hb.w;
 	float grass = 0.0;
-	albedo = apply_grass(albedo, length(v_world - CAMERA_POSITION_WORLD), v_splat_uv, 1.0, grass);
+	albedo = apply_grass(albedo, length(v_world - CAMERA_POSITION_WORLD), v_splat_uv, 1.0, 0.5, grass);
 	ALBEDO = brush_overlay(albedo * 1.1, emission);
 	ROUGHNESS = 1.0;
 	EMISSION = emission;
@@ -49,7 +49,9 @@ void light() {
 	float lit = hl * ATTENUATION;
 	float q = lit * bands;
 	float stepped = clamp((floor(q) + smoothstep(0.5 - band_softness, 0.5 + band_softness, fract(q))) / bands, 0.0, 1.0);
-	vec3 shade = mix(shadow_tint * 0.45, vec3(1.0), stepped);
+	// The tinted shadow floor only applies inside a local light's range.
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	vec3 shade = mix(shadow_tint * 0.45 * floor_k, vec3(1.0), stepped);
 	float rim = step(0.82, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0)) * rim_strength * stepped;
 	DIFFUSE_LIGHT += (shade + rim) * LIGHT_COLOR / PI;
 }

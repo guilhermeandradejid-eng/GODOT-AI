@@ -1,0 +1,658 @@
+{
+  "scene": "res://demos/vfx_showcase.tscn",
+  "style": "stylized",
+  "environment": {
+    "preset": "night",
+    "fog_density": 0.0
+  },
+  "terrain": {
+    "preset": "flat",
+    "size": 96,
+    "seed": 1,
+    "palette": "volcanic"
+  },
+  "vfx": [
+    {
+      "preset": "fire",
+      "name": "FX_fire",
+      "at": [
+        -26,
+        -21
+      ]
+    },
+    {
+      "preset": "campfire",
+      "name": "FX_campfire",
+      "at": [
+        -13,
+        -21
+      ]
+    },
+    {
+      "preset": "torch",
+      "name": "FX_torch",
+      "at": [
+        0,
+        -21
+      ]
+    },
+    {
+      "preset": "embers",
+      "name": "FX_embers",
+      "at": [
+        13,
+        -21
+      ]
+    },
+    {
+      "preset": "sparks",
+      "name": "FX_sparks",
+      "at": [
+        26,
+        -21
+      ]
+    },
+    {
+      "preset": "smoke",
+      "name": "FX_smoke",
+      "at": [
+        -26,
+        -7
+      ]
+    },
+    {
+      "preset": "steam",
+      "name": "FX_steam",
+      "at": [
+        -13,
+        -7
+      ]
+    },
+    {
+      "preset": "volcano_plume",
+      "name": "FX_volcano_plume",
+      "at": [
+        0,
+        -7
+      ],
+      "scale": 0.35
+    },
+    {
+      "preset": "magic_aura",
+      "name": "FX_magic_aura",
+      "at": [
+        13,
+        -7
+      ]
+    },
+    {
+      "preset": "portal",
+      "name": "FX_portal",
+      "at": [
+        26,
+        -7
+      ]
+    },
+    {
+      "preset": "heal",
+      "name": "FX_heal",
+      "at": [
+        -26,
+        7
+      ]
+    },
+    {
+      "preset": "force_field",
+      "name": "FX_force_field",
+      "at": [
+        -13,
+        7
+      ]
+    },
+    {
+      "preset": "fountain",
+      "name": "FX_fountain",
+      "at": [
+        0,
+        7
+      ]
+    },
+    {
+      "preset": "waterfall",
+      "name": "FX_waterfall",
+      "at": [
+        13,
+        7
+      ],
+      "scale": 0.6
+    },
+    {
+      "preset": "bubbles",
+      "name": "FX_bubbles",
+      "at": [
+        26,
+        7
+      ]
+    },
+    {
+      "preset": "fireflies",
+      "name": "FX_fireflies",
+      "at": [
+        -26,
+        21
+      ],
+      "scale": 0.4
+    },
+    {
+      "preset": "lightning",
+      "name": "FX_lightning",
+      "at": [
+        -13,
+        21
+      ]
+    },
+    {
+      "preset": "explosion",
+      "name": "FX_explosion",
+      "at": [
+        0,
+        21
+      ]
+    },
+    {
+      "preset": "shockwave",
+      "name": "FX_shockwave",
+      "at": [
+        13,
+        21
+      ]
+    },
+    {
+      "preset": "confetti",
+      "name": "FX_confetti",
+      "at": [
+        26,
+        21
+      ]
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "position": [
+      0,
+      17,
+      46
+    ],
+    "look_at": [
+      0,
+      1,
+      2
+    ]
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_fire",
+        "position": [
+          -26,
+          0.9,
+          -16.8
+        ],
+        "properties": {
+          "text": "fogo",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_campfire",
+        "position": [
+          -13,
+          0.9,
+          -16.8
+        ],
+        "properties": {
+          "text": "fogueira",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_torch",
+        "position": [
+          0,
+          0.9,
+          -16.8
+        ],
+        "properties": {
+          "text": "tocha",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_embers",
+        "position": [
+          13,
+          0.9,
+          -16.8
+        ],
+        "properties": {
+          "text": "brasas",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_sparks",
+        "position": [
+          26,
+          0.9,
+          -16.8
+        ],
+        "properties": {
+          "text": "faíscas",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_smoke",
+        "position": [
+          -26,
+          0.9,
+          -2.8
+        ],
+        "properties": {
+          "text": "fumaça",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_steam",
+        "position": [
+          -13,
+          0.9,
+          -2.8
+        ],
+        "properties": {
+          "text": "vapor",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_volcano_plume",
+        "position": [
+          0,
+          0.9,
+          -2.8
+        ],
+        "properties": {
+          "text": "pluma vulcânica",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_magic_aura",
+        "position": [
+          13,
+          0.9,
+          -2.8
+        ],
+        "properties": {
+          "text": "aura mágica",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_portal",
+        "position": [
+          26,
+          0.9,
+          -2.8
+        ],
+        "properties": {
+          "text": "portal",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_heal",
+        "position": [
+          -26,
+          0.9,
+          11.2
+        ],
+        "properties": {
+          "text": "cura",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_force_field",
+        "position": [
+          -13,
+          0.9,
+          11.2
+        ],
+        "properties": {
+          "text": "campo de força",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_fountain",
+        "position": [
+          0,
+          0.9,
+          11.2
+        ],
+        "properties": {
+          "text": "fonte",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_waterfall",
+        "position": [
+          13,
+          0.9,
+          11.2
+        ],
+        "properties": {
+          "text": "cachoeira",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_bubbles",
+        "position": [
+          26,
+          0.9,
+          11.2
+        ],
+        "properties": {
+          "text": "bolhas",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_fireflies",
+        "position": [
+          -26,
+          0.9,
+          25.2
+        ],
+        "properties": {
+          "text": "vagalumes",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_lightning",
+        "position": [
+          -13,
+          0.9,
+          25.2
+        ],
+        "properties": {
+          "text": "raio",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_explosion",
+        "position": [
+          0,
+          0.9,
+          25.2
+        ],
+        "properties": {
+          "text": "explosão",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.set",
+      "args": {
+        "path": "FX_explosion",
+        "properties": {
+          "loop_interval": 3.5
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_shockwave",
+        "position": [
+          13,
+          0.9,
+          25.2
+        ],
+        "properties": {
+          "text": "onda de choque",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.set",
+      "args": {
+        "path": "FX_shockwave",
+        "properties": {
+          "loop_interval": 3.5
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "Label3D",
+        "name": "Label_confetti",
+        "position": [
+          26,
+          0.9,
+          25.2
+        ],
+        "properties": {
+          "text": "confete",
+          "font_size": 96,
+          "pixel_size": 0.008,
+          "billboard": 1,
+          "outline_size": 18,
+          "modulate": "#ffffff",
+          "outline_modulate": "#000000cc"
+        }
+      }
+    },
+    {
+      "cmd": "node.set",
+      "args": {
+        "path": "FX_confetti",
+        "properties": {
+          "loop_interval": 3.5
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Vitrine de VFX",
+          "subtitle": "stylized · noite · todos os efeitos da biblioteca",
+          "prompt": ""
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Vitrine de VFX",
+    "subtitle": "stylized · noite · todos os efeitos da biblioteca",
+    "prompt": ""
+  }
+}

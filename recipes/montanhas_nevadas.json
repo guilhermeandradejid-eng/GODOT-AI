@@ -1,0 +1,58 @@
+{
+  "scene": "res://demos/montanhas_nevadas.tscn",
+  "style": "realistic",
+  "environment": "dawn",
+  "terrain": {
+    "preset": "mountains",
+    "size": 512,
+    "cell_size": 2,
+    "seed": 3,
+    "palette": "snowy",
+    "height_multiplier": 1.2,
+    "erosion": {
+      "type": "thermal",
+      "iterations": 30
+    }
+  },
+  "grass": [
+    {
+      "preset": "tundra",
+      "density": 0.7,
+      "rules": {
+        "max_height": 40
+      }
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "snowfall"
+    },
+    {
+      "preset": "mist",
+      "at": "valley"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Montanhas nevadas",
+          "subtitle": "realistic · amanhecer · cordilheira com erosão",
+          "prompt": "cordilheira nevada ao amanhecer com neve caindo e névoa nos vales"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Montanhas nevadas",
+    "subtitle": "realistic · amanhecer · cordilheira com erosão",
+    "prompt": "cordilheira nevada ao amanhecer com neve caindo e névoa nos vales"
+  }
+}

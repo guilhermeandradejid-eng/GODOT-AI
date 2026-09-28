@@ -52,7 +52,8 @@ void fragment() {
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
 	float lit = smoothstep(-0.3, 0.9, ndl) * ATTENUATION;
-	DIFFUSE_LIGHT += mix(vec3(0.42, 0.5, 0.72) * 0.5, vec3(1.0), lit) * LIGHT_COLOR / PI;
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	DIFFUSE_LIGHT += mix(vec3(0.42, 0.5, 0.72) * 0.5 * floor_k, vec3(1.0), lit) * LIGHT_COLOR / PI;
 	vec3 hv = normalize(LIGHT + VIEW);
 	SPECULAR_LIGHT += step(0.985, dot(NORMAL, hv)) * 0.5 * ATTENUATION * LIGHT_COLOR;
 }

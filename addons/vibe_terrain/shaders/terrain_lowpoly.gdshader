@@ -27,7 +27,7 @@ void fragment() {
 		emis = layer3_emission;
 	}
 	float grass = 0.0;
-	col = apply_grass(col, 1e9, v_flat_uv, 1.0, grass);
+	col = apply_grass(col, 1e9, v_flat_uv, 1.0, 0.5, grass);
 	col *= 1.0 + (v_flat_rand - 0.5) * color_jitter * 2.0;
 	vec3 emission = col * emis;
 	NORMAL = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
@@ -41,6 +41,8 @@ void fragment() {
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
 	float lit = smoothstep(-0.2, 0.85, ndl) * ATTENUATION;
-	vec3 shade = mix(shadow_tint * 0.38, vec3(1.0), lit);
+	// The tinted shadow floor only applies inside a local light's range.
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	vec3 shade = mix(shadow_tint * 0.38 * floor_k, vec3(1.0), lit);
 	DIFFUSE_LIGHT += shade * LIGHT_COLOR / PI;
 }

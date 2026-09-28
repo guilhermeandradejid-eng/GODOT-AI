@@ -19,7 +19,9 @@ extends RefCounted
 ##   "grass": [ {"preset": "meadow", "density": 0.8}, {"preset": "flowers", "density": 0.3} ],
 ##   "vfx": [ {"preset": "campfire", "at": "flat"}, {"preset": "fireflies", "count": 3},
 ##            {"preset": "fire", "at": [10, 5], "color": "blue", "scale": 2} ],
-##   "camera": {"type": "fly", "view": "aerial"}
+##   "camera": {"type": "fly", "view": "hero"},
+##   "style": "toon",                             # realistic | stylized | toon | cel | lowpoly
+##   "commands": [ {"cmd": "node.add", "args": {...}} ]   # any extra commands, run last
 ## }
 
 const Util = preload("res://addons/vibe_core/core/vibe_util.gd")
@@ -32,46 +34,49 @@ const DEFAULT_ANCHOR := {
 
 const EXAMPLES := {
 	"ilha_tropical": {
-		"scene": "res://demos/ilha_tropical.tscn",
+		"scene": "res://scenes/ilha_tropical.tscn",
+		"style": "realistic",
 		"environment": "sunset",
 		"terrain": {"preset": "island", "size": 256, "seed": 11, "palette": "tropical", "water": true},
 		"grass": [{"preset": "lush", "density": 0.9}, {"preset": "flowers", "name": "Flores", "density": 0.25}],
 		"vfx": [{"preset": "campfire", "at": "beach"}, {"preset": "fireflies", "count": 2, "at": "flat"}],
-		"camera": {"type": "fly", "view": "aerial"},
+		"camera": {"type": "fly", "view": "hero"},
 	},
 	"montanhas_nevadas": {
-		"scene": "res://demos/montanhas_nevadas.tscn",
+		"scene": "res://scenes/montanhas_nevadas.tscn",
 		"environment": "dawn",
 		"terrain": {"preset": "mountains", "size": 512, "seed": 3, "palette": "snowy", "height_multiplier": 1.3,
 			"erosion": {"type": "thermal", "iterations": 30}},
 		"grass": [{"preset": "tundra", "density": 0.6}],
 		"vfx": [{"preset": "snowfall"}],
-		"camera": {"type": "fly", "view": "aerial"},
+		"camera": {"type": "fly", "view": "hero"},
 	},
 	"deserto_canion": {
-		"scene": "res://demos/deserto_canion.tscn",
-		"environment": "day",
+		"scene": "res://scenes/deserto_canion.tscn",
+		"style": "stylized",
+		"environment": "sunset",
 		"terrain": {"preset": "canyon", "size": 256, "seed": 21, "palette": "canyon",
 			"features": [{"type": "river", "width": 7, "depth": 5}]},
 		"grass": [{"preset": "dry", "density": 0.35}],
 		"vfx": [{"preset": "dust"}, {"preset": "campfire", "at": "flat"}],
-		"camera": {"type": "fly", "view": "aerial"},
+		"camera": {"type": "fly", "view": "hero"},
 	},
 	"vulcao": {
-		"scene": "res://demos/vulcao.tscn",
+		"scene": "res://scenes/vulcao.tscn",
 		"environment": "stormy",
 		"terrain": {"preset": "volcano", "size": 256, "seed": 5, "palette": "volcanic", "water": true},
 		"vfx": [{"preset": "volcano_plume", "at": "peak"}, {"preset": "embers", "at": "peak"}, {"preset": "lightning", "at": "random"}],
-		"camera": {"type": "fly", "view": "aerial"},
+		"camera": {"type": "fly", "view": "hero"},
 	},
 	"campo_noturno": {
-		"scene": "res://demos/campo_noturno.tscn",
+		"scene": "res://scenes/campo_noturno.tscn",
+		"style": "toon",
 		"environment": "night",
 		"terrain": {"preset": "hills", "size": 256, "seed": 8, "palette": "temperate", "height_multiplier": 0.6,
 			"features": [{"type": "lake", "at": "valley", "radius": 28}, {"type": "flatten", "at": "center", "radius": 10}]},
 		"grass": [{"preset": "meadow", "density": 1.0}, {"preset": "flowers", "name": "Flores", "density": 0.3}],
 		"vfx": [{"preset": "campfire", "at": "center"}, {"preset": "fireflies", "count": 4, "at": "flat"}, {"preset": "portal", "at": "north", "color": "purple"}],
-		"camera": {"type": "fly", "view": "aerial"},
+		"camera": {"type": "fly", "view": "hero"},
 	},
 }
 
@@ -195,6 +200,14 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 
 	if style != "":
 		await _step(registry, ctx, "style.set", {"style": style})
+
+	# Anything else, as raw commands (labels, lights, props, extra effects...).
+	var extra = recipe.get("commands", [])
+	if extra is Array:
+		for c in extra:
+			if c is Dictionary and str(c.get("cmd", "")) != "":
+				var cargs = c.get("args", {})
+				await _step(registry, ctx, str(c.cmd), cargs if cargs is Dictionary else {})
 
 	return {"ok": ok, "scene": ctx.scene_path, "terrain": terrain_name, "style": style if style != "" else "realistic", "steps": steps}
 

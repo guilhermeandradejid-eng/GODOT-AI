@@ -25,7 +25,9 @@ void light() {
 	float q = lit * bands;
 	float stepped = (floor(q) + smoothstep(0.5 - band_softness, 0.5 + band_softness, fract(q))) / bands;
 	stepped = clamp(stepped, 0.0, 1.0);
-	vec3 shade = mix(shadow_tint * 0.55, vec3(1.0), stepped);
+	// The tinted shadow floor only applies inside a local light's range.
+	float floor_k = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	vec3 shade = mix(shadow_tint * 0.55 * floor_k, vec3(1.0), stepped);
 	float rim = step(0.72, 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0)) * rim_strength * v_hf;
 	DIFFUSE_LIGHT += (shade + rim) * LIGHT_COLOR / PI;
 }

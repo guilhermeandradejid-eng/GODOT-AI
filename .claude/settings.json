@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 tools/vibe.py:*)",
+      "Bash(python3 tools/build_demos.py:*)",
+      "Bash(python3 tests/run_tests.py:*)",
+      "Bash(python3 tests/render_gallery.py:*)",
+      "mcp__godot-vibe"
+    ]
+  },
+  "enabledMcpjsonServers": ["godot-vibe"]
+}

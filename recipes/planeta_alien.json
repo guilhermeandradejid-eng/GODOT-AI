@@ -1,0 +1,64 @@
+{
+  "scene": "res://demos/planeta_alien.tscn",
+  "style": "stylized",
+  "environment": "alien",
+  "terrain": {
+    "preset": "crater",
+    "size": 256,
+    "seed": 9,
+    "palette": "alien"
+  },
+  "grass": [
+    {
+      "preset": "alien",
+      "density": 0.7
+    }
+  ],
+  "vfx": [
+    {
+      "preset": "portal",
+      "name": "Portal",
+      "at": "flat",
+      "color": "#40ffd0",
+      "scale": 1.5
+    },
+    {
+      "preset": "magic_aura",
+      "at": "center"
+    },
+    {
+      "preset": "force_field",
+      "at": "east",
+      "scale": 2.0
+    },
+    {
+      "preset": "fireflies",
+      "count": 3,
+      "at": "flat",
+      "color": "#80fff0"
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "view": "hero"
+  },
+  "commands": [
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Planeta alienígena",
+          "subtitle": "stylized · céu alien · cristais e grama brilhante",
+          "prompt": "planeta alienígena com crateras, cristais brilhantes, grama roxa luminosa e um portal"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Planeta alienígena",
+    "subtitle": "stylized · céu alien · cristais e grama brilhante",
+    "prompt": "planeta alienígena com crateras, cristais brilhantes, grama roxa luminosa e um portal"
+  }
+}

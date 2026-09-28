@@ -262,7 +262,7 @@ func parse(prompt: String) -> Dictionary:
 	if style != "":
 		recipe["style"] = style
 		notes.append("estilo / style: %s" % style)
-	recipe["camera"] = {"type": "fly", "view": "aerial"}
+	recipe["camera"] = {"type": "fly", "view": "hero"}
 	return recipe
 
 
