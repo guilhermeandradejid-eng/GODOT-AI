@@ -120,8 +120,8 @@ const PALETTES := {
 
 ## Realistic style: built-in PBR texture set, tint and meters per tile for each layer.
 const TEXTURES := {
-	"temperate": [["grass_ground", "#ffffff", 3.0], ["dirt", "#ffffff", 3.0], ["rock", "#ffffff", 6.0], ["snow", "#ffffff", 5.0]],
-	"tropical": [["grass_ground", "#c6e6a0", 3.0], ["sand", "#ffffff", 4.0], ["rock", "#8a847e", 6.0], ["moss", "#ffffff", 3.0]],
+	"temperate": [["grass_ground", "#95bd8c", 3.0], ["dirt", "#ffffff", 3.0], ["rock", "#ffffff", 6.0], ["snow", "#ffffff", 5.0]],
+	"tropical": [["grass_ground", "#72ba70", 3.0], ["sand", "#ffffff", 4.0], ["rock", "#8a847e", 6.0], ["moss", "#ffffff", 3.0]],
 	"snowy": [["snow", "#ffffff", 5.0], ["gravel", "#c8d0dc", 2.5], ["rock", "#ffffff", 6.0], ["ice", "#ffffff", 5.0]],
 	"desert": [["sand", "#ffffff", 4.0], ["gravel", "#e0c098", 2.5], ["sandstone", "#ffffff", 7.0], ["rock", "#a07a5c", 6.0]],
 	"canyon": [["sand", "#f0a878", 4.0], ["dirt", "#e09a68", 3.0], ["sandstone", "#ffffff", 7.0], ["sandstone", "#f4dcc0", 5.0]],
@@ -130,7 +130,7 @@ const TEXTURES := {
 	"alien": [["moss", "#c080ff", 3.0], ["dirt", "#60d0d0", 3.0], ["rock", "#9070d0", 6.0], ["crystal", "#ffffff", 4.0]],
 	"lunar": [["regolith", "#ffffff", 5.0], ["ash", "#a0a0a0", 3.0], ["rock", "#d0d0d0", 6.0], ["regolith", "#f0f0f0", 3.0]],
 	"swamp": [["moss", "#8a9a6a", 3.0], ["mud", "#ffffff", 3.0], ["rock", "#8a9080", 6.0], ["moss", "#a8c070", 2.5]],
-	"savanna": [["grass_ground", "#f0d890", 3.0], ["dirt", "#f09868", 3.0], ["rock", "#ffffff", 6.0], ["grass_ground", "#ffffff", 3.0]],
+	"savanna": [["grass_ground", "#f0d890", 3.0], ["dirt", "#f09868", 3.0], ["rock", "#ffffff", 6.0], ["grass_ground", "#95bd8c", 3.0]],
 }
 
 const ALIASES := {

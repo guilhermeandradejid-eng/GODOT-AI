@@ -1,6 +1,6 @@
 // Vibe water — low poly: big faceted waves (flat shading) and depth tones.
 shader_type spatial;
-render_mode blend_mix, depth_draw_always, cull_disabled, diffuse_lambert, specular_schlick_ggx;
+render_mode blend_mix, depth_draw_always, cull_disabled, specular_schlick_ggx;
 
 uniform vec4 deep_color : source_color = vec4(0.08, 0.32, 0.55, 0.95);
 uniform vec4 shallow_color : source_color = vec4(0.3, 0.7, 0.75, 0.85);
@@ -44,6 +44,15 @@ void fragment() {
 	NORMAL = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
 	ALBEDO = col.rgb;
 	ALPHA = col.a;
-	ROUGHNESS = 0.3;
-	SPECULAR = 0.4;
+	ROUGHNESS = 0.6;
+	SPECULAR = 0.2;
+}
+
+// Wrap lighting (every facet stays readable) + a small crisp highlight.
+void light() {
+	float ndl = dot(NORMAL, LIGHT);
+	float lit = smoothstep(-0.3, 0.9, ndl) * ATTENUATION;
+	DIFFUSE_LIGHT += mix(vec3(0.42, 0.5, 0.72) * 0.5, vec3(1.0), lit) * LIGHT_COLOR / PI;
+	vec3 hv = normalize(LIGHT + VIEW);
+	SPECULAR_LIGHT += step(0.985, dot(NORMAL, hv)) * 0.5 * ATTENUATION * LIGHT_COLOR;
 }

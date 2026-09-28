@@ -22,9 +22,9 @@ STYLES = ["realistic", "stylized", "toon", "cel", "lowpoly"]
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scene", default="res://tests/tmp/gallery.tscn")
-    ap.add_argument("--prompt", default="colinas verdes com um lago, flores e uma fogueira ao entardecer")
+    ap.add_argument("--prompt", default="colinas verdes com um lago, flores e uma fogueira")
     ap.add_argument("--styles", default=",".join(STYLES))
-    ap.add_argument("--views", default="aerial,ground")
+    ap.add_argument("--views", default="aerial,hero")
     ap.add_argument("--out", default="res://.vibe/screenshots")
     ap.add_argument("--size", default="960x540")
     ap.add_argument("--skip-build", action="store_true")

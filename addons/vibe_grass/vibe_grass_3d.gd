@@ -162,6 +162,7 @@ var _chunks: Array = []
 var _rebuild_queued := false
 var _applying := false
 var _last_xform := Transform3D()
+var _tinted_terrain: WeakRef = null
 
 
 func _init() -> void:
@@ -175,8 +176,13 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_EDITOR_PRE_SAVE:
-		_externalize_data()
+	match what:
+		NOTIFICATION_EDITOR_PRE_SAVE:
+			_externalize_data()
+		NOTIFICATION_VISIBILITY_CHANGED:
+			_register_ground_tint()
+		NOTIFICATION_EXIT_TREE:
+			_unregister_ground_tint()
 
 
 func _process(_delta: float) -> void:
@@ -636,6 +642,48 @@ func _update_material() -> void:
 				mat.set_shader_parameter("color_steps", 3.0)
 	_mat_far.set_shader_parameter("width_scale", 1.7)
 	_mat_near.set_shader_parameter("width_scale", 1.0)
+	_register_ground_tint()
+
+
+## [near, far] colors of the ground under this grass (alpha = strength): the
+## terrain uses them so grassy areas keep their color where blades are culled.
+func ground_tint_colors() -> Array:
+	if style in ["toon", "cel", "lowpoly"]:
+		var flat := color_base.lerp(color_tip, 0.5)
+		return [Color(flat, 1.0), Color(flat, 1.0)]
+	var avg := color_base.lerp(color_tip, 0.6).lerp(dry_color, dry_amount * 0.45)
+	if flower_chance > 0.0 and not flower_colors.is_empty():
+		var fc := Color(0, 0, 0)
+		for c in flower_colors:
+			fc += c
+		fc /= float(flower_colors.size())
+		avg = avg.lerp(fc, clampf(flower_chance * 0.15, 0.0, 0.12))
+	var near := color_base.lerp(color_tip, 0.2) * 0.85
+	return [Color(near, 0.7), Color(avg, 0.9)]
+
+
+func _register_ground_tint() -> void:
+	if not is_inside_tree():
+		return
+	var t := get_terrain()
+	var old: Node = _tinted_terrain.get_ref() if _tinted_terrain != null else null
+	if old != null and old != t and old.has_method("remove_grass_overlay"):
+		old.remove_grass_overlay(get_instance_id())
+	_tinted_terrain = weakref(t) if t != null else null
+	if t == null or not t.has_method("set_grass_overlay"):
+		return
+	if not is_visible_in_tree() or _density_tex == null:
+		t.remove_grass_overlay(get_instance_id())
+		return
+	var cols := ground_tint_colors()
+	t.set_grass_overlay(get_instance_id(), _density_tex, cols[0], cols[1], view_distance)
+
+
+func _unregister_ground_tint() -> void:
+	var t: Node = _tinted_terrain.get_ref() if _tinted_terrain != null else null
+	if t != null and t.has_method("remove_grass_overlay"):
+		t.remove_grass_overlay(get_instance_id())
+	_tinted_terrain = null
 
 
 func _externalize_data() -> void:
@@ -644,10 +692,13 @@ func _externalize_data() -> void:
 	var path := data.resource_path
 	if path == "" or path.contains("::"):
 		var root := get_tree().edited_scene_root if is_inside_tree() else null
-		var base := "untitled"
-		if root != null:
-			base = root.scene_file_path.get_file().get_basename() if root.scene_file_path != "" else str(root.name)
-		var dir := "res://vibe_data/" + base.to_lower().replace(" ", "_")
+		var dir := "res://vibe_data/untitled"
+		if root != null and root.scene_file_path != "":
+			# Next to the scene: res://levels/ilha.tscn -> res://levels/ilha_data/
+			var file := root.scene_file_path
+			dir = file.get_base_dir().path_join(file.get_file().get_basename().to_lower().replace(" ", "_") + "_data")
+		elif root != null:
+			dir = "res://vibe_data/" + str(root.name).to_lower().replace(" ", "_")
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 		path = dir.path_join("%s_grass.res" % str(name).to_lower().replace(" ", "_"))
 		var n := 2

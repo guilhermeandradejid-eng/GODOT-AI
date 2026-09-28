@@ -1,5 +1,6 @@
 // Shared code for every Vibe terrain style: heightmap displacement, splat
-// weights, noise helpers and textured (PBR) layer sampling.
+// weights, noise helpers, textured (PBR) layer sampling, the distant-hills
+// horizon ring and the ground tint painted by grass layers.
 //
 // Techniques adapted from Terrain3D (MIT, Cory Petkovsek, Roope Palmroos and
 // contributors, github.com/TokisanGames/Terrain3D): height-based blending,
@@ -15,6 +16,12 @@ uniform float blend_sharpness : hint_range(0.5, 6.0) = 1.6;
 uniform float height_blend : hint_range(0.0, 1.0) = 0.6;
 uniform float macro_variation : hint_range(0.0, 0.6) = 0.18;
 uniform float detail_fade_distance = 350.0;
+// Textured layers blend to a larger-scale sample and then toward their average
+// color between these distances (hides tiling and the detiling mosaic far away).
+uniform float far_start = 35.0;
+uniform float far_end = 260.0;
+// Low poly: random horizontal offset of the grid vertices (breaks the grid look).
+uniform float vertex_jitter = 0.0;
 
 uniform vec3 layer0_color_a : source_color = vec3(0.2, 0.32, 0.12);
 uniform vec3 layer0_color_b : source_color = vec3(0.35, 0.48, 0.18);
@@ -73,6 +80,22 @@ uniform vec3 brush_position = vec3(0.0);
 uniform float brush_radius = 0.0;
 uniform vec4 brush_color : source_color = vec4(1.0, 0.75, 0.2, 1.0);
 
+// Ground tint where grass grows, set by VibeGrass3D nodes (up to 3 layers).
+// near = ground color under the blades, far = average blade color seen from
+// afar (rgb, strength in alpha); range = that grass layer's view distance.
+uniform sampler2D grass_map_0 : filter_linear, repeat_disable;
+uniform sampler2D grass_map_1 : filter_linear, repeat_disable;
+uniform sampler2D grass_map_2 : filter_linear, repeat_disable;
+uniform vec4 grass_near_0 : source_color = vec4(0.0);
+uniform vec4 grass_near_1 : source_color = vec4(0.0);
+uniform vec4 grass_near_2 : source_color = vec4(0.0);
+uniform vec4 grass_far_0 : source_color = vec4(0.0);
+uniform vec4 grass_far_1 : source_color = vec4(0.0);
+uniform vec4 grass_far_2 : source_color = vec4(0.0);
+uniform float grass_range_0 = 70.0;
+uniform float grass_range_1 = 70.0;
+uniform float grass_range_2 = 70.0;
+
 varying vec3 v_local;
 varying vec3 v_world;
 varying vec2 v_splat_uv;
@@ -80,6 +103,9 @@ varying vec3 v_normal_ws;
 // Per-triangle (provoking vertex) data for the low-poly style.
 varying flat vec4 v_flat_splat;
 varying flat float v_flat_rand;
+varying flat vec2 v_flat_uv;
+// 1 on steep slopes of the horizon hills (painted with the cliff layer).
+varying float v_ring_rock;
 
 float t_hash13(vec3 p) {
 	p = fract(p * 0.1031);
@@ -138,6 +164,7 @@ vec4 procedural_layer(vec3 ca, vec3 cb, float scale, float strata, float emissio
 // Splat weights with a little noise break-up, before height blending.
 vec4 raw_weights() {
 	vec4 w = texture(splatmap, v_splat_uv);
+	w = mix(w, vec4(0.0, 0.0, 1.0, 0.0), v_ring_rock);
 	float breakup = t_fbm(v_local * 0.3);
 	w = max(w + (breakup - 0.5) * 0.3 * w * (1.0 - w) * 4.0, vec4(0.0));
 	return w / max(w.x + w.y + w.z + w.w, 0.0001);
@@ -168,27 +195,52 @@ vec3 unpack_normal(vec4 nr) {
 }
 
 // Samples a packed layer (albedo+height / normal+roughness) with triplanar
-// projection on steep terrain. Returns albedo+height; out world normal & roughness.
-vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float uv_scale, vec3 p, vec3 n_ws,
-		float fallback_rough, out vec3 out_normal, out float out_rough) {
+// projection on steep terrain. dpdx/dpdy are the screen-space derivatives of p,
+// taken once in uniform control flow (so mip selection stays valid inside
+// branches and across detiling cells). far (0..1) blends the top projection to
+// a larger-scale sample and toward the average color of the texture.
+// Returns albedo+height; out world normal & roughness.
+vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float uv_scale, vec3 p, vec3 dpdx, vec3 dpdy,
+		vec3 n_ws, float fallback_rough, float far, out vec3 out_normal, out float out_rough) {
 	vec3 blend = pow(abs(n_ws), vec3(6.0));
 	blend /= (blend.x + blend.y + blend.z);
+	float inv = 1.0 / uv_scale;
 	mat2 rot;
-	vec2 uv_y = detile(p.xz / uv_scale, rot);
-	vec4 alb = texture(alb_tex, uv_y);
-	vec4 nr = has_normal ? texture(nrm_tex, uv_y) : vec4(0.5, 0.5, 1.0, fallback_rough);
+	vec2 uv_y = detile(p.xz * inv, rot);
+	vec2 gx = rot * (dpdx.xz * inv);
+	vec2 gy = rot * (dpdy.xz * inv);
+	vec4 alb = textureGrad(alb_tex, uv_y, gx, gy);
+	vec4 nr = has_normal ? textureGrad(nrm_tex, uv_y, gx, gy) : vec4(0.5, 0.5, 1.0, fallback_rough);
 	vec3 tn_y = unpack_normal(nr);
 	// Rotate the tangent-space normal back (inverse of the detile UV rotation).
 	tn_y.xy = tn_y.xy * rot;
+	if (far > 0.001) {
+		float k = 0.21;
+		vec2 uv_m = p.xz * inv * k + vec2(0.37, 0.61);
+		vec2 mx = dpdx.xz * inv * k;
+		vec2 my = dpdy.xz * inv * k;
+		vec4 alb_m = textureGrad(alb_tex, uv_m, mx, my);
+		vec4 avg = textureLod(alb_tex, vec2(0.5), 14.0);
+		alb_m.rgb = mix(alb_m.rgb, avg.rgb, 0.3 + 0.45 * smoothstep(0.5, 1.0, far));
+		vec4 nr_m = has_normal ? textureGrad(nrm_tex, uv_m, mx, my) : vec4(0.5, 0.5, 1.0, fallback_rough);
+		float fm = smoothstep(0.0, 0.6, far);
+		alb = mix(alb, alb_m, fm);
+		nr.a = mix(nr.a, nr_m.a, fm);
+		tn_y = normalize(mix(tn_y, mix(unpack_normal(nr_m), vec3(0.0, 0.0, 1.0), 0.5 * far), fm));
+	}
 	vec3 wn = vec3(tn_y.x + n_ws.x, n_ws.y * tn_y.z, tn_y.y * -1.0 + n_ws.z);
 	float rough = nr.a;
 	if (blend.y < 0.98) {
-		vec2 uv_x = p.zy / uv_scale;
-		vec2 uv_z = p.xy / uv_scale;
-		vec4 alb_x = texture(alb_tex, uv_x);
-		vec4 alb_z = texture(alb_tex, uv_z);
-		vec4 nr_x = has_normal ? texture(nrm_tex, uv_x) : vec4(0.5, 0.5, 1.0, fallback_rough);
-		vec4 nr_z = has_normal ? texture(nrm_tex, uv_z) : vec4(0.5, 0.5, 1.0, fallback_rough);
+		vec2 uv_x = p.zy * inv;
+		vec2 uv_z = p.xy * inv;
+		vec2 gxx = dpdx.zy * inv;
+		vec2 gxy = dpdy.zy * inv;
+		vec2 gzx = dpdx.xy * inv;
+		vec2 gzy = dpdy.xy * inv;
+		vec4 alb_x = textureGrad(alb_tex, uv_x, gxx, gxy);
+		vec4 alb_z = textureGrad(alb_tex, uv_z, gzx, gzy);
+		vec4 nr_x = has_normal ? textureGrad(nrm_tex, uv_x, gxx, gxy) : vec4(0.5, 0.5, 1.0, fallback_rough);
+		vec4 nr_z = has_normal ? textureGrad(nrm_tex, uv_z, gzx, gzy) : vec4(0.5, 0.5, 1.0, fallback_rough);
 		vec3 tn_x = unpack_normal(nr_x);
 		vec3 tn_z = unpack_normal(nr_z);
 		// UDN blend (Ben Golus)
@@ -204,7 +256,38 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 	return alb;
 }
 
+// One grass layer painted over the ground color. hard = 1 gives flat,
+// crisp-edged patches (toon / cel / low poly).
+vec3 grass_over(vec3 col, inout float amount, sampler2D map, vec4 near_c, vec4 far_c, float range, float dist, vec2 uv, float hard) {
+	if (far_c.a <= 0.0) {
+		return col;
+	}
+	float d = textureLod(map, uv, 0.0).r;
+	float cover = mix(smoothstep(0.03, 0.6, d), step(0.3, d), hard);
+	vec4 c = mix(near_c, far_c, smoothstep(range * 0.3, range * 0.95, dist));
+	float a = cover * c.a;
+	amount = max(amount, a);
+	// Keep some of the ground texture's light/dark variation under the tint.
+	float luma = dot(col, vec3(0.3, 0.59, 0.11));
+	vec3 target = c.rgb * mix(1.0, clamp(luma * 6.0, 0.55, 1.45), 0.5 * (1.0 - hard));
+	return mix(col, target, a);
+}
+
+// Ground color where grass grows, so the terrain reads as grass from afar
+// (where blades are no longer drawn). amount = strongest grass coverage.
+vec3 apply_grass(vec3 col, float dist, vec2 uv, float hard, out float amount) {
+	amount = 0.0;
+	col = grass_over(col, amount, grass_map_0, grass_near_0, grass_far_0, grass_range_0, dist, uv, hard);
+	col = grass_over(col, amount, grass_map_1, grass_near_1, grass_far_1, grass_range_1, dist, uv, hard);
+	col = grass_over(col, amount, grass_map_2, grass_near_2, grass_far_2, grass_range_2, dist, uv, hard);
+	return col;
+}
+
 void vertex() {
+	vec3 mesh_normal = NORMAL;
+	// Horizon ring vertices lie outside the heightmap square; their VERTEX.y
+	// holds the extra height of the distant hills and NORMAL their normal.
+	bool ring = max(abs(VERTEX.x), abs(VERTEX.z)) > terrain_half_size + 0.01;
 	ivec2 size = textureSize(heightmap, 0);
 	vec2 texel = (VERTEX.xz + vec2(terrain_half_size)) / cell_size;
 	ivec2 c = clamp(ivec2(round(texel)), ivec2(0), size - 1);
@@ -214,8 +297,20 @@ void vertex() {
 	float hd = texelFetch(heightmap, clamp(c + ivec2(0, -1), ivec2(0), size - 1), 0).r;
 	float hu = texelFetch(heightmap, clamp(c + ivec2(0, 1), ivec2(0), size - 1), 0).r;
 	vec3 n = normalize(vec3(hl - hr, 2.0 * cell_size, hd - hu));
-	float skirt = VERTEX.y;
-	VERTEX.y = h + skirt * skirt_depth;
+	if (ring) {
+		VERTEX.y = h + VERTEX.y;
+		n = normalize(mesh_normal);
+	} else {
+		// Skirt vertices have y = -1: pushed down to hide cracks between LODs.
+		VERTEX.y = h + VERTEX.y * skirt_depth;
+	}
+	if (!ring && vertex_jitter > 0.0) {
+		vec2 j = vec2(t_hash12(vec2(c) + 3.7), t_hash12(vec2(c) + 11.3)) - 0.5;
+		// The outer border stays straight so it still meets the horizon ring.
+		j *= vec2((c.x > 0 && c.x < size.x - 1) ? 1.0 : 0.0, (c.y > 0 && c.y < size.y - 1) ? 1.0 : 0.0);
+		VERTEX.xz += j * vertex_jitter;
+	}
+	v_ring_rock = ring ? 1.0 - smoothstep(0.72, 0.88, n.y) : 0.0;
 	NORMAL = n;
 	TANGENT = normalize(cross(n, vec3(0.0, 0.0, 1.0)));
 	BINORMAL = normalize(cross(n, TANGENT));
@@ -223,8 +318,9 @@ void vertex() {
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_splat_uv = (vec2(c) + 0.5) / vec2(size);
 	v_normal_ws = normalize((MODEL_MATRIX * vec4(n, 0.0)).xyz);
-	v_flat_splat = textureLod(splatmap, v_splat_uv, 0.0);
-	v_flat_rand = t_hash12(vec2(c));
+	v_flat_splat = mix(textureLod(splatmap, v_splat_uv, 0.0), vec4(0.0, 0.0, 1.0, 0.0), v_ring_rock);
+	v_flat_rand = t_hash12(ring ? floor(VERTEX.xz) : vec2(c));
+	v_flat_uv = v_splat_uv;
 }
 
 vec3 brush_overlay(vec3 albedo, inout vec3 emission) {

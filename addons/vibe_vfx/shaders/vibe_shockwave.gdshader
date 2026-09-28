@@ -15,7 +15,7 @@ void fragment() {
 	float front = progress;
 	float d = abs(r - front);
 	float ring = 1.0 - smoothstep(0.0, thickness * (0.4 + progress), d);
-	float inner = smoothstep(front, 0.0, r) * 0.25 * (1.0 - progress);
+	float inner = (1.0 - smoothstep(0.0, max(front, 0.001), r)) * 0.25 * (1.0 - progress);
 	float v = (ring + inner) * (1.0 - progress) * step(r, 1.0);
 	if (bands > 0.5) {
 		v = step(0.35, v) * 0.9;

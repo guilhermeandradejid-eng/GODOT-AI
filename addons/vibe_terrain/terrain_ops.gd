@@ -267,20 +267,25 @@ const STAMP_ALIASES := {"montanha": "mountain", "morro": "hill", "colina": "hill
 static func stamp(data, shape: String, center: Vector2, radius: float, height_m: float, seed_value: int = 1) -> Dictionary:
 	shape = STAMP_ALIASES.get(shape, shape)
 	var res: int = data.resolution
-	var reach := radius * (1.6 if shape in ["crater", "lake"] else 1.05)
+	var reach := radius * (2.0 if shape == "lake" else (1.6 if shape == "crater" else 1.05))
 	var rect := brush_rect(res, center, reach)
 	var h: PackedFloat32Array = data.heights
 	var noise := FastNoiseLite.new()
 	noise.seed = seed_value
 	noise.frequency = 1.0 / maxf(radius * 0.5, 1.0)
 	noise.fractal_octaves = 4
+	# Irregular shoreline for lakes (radius varies around the shore).
+	var warp := FastNoiseLite.new()
+	warp.seed = seed_value + 101
+	warp.frequency = 1.0 / maxf(radius * 0.7, 1.0)
+	warp.fractal_octaves = 2
 	var level := 0.0
 	if shape == "lake":
 		# Water level = lowest point of the rim, so the lake never overflows.
 		level = INF
 		for k in 48:
-			var a := TAU * float(k) / 48.0
-			var p := center + Vector2(cos(a), sin(a)) * radius * 1.05
+			var dir := Vector2(cos(TAU * float(k) / 48.0), sin(TAU * float(k) / 48.0))
+			var p := center + dir * radius * _lake_warp(warp, center + dir * radius) * 1.05
 			level = minf(level, data.sample(p.x, p.y))
 		level -= 0.4
 	var plateau_base: float = data.sample(center.x, center.y)
@@ -305,12 +310,13 @@ static func stamp(data, shape: String, center: Vector2, radius: float, height_m:
 						cone -= height_m * 0.25 * (1.0 - smoothstep(0.03, 0.16, t))
 						h[i] = maxf(h[i], h[i] * 0.3 + cone)
 				"lake":
-					if t < 1.0:
-						var bottom := level - height_m * (1.0 - t * t)
+					var tl := d / (radius * _lake_warp(warp, Vector2(x, z)))
+					if tl < 1.0:
+						var bottom := level - height_m * (1.0 - tl * tl)
 						h[i] = minf(h[i], bottom)
-					elif t < 1.6:
-						var shore := level + 0.3 + (t - 1.0) * radius * 0.25
-						h[i] = minf(h[i], lerpf(shore, h[i], smoothstep(1.0, 1.6, t)))
+					elif tl < 1.6:
+						var shore := level + 0.3 + (tl - 1.0) * radius * 0.25
+						h[i] = minf(h[i], lerpf(shore, h[i], smoothstep(1.0, 1.6, tl)))
 				"plateau":
 					var top := plateau_base + height_m
 					var w := 1.0 - smoothstep(0.82, 1.0, t)
@@ -320,6 +326,10 @@ static func stamp(data, shape: String, center: Vector2, radius: float, height_m:
 						h[i] -= height_m * (1.0 - t * t)
 	data.heights = h
 	return {"rect": rect, "level": level}
+
+
+static func _lake_warp(noise: FastNoiseLite, p: Vector2) -> float:
+	return 1.0 + 0.24 * noise.get_noise_2d(p.x, p.y)
 
 
 ## Flattens a circular area to `height` (or the average height at the center).

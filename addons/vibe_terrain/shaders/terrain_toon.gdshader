@@ -37,6 +37,8 @@ void fragment() {
 	vec3 albedo = c0.rgb * hb.x + c1.rgb * hb.y + c2.rgb * hb.z + c3.rgb * hb.w;
 	vec3 emission = c0.rgb * layer0_emission * hb.x + c1.rgb * layer1_emission * hb.y
 		+ c2.rgb * layer2_emission * hb.z + c3.rgb * layer3_emission * hb.w;
+	float grass = 0.0;
+	albedo = apply_grass(albedo, length(v_world - CAMERA_POSITION_WORLD), v_splat_uv, 1.0, grass);
 	ALBEDO = brush_overlay(albedo * 1.1, emission);
 	ROUGHNESS = 1.0;
 	EMISSION = emission;

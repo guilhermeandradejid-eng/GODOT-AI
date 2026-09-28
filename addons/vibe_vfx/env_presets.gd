@@ -17,10 +17,10 @@ const PRESETS := {
 	},
 	"sunset": {
 		"description": "Pôr do sol dourado / golden sunset",
-		"sun_elevation": 7.0, "sun_azimuth": -70.0, "sun_color": "#ffa35c", "sun_energy": 1.6,
-		"sky_top": "#34467f", "sky_horizon": "#ff9656", "ground": "#40302c", "sun_size": 0.035, "sun_glow": 0.9,
+		"sun_elevation": 11.0, "sun_azimuth": -70.0, "sun_color": "#ffc390", "sun_energy": 1.55,
+		"sky_top": "#3a4f8f", "sky_horizon": "#ff9656", "ground": "#40302c", "sun_size": 0.035, "sun_glow": 0.9,
 		"clouds": 0.45, "cloud_color": "#ffb58a", "stars": 0.0, "moon": 0.0,
-		"ambient": 0.5, "fog_density": 0.0006, "fog_color": "#c9967e", "glow": 0.3, "exposure": 1.05,
+		"ambient": 0.78, "fog_density": 0.0005, "fog_color": "#c4a08e", "glow": 0.3, "exposure": 1.05,
 	},
 	"dawn": {
 		"description": "Amanhecer suave / soft dawn",
@@ -79,8 +79,8 @@ const ALIASES := {
 const STYLE_POST := {
 	"realistic": {"tonemap": "filmic", "saturation": 1.0, "contrast": 1.0, "sky_bands": 0.0, "ssao": true, "glow_mul": 1.0, "fog_mul": 1.0, "ambient_mul": 1.0},
 	"stylized": {"tonemap": "filmic", "saturation": 1.1, "contrast": 1.04, "sky_bands": 0.0, "ssao": true, "glow_mul": 1.3, "fog_mul": 0.8, "ambient_mul": 1.1},
-	"toon": {"tonemap": "linear", "saturation": 1.1, "contrast": 1.05, "sky_bands": 5.0, "ssao": false, "glow_mul": 1.1, "fog_mul": 0.6, "ambient_mul": 1.25},
-	"cel": {"tonemap": "linear", "saturation": 1.14, "contrast": 1.08, "sky_bands": 3.0, "ssao": false, "glow_mul": 0.9, "fog_mul": 0.5, "ambient_mul": 1.3},
+	"toon": {"tonemap": "linear", "saturation": 1.1, "contrast": 1.05, "sky_bands": 0.0, "sky_toon": 1.0, "ssao": false, "glow_mul": 1.1, "fog_mul": 0.6, "ambient_mul": 1.25},
+	"cel": {"tonemap": "linear", "saturation": 1.14, "contrast": 1.08, "sky_bands": 0.0, "sky_toon": 1.0, "ssao": false, "glow_mul": 0.9, "fog_mul": 0.5, "ambient_mul": 1.3},
 	"lowpoly": {"tonemap": "filmic", "saturation": 1.12, "contrast": 1.02, "sky_bands": 0.0, "ssao": true, "glow_mul": 0.9, "fog_mul": 1.2, "ambient_mul": 1.1},
 }
 
@@ -140,6 +140,7 @@ static func apply(env_node: WorldEnvironment, sun: DirectionalLight3D, s: Dictio
 	mat.set_shader_parameter("cloud_coverage", float(s.get("clouds", 0.3)))
 	mat.set_shader_parameter("cloud_color", _c(s.get("cloud_color"), "#ffffff"))
 	mat.set_shader_parameter("bands", float(post.sky_bands))
+	mat.set_shader_parameter("toon", float(post.get("sky_toon", 0.0)))
 
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_energy = float(s.get("ambient", 1.0)) * float(post.ambient_mul)

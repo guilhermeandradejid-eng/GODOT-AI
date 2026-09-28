@@ -1,0 +1,3494 @@
+{
+  "generated_by": "vibe_cli.gd --write-schema",
+  "godot": "4.7.2-stable (custom_build)",
+  "modules": [
+    "vibe_core",
+    "vibe_grass",
+    "vibe_terrain",
+    "vibe_vfx"
+  ],
+  "commands": [
+    {
+      "name": "camera.add",
+      "category": "camera",
+      "description": "Adds (or replaces) the main camera. type 'fly' attaches a WASD + mouse fly-camera script for exploring the world when the game runs.",
+      "editor_only": false,
+      "args": {
+        "type": {
+          "type": "string",
+          "description": "Camera behavior.",
+          "default": "fly",
+          "enum": [
+            "fly",
+            "static"
+          ]
+        },
+        "view": {
+          "type": "string",
+          "description": "Automatic framing of the terrain.",
+          "default": "aerial",
+          "enum": [
+            "aerial",
+            "ground",
+            "top",
+            "north",
+            "south",
+            "east",
+            "west"
+          ]
+        },
+        "position": {
+          "type": "position",
+          "description": "Explicit camera position (overrides view)."
+        },
+        "look_at": {
+          "type": "position",
+          "description": "Point to look at."
+        },
+        "name": {
+          "type": "string",
+          "description": "Node name.",
+          "default": "VibeCamera"
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "fly",
+              "static"
+            ],
+            "default": "fly",
+            "description": "Camera behavior."
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "aerial",
+              "ground",
+              "top",
+              "north",
+              "south",
+              "east",
+              "west"
+            ],
+            "default": "aerial",
+            "description": "Automatic framing of the terrain."
+          },
+          "position": {
+            "description": "Explicit camera position (overrides view). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "look_at": {
+            "description": "Point to look at. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "name": {
+            "type": "string",
+            "default": "VibeCamera",
+            "description": "Node name."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "editor.reload",
+      "category": "editor",
+      "description": "Reloads the current scene from disk (use after editing .tscn files by hand).",
+      "editor_only": true,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "editor.run",
+      "category": "editor",
+      "description": "Plays the scene in the editor (current scene by default, or a given path, or the main scene).",
+      "editor_only": true,
+      "args": {
+        "scene": {
+          "type": "string",
+          "description": "'current', 'main' or a scene path.",
+          "default": "current"
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "scene": {
+            "type": "string",
+            "default": "current",
+            "description": "'current', 'main' or a scene path."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "editor.stop",
+      "category": "editor",
+      "description": "Stops the running game started from the editor.",
+      "editor_only": true,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "env.list",
+      "category": "env",
+      "description": "Lists atmosphere presets.",
+      "editor_only": false,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "env.set",
+      "category": "env",
+      "description": "Sets the atmosphere: sky, sun/moon, fog, glow and post-processing. Presets: day, sunset, dawn, night, overcast, foggy, stormy, alien. Any value can be overridden.",
+      "editor_only": false,
+      "args": {
+        "preset": {
+          "type": "string",
+          "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...).",
+          "default": "day"
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style for post-processing (default: scene style).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "sun_elevation": {
+          "type": "number",
+          "description": "Sun height in degrees (0 = horizon)."
+        },
+        "sun_azimuth": {
+          "type": "number",
+          "description": "Sun direction in degrees."
+        },
+        "sun_color": {
+          "type": "color",
+          "description": "Sun/moon light color."
+        },
+        "sun_energy": {
+          "type": "number",
+          "description": "Sun/moon intensity."
+        },
+        "sky_top": {
+          "type": "color",
+          "description": "Sky color at the zenith."
+        },
+        "sky_horizon": {
+          "type": "color",
+          "description": "Sky color at the horizon."
+        },
+        "clouds": {
+          "type": "number",
+          "description": "Cloud coverage 0..1."
+        },
+        "cloud_color": {
+          "type": "color",
+          "description": "Cloud color."
+        },
+        "stars": {
+          "type": "number",
+          "description": "Star brightness 0..1."
+        },
+        "fog_density": {
+          "type": "number",
+          "description": "Fog density (0 = off, 0.02 = thick)."
+        },
+        "fog_color": {
+          "type": "color",
+          "description": "Fog color."
+        },
+        "glow": {
+          "type": "number",
+          "description": "Bloom amount."
+        },
+        "exposure": {
+          "type": "number",
+          "description": "Camera exposure."
+        },
+        "ambient": {
+          "type": "number",
+          "description": "Ambient light energy."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "default": "day",
+            "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style for post-processing (default: scene style)."
+          },
+          "sun_elevation": {
+            "type": "number",
+            "description": "Sun height in degrees (0 = horizon)."
+          },
+          "sun_azimuth": {
+            "type": "number",
+            "description": "Sun direction in degrees."
+          },
+          "sun_color": {
+            "type": "string",
+            "description": "Sun/moon light color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "sun_energy": {
+            "type": "number",
+            "description": "Sun/moon intensity."
+          },
+          "sky_top": {
+            "type": "string",
+            "description": "Sky color at the zenith. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "sky_horizon": {
+            "type": "string",
+            "description": "Sky color at the horizon. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "clouds": {
+            "type": "number",
+            "description": "Cloud coverage 0..1."
+          },
+          "cloud_color": {
+            "type": "string",
+            "description": "Cloud color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "stars": {
+            "type": "number",
+            "description": "Star brightness 0..1."
+          },
+          "fog_density": {
+            "type": "number",
+            "description": "Fog density (0 = off, 0.02 = thick)."
+          },
+          "fog_color": {
+            "type": "string",
+            "description": "Fog color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "glow": {
+            "type": "number",
+            "description": "Bloom amount."
+          },
+          "exposure": {
+            "type": "number",
+            "description": "Camera exposure."
+          },
+          "ambient": {
+            "type": "number",
+            "description": "Ambient light energy."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "grass.clear",
+      "category": "grass",
+      "description": "Removes all grass of a layer (density 0 everywhere).",
+      "editor_only": false,
+      "args": {
+        "grass": {
+          "type": "string",
+          "description": "Grass node name (defaults to the first grass layer in the scene)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "grass": {
+            "type": "string",
+            "description": "Grass node name (defaults to the first grass layer in the scene)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "grass.create",
+      "category": "grass",
+      "description": "Adds a grass layer (VibeGrass3D) on the terrain. Types: meadow, lush, tall, dry, flowers, wheat, tundra, savanna, reeds, alien. Starts empty: use grass.fill (rules) or grass.paint.",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Node name.",
+          "default": "Grass"
+        },
+        "terrain": {
+          "type": "string",
+          "description": "Terrain to grow on (default: first terrain)."
+        },
+        "preset": {
+          "type": "string",
+          "description": "Grass type.",
+          "default": "meadow",
+          "enum": [
+            "meadow",
+            "lush",
+            "tall",
+            "dry",
+            "flowers",
+            "wheat",
+            "tundra",
+            "savanna",
+            "reeds",
+            "alien"
+          ]
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace a grass node with the same name.",
+          "default": false
+        },
+        "area_size": {
+          "type": "number",
+          "description": "Area in meters when there is no terrain.",
+          "default": 64.0
+        },
+        "blade_height": {
+          "type": "number",
+          "description": "Blade height in meters."
+        },
+        "blade_width": {
+          "type": "number",
+          "description": "Blade width in meters."
+        },
+        "blade_curve": {
+          "type": "number",
+          "description": "How much blades bend (0..1.5)."
+        },
+        "blades_per_clump": {
+          "type": "integer",
+          "description": "Blades per clump."
+        },
+        "density_per_m2": {
+          "type": "number",
+          "description": "Clumps per m² at full density."
+        },
+        "flower_chance": {
+          "type": "number",
+          "description": "0..1 chance of a flower on a blade."
+        },
+        "color_base": {
+          "type": "color",
+          "description": "Color at the root."
+        },
+        "color_tip": {
+          "type": "color",
+          "description": "Color at the tip."
+        },
+        "dry_color": {
+          "type": "color",
+          "description": "Color of dry patches."
+        },
+        "dry_amount": {
+          "type": "number",
+          "description": "0..1 amount of dry patches."
+        },
+        "sss_color": {
+          "type": "color",
+          "description": "Backlight (subsurface) color."
+        },
+        "emission": {
+          "type": "number",
+          "description": "Glow (alien grass)."
+        },
+        "wind_strength": {
+          "type": "number",
+          "description": "Wind bend."
+        },
+        "wind_speed": {
+          "type": "number",
+          "description": "Wind speed."
+        },
+        "view_distance": {
+          "type": "number",
+          "description": "Draw distance in meters."
+        },
+        "cast_shadows": {
+          "type": "boolean",
+          "description": "Blades cast shadows (costly)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style: realistic, stylized, toon, cel, lowpoly.",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "default": "Grass",
+            "description": "Node name."
+          },
+          "terrain": {
+            "type": "string",
+            "description": "Terrain to grow on (default: first terrain)."
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "meadow",
+              "lush",
+              "tall",
+              "dry",
+              "flowers",
+              "wheat",
+              "tundra",
+              "savanna",
+              "reeds",
+              "alien"
+            ],
+            "default": "meadow",
+            "description": "Grass type."
+          },
+          "replace": {
+            "type": "boolean",
+            "default": false,
+            "description": "Replace a grass node with the same name."
+          },
+          "area_size": {
+            "type": "number",
+            "default": 64.0,
+            "description": "Area in meters when there is no terrain."
+          },
+          "blade_height": {
+            "type": "number",
+            "description": "Blade height in meters."
+          },
+          "blade_width": {
+            "type": "number",
+            "description": "Blade width in meters."
+          },
+          "blade_curve": {
+            "type": "number",
+            "description": "How much blades bend (0..1.5)."
+          },
+          "blades_per_clump": {
+            "type": "integer",
+            "description": "Blades per clump."
+          },
+          "density_per_m2": {
+            "type": "number",
+            "description": "Clumps per m² at full density."
+          },
+          "flower_chance": {
+            "type": "number",
+            "description": "0..1 chance of a flower on a blade."
+          },
+          "color_base": {
+            "type": "string",
+            "description": "Color at the root. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "color_tip": {
+            "type": "string",
+            "description": "Color at the tip. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "dry_color": {
+            "type": "string",
+            "description": "Color of dry patches. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "dry_amount": {
+            "type": "number",
+            "description": "0..1 amount of dry patches."
+          },
+          "sss_color": {
+            "type": "string",
+            "description": "Backlight (subsurface) color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "emission": {
+            "type": "number",
+            "description": "Glow (alien grass)."
+          },
+          "wind_strength": {
+            "type": "number",
+            "description": "Wind bend."
+          },
+          "wind_speed": {
+            "type": "number",
+            "description": "Wind speed."
+          },
+          "view_distance": {
+            "type": "number",
+            "description": "Draw distance in meters."
+          },
+          "cast_shadows": {
+            "type": "boolean",
+            "description": "Blades cast shadows (costly)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style: realistic, stylized, toon, cel, lowpoly."
+          }
+        }
+      },
+      "examples": [
+        {
+          "preset": "flowers",
+          "name": "Flores"
+        }
+      ]
+    },
+    {
+      "name": "grass.fill",
+      "category": "grass",
+      "description": "Fills grass density automatically by rules: height range, max slope, terrain layer, away from water, natural patches.",
+      "editor_only": false,
+      "args": {
+        "grass": {
+          "type": "string",
+          "description": "Grass node name (defaults to the first grass layer in the scene)."
+        },
+        "density": {
+          "type": "number",
+          "description": "0..1 density where the rules match.",
+          "default": 1.0
+        },
+        "min_height": {
+          "type": "number",
+          "description": "Only above this height."
+        },
+        "max_height": {
+          "type": "number",
+          "description": "Only below this height."
+        },
+        "max_slope": {
+          "type": "number",
+          "description": "No grass on slopes steeper than this (degrees).",
+          "default": 38.0
+        },
+        "min_slope": {
+          "type": "number",
+          "description": "Only on slopes steeper than this.",
+          "default": 0.0
+        },
+        "layer": {
+          "type": "integer",
+          "description": "Only where this terrain layer (0-3) is painted (e.g. 0 = grass)."
+        },
+        "min_layer_weight": {
+          "type": "number",
+          "description": "Layer weight threshold.",
+          "default": 0.35
+        },
+        "avoid_water": {
+          "type": "boolean",
+          "description": "Keep out of the sea and lakes.",
+          "default": true
+        },
+        "patchiness": {
+          "type": "number",
+          "description": "0 = uniform, 1 = sparse patches.",
+          "default": 0.3
+        },
+        "patch_scale": {
+          "type": "number",
+          "description": "Patch size in meters.",
+          "default": 18.0
+        },
+        "mode": {
+          "type": "string",
+          "description": "Combine with the current density.",
+          "default": "replace",
+          "enum": [
+            "replace",
+            "add",
+            "max",
+            "min",
+            "multiply"
+          ]
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Patch noise seed.",
+          "default": 5
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "grass": {
+            "type": "string",
+            "description": "Grass node name (defaults to the first grass layer in the scene)."
+          },
+          "density": {
+            "type": "number",
+            "default": 1.0,
+            "description": "0..1 density where the rules match."
+          },
+          "min_height": {
+            "type": "number",
+            "description": "Only above this height."
+          },
+          "max_height": {
+            "type": "number",
+            "description": "Only below this height."
+          },
+          "max_slope": {
+            "type": "number",
+            "default": 38.0,
+            "description": "No grass on slopes steeper than this (degrees)."
+          },
+          "min_slope": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Only on slopes steeper than this."
+          },
+          "layer": {
+            "type": "integer",
+            "description": "Only where this terrain layer (0-3) is painted (e.g. 0 = grass)."
+          },
+          "min_layer_weight": {
+            "type": "number",
+            "default": 0.35,
+            "description": "Layer weight threshold."
+          },
+          "avoid_water": {
+            "type": "boolean",
+            "default": true,
+            "description": "Keep out of the sea and lakes."
+          },
+          "patchiness": {
+            "type": "number",
+            "default": 0.3,
+            "description": "0 = uniform, 1 = sparse patches."
+          },
+          "patch_scale": {
+            "type": "number",
+            "default": 18.0,
+            "description": "Patch size in meters."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "add",
+              "max",
+              "min",
+              "multiply"
+            ],
+            "default": "replace",
+            "description": "Combine with the current density."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 5,
+            "description": "Patch noise seed."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "grass.info",
+      "category": "grass",
+      "description": "Info about a grass layer (coverage, type, style...).",
+      "editor_only": false,
+      "args": {
+        "grass": {
+          "type": "string",
+          "description": "Grass node name (defaults to the first grass layer in the scene)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "grass": {
+            "type": "string",
+            "description": "Grass node name (defaults to the first grass layer in the scene)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "grass.paint",
+      "category": "grass",
+      "description": "Paints (or erases) grass density with a brush at a position or along 'points'.",
+      "editor_only": false,
+      "args": {
+        "grass": {
+          "type": "string",
+          "description": "Grass node name (defaults to the first grass layer in the scene)."
+        },
+        "position": {
+          "type": "position",
+          "description": "Brush center.",
+          "default": "center"
+        },
+        "points": {
+          "type": "array",
+          "description": "Optional stroke positions."
+        },
+        "radius": {
+          "type": "number",
+          "description": "Brush radius in meters.",
+          "default": 8.0
+        },
+        "density": {
+          "type": "number",
+          "description": "Target density 0..1 (0 erases).",
+          "default": 1.0
+        },
+        "strength": {
+          "type": "number",
+          "description": "0..1.",
+          "default": 1.0
+        },
+        "erase": {
+          "type": "boolean",
+          "description": "Shortcut for density 0.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "grass": {
+            "type": "string",
+            "description": "Grass node name (defaults to the first grass layer in the scene)."
+          },
+          "position": {
+            "default": "center",
+            "description": "Brush center. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "points": {
+            "type": "array",
+            "description": "Optional stroke positions."
+          },
+          "radius": {
+            "type": "number",
+            "default": 8.0,
+            "description": "Brush radius in meters."
+          },
+          "density": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Target density 0..1 (0 erases)."
+          },
+          "strength": {
+            "type": "number",
+            "default": 1.0,
+            "description": "0..1."
+          },
+          "erase": {
+            "type": "boolean",
+            "default": false,
+            "description": "Shortcut for density 0."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "grass.set",
+      "category": "grass",
+      "description": "Changes grass look/behavior: preset, style, height, colors, wind, draw distance...",
+      "editor_only": false,
+      "args": {
+        "grass": {
+          "type": "string",
+          "description": "Grass node name (defaults to the first grass layer in the scene)."
+        },
+        "preset": {
+          "type": "string",
+          "description": "Apply a grass type first.",
+          "enum": [
+            "meadow",
+            "lush",
+            "tall",
+            "dry",
+            "flowers",
+            "wheat",
+            "tundra",
+            "savanna",
+            "reeds",
+            "alien"
+          ]
+        },
+        "blade_height": {
+          "type": "number",
+          "description": "Blade height in meters."
+        },
+        "blade_width": {
+          "type": "number",
+          "description": "Blade width in meters."
+        },
+        "blade_curve": {
+          "type": "number",
+          "description": "How much blades bend (0..1.5)."
+        },
+        "blades_per_clump": {
+          "type": "integer",
+          "description": "Blades per clump."
+        },
+        "density_per_m2": {
+          "type": "number",
+          "description": "Clumps per m² at full density."
+        },
+        "flower_chance": {
+          "type": "number",
+          "description": "0..1 chance of a flower on a blade."
+        },
+        "color_base": {
+          "type": "color",
+          "description": "Color at the root."
+        },
+        "color_tip": {
+          "type": "color",
+          "description": "Color at the tip."
+        },
+        "dry_color": {
+          "type": "color",
+          "description": "Color of dry patches."
+        },
+        "dry_amount": {
+          "type": "number",
+          "description": "0..1 amount of dry patches."
+        },
+        "sss_color": {
+          "type": "color",
+          "description": "Backlight (subsurface) color."
+        },
+        "emission": {
+          "type": "number",
+          "description": "Glow (alien grass)."
+        },
+        "wind_strength": {
+          "type": "number",
+          "description": "Wind bend."
+        },
+        "wind_speed": {
+          "type": "number",
+          "description": "Wind speed."
+        },
+        "view_distance": {
+          "type": "number",
+          "description": "Draw distance in meters."
+        },
+        "cast_shadows": {
+          "type": "boolean",
+          "description": "Blades cast shadows (costly)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style: realistic, stylized, toon, cel, lowpoly.",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "grass": {
+            "type": "string",
+            "description": "Grass node name (defaults to the first grass layer in the scene)."
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "meadow",
+              "lush",
+              "tall",
+              "dry",
+              "flowers",
+              "wheat",
+              "tundra",
+              "savanna",
+              "reeds",
+              "alien"
+            ],
+            "description": "Apply a grass type first."
+          },
+          "blade_height": {
+            "type": "number",
+            "description": "Blade height in meters."
+          },
+          "blade_width": {
+            "type": "number",
+            "description": "Blade width in meters."
+          },
+          "blade_curve": {
+            "type": "number",
+            "description": "How much blades bend (0..1.5)."
+          },
+          "blades_per_clump": {
+            "type": "integer",
+            "description": "Blades per clump."
+          },
+          "density_per_m2": {
+            "type": "number",
+            "description": "Clumps per m² at full density."
+          },
+          "flower_chance": {
+            "type": "number",
+            "description": "0..1 chance of a flower on a blade."
+          },
+          "color_base": {
+            "type": "string",
+            "description": "Color at the root. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "color_tip": {
+            "type": "string",
+            "description": "Color at the tip. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "dry_color": {
+            "type": "string",
+            "description": "Color of dry patches. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "dry_amount": {
+            "type": "number",
+            "description": "0..1 amount of dry patches."
+          },
+          "sss_color": {
+            "type": "string",
+            "description": "Backlight (subsurface) color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "emission": {
+            "type": "number",
+            "description": "Glow (alien grass)."
+          },
+          "wind_strength": {
+            "type": "number",
+            "description": "Wind bend."
+          },
+          "wind_speed": {
+            "type": "number",
+            "description": "Wind speed."
+          },
+          "view_distance": {
+            "type": "number",
+            "description": "Draw distance in meters."
+          },
+          "cast_shadows": {
+            "type": "boolean",
+            "description": "Blades cast shadows (costly)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style: realistic, stylized, toon, cel, lowpoly."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "help",
+      "category": "core",
+      "description": "Lists every command (grouped by category) or shows the full arguments of one command.",
+      "editor_only": false,
+      "args": {
+        "command": {
+          "type": "string",
+          "description": "Command name to describe, e.g. 'terrain.sculpt'."
+        },
+        "category": {
+          "type": "string",
+          "description": "Only list commands of a category (core, scene, node, terrain, grass, vfx, env, world)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Command name to describe, e.g. 'terrain.sculpt'."
+          },
+          "category": {
+            "type": "string",
+            "description": "Only list commands of a category (core, scene, node, terrain, grass, vfx, env, world)."
+          }
+        }
+      },
+      "examples": [
+        {
+          "command": "terrain.sculpt"
+        }
+      ]
+    },
+    {
+      "name": "node.add",
+      "category": "node",
+      "description": "Adds any node: a built-in class (MeshInstance3D, OmniLight3D, Camera3D...), a global script class or a scene path (res://x.tscn). Properties accept JSON values ([x,y,z] vectors, '#hex' colors, resource class names like 'BoxMesh' or {\"type\": \"BoxMesh\", \"size\": [2,1,2]}).",
+      "editor_only": false,
+      "args": {
+        "type": {
+          "type": "string",
+          "description": "Class name, global class or scene path.",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Node name."
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent node path/name (defaults to the scene root)."
+        },
+        "position": {
+          "type": "position",
+          "description": "Where to place it (Node3D only)."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Property values to set, e.g. {\"light_color\": \"#ffaa55\", \"omni_range\": 12}.",
+          "default": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Class name, global class or scene path."
+          },
+          "name": {
+            "type": "string",
+            "description": "Node name."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent node path/name (defaults to the scene root)."
+          },
+          "position": {
+            "description": "Where to place it (Node3D only). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "properties": {
+            "type": "object",
+            "default": {},
+            "description": "Property values to set, e.g. {\"light_color\": \"#ffaa55\", \"omni_range\": 12}."
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "examples": [
+        {
+          "type": "MeshInstance3D",
+          "name": "Pedra",
+          "position": [
+            10,
+            4
+          ],
+          "properties": {
+            "mesh": {
+              "type": "SphereMesh",
+              "radius": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "node.get",
+      "category": "node",
+      "description": "Reads properties of a node (all editor-visible properties when none are given).",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Node path or name.",
+          "required": true
+        },
+        "properties": {
+          "type": "array",
+          "description": "Property names to read.",
+          "default": []
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Node path or name."
+          },
+          "properties": {
+            "type": "array",
+            "default": [],
+            "description": "Property names to read."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "node.remove",
+      "category": "node",
+      "description": "Removes a node (and its children) from the scene.",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Node path or name.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Node path or name."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "node.set",
+      "category": "node",
+      "description": "Sets properties of a node (undoable in the editor). Supports nested paths like 'mesh:size'.",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Node path or name.",
+          "required": true
+        },
+        "properties": {
+          "type": "object",
+          "description": "Property values, e.g. {\"position\": [0, 5, 0], \"visible\": false}.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Node path or name."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Property values, e.g. {\"position\": [0, 5, 0], \"visible\": false}."
+          }
+        },
+        "required": [
+          "path",
+          "properties"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "redo",
+      "category": "core",
+      "description": "Redoes the last undone change in the current scene (editor only).",
+      "editor_only": true,
+      "args": {
+        "steps": {
+          "type": "integer",
+          "description": "How many actions to redo.",
+          "default": 1
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "integer",
+            "default": 1,
+            "description": "How many actions to redo."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "scene.new",
+      "category": "scene",
+      "description": "Creates a new 3D scene (Node3D root) at the given path and makes it the target of the next commands (opens it in the editor).",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Scene path, e.g. 'res://scenes/world.tscn'.",
+          "required": true
+        },
+        "root_name": {
+          "type": "string",
+          "description": "Root node name (defaults to the file name in PascalCase)."
+        },
+        "overwrite": {
+          "type": "boolean",
+          "description": "Replace the file if it already exists.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Scene path, e.g. 'res://scenes/world.tscn'."
+          },
+          "root_name": {
+            "type": "string",
+            "description": "Root node name (defaults to the file name in PascalCase)."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false,
+            "description": "Replace the file if it already exists."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "scene.open",
+      "category": "scene",
+      "description": "Opens an existing scene and makes it the target of the next commands.",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Scene path (res://...).",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Scene path (res://...)."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "scene.save",
+      "category": "scene",
+      "description": "Saves the target scene and the generated data (terrain heightmaps, grass density...).",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Optional new path (save as)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Optional new path (save as)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "scene.tree",
+      "category": "scene",
+      "description": "Returns the node tree of the target scene (names, types, paths).",
+      "editor_only": false,
+      "args": {
+        "max_depth": {
+          "type": "integer",
+          "description": "Maximum depth to list.",
+          "default": 4
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "max_depth": {
+            "type": "integer",
+            "default": 4,
+            "description": "Maximum depth to list."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "screenshot",
+      "category": "core",
+      "description": "Renders the scene to a PNG so you can SEE the result (returns the file path). Works in the live editor; in headless mode it needs a display (the terminal client runs Godot with a window).",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "Output PNG (default res://.vibe/screenshots/shot_<time>.png)."
+        },
+        "view": {
+          "type": "string",
+          "description": "Automatic camera placement ('editor' = what the editor viewport shows).",
+          "default": "aerial",
+          "enum": [
+            "aerial",
+            "top",
+            "ground",
+            "north",
+            "south",
+            "east",
+            "west",
+            "editor"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "Node name/path to frame (e.g. a VFX)."
+        },
+        "position": {
+          "type": "position",
+          "description": "Camera position (overrides view)."
+        },
+        "look_at": {
+          "type": "position",
+          "description": "Point to look at (with position)."
+        },
+        "width": {
+          "type": "integer",
+          "description": "Image width.",
+          "default": 1280
+        },
+        "height": {
+          "type": "integer",
+          "description": "Image height.",
+          "default": 720
+        },
+        "fov": {
+          "type": "number",
+          "description": "Vertical field of view in degrees.",
+          "default": 60.0
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Frames to wait before capturing (lets particles/shaders warm up).",
+          "default": 12
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Output PNG (default res://.vibe/screenshots/shot_<time>.png)."
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "aerial",
+              "top",
+              "ground",
+              "north",
+              "south",
+              "east",
+              "west",
+              "editor"
+            ],
+            "default": "aerial",
+            "description": "Automatic camera placement ('editor' = what the editor viewport shows)."
+          },
+          "target": {
+            "type": "string",
+            "description": "Node name/path to frame (e.g. a VFX)."
+          },
+          "position": {
+            "description": "Camera position (overrides view). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "look_at": {
+            "description": "Point to look at (with position). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "width": {
+            "type": "integer",
+            "default": 1280,
+            "description": "Image width."
+          },
+          "height": {
+            "type": "integer",
+            "default": 720,
+            "description": "Image height."
+          },
+          "fov": {
+            "type": "number",
+            "default": 60.0,
+            "description": "Vertical field of view in degrees."
+          },
+          "frames": {
+            "type": "integer",
+            "default": 12,
+            "description": "Frames to wait before capturing (lets particles/shaders warm up)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "status",
+      "category": "core",
+      "description": "Shows where commands run (editor or headless), the open scene and every terrain, grass layer and VFX in it.",
+      "editor_only": false,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "style.set",
+      "category": "style",
+      "description": "Changes the art style of the whole scene at once (terrain, water, grass, VFX, sky/post): realistic, stylized, toon, cel, lowpoly.",
+      "editor_only": false,
+      "args": {
+        "style": {
+          "type": "string",
+          "description": "realistic (PBR textures), stylized (painterly), toon, cel (anime 2-tone), lowpoly (faceted).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ],
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "realistic (PBR textures), stylized (painterly), toon, cel (anime 2-tone), lowpoly (faceted)."
+          }
+        },
+        "required": [
+          "style"
+        ]
+      },
+      "examples": [
+        {
+          "style": "toon"
+        }
+      ]
+    },
+    {
+      "name": "terrain.auto_paint",
+      "category": "terrain",
+      "description": "Repaints all layers automatically from height/slope rules (beach near water, rock on cliffs, snow/lava on peaks). Override any rule, e.g. {\"cliff_slope\": 30, \"peak_height\": 0.7}.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "rules": {
+          "type": "object",
+          "description": "Rule overrides: base_layer, beach_layer, beach_band, cliff_layer, cliff_slope, steep_layer, steep_slope, peak_layer, peak_height (0..1), peak_max_slope, peak_concave, patch_layer, patch_amount, seed.",
+          "default": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "rules": {
+            "type": "object",
+            "default": {},
+            "description": "Rule overrides: base_layer, beach_layer, beach_band, cliff_layer, cliff_slope, steep_layer, steep_slope, peak_layer, peak_height (0..1), peak_max_slope, peak_concave, patch_layer, patch_amount, seed."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.carve_path",
+      "category": "terrain",
+      "description": "Carves a river (channel + flowing water) or a road (flattened strip) along points, or along an automatic natural path when no points are given.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "mode": {
+          "type": "string",
+          "description": "river or road.",
+          "default": "river",
+          "enum": [
+            "river",
+            "road"
+          ]
+        },
+        "points": {
+          "type": "array",
+          "description": "World positions [[x,z], ...]. Omit for an automatic path."
+        },
+        "width": {
+          "type": "number",
+          "description": "Width in meters (default 7 river / 5 road)."
+        },
+        "depth": {
+          "type": "number",
+          "description": "River depth in meters.",
+          "default": 2.5
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Seed for the automatic path.",
+          "default": 1
+        },
+        "paint_layer": {
+          "type": "integer",
+          "description": "Layer painted along the path (default: 1 = dirt/sand)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "river",
+              "road"
+            ],
+            "default": "river",
+            "description": "river or road."
+          },
+          "points": {
+            "type": "array",
+            "description": "World positions [[x,z], ...]. Omit for an automatic path."
+          },
+          "width": {
+            "type": "number",
+            "description": "Width in meters (default 7 river / 5 road)."
+          },
+          "depth": {
+            "type": "number",
+            "default": 2.5,
+            "description": "River depth in meters."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Seed for the automatic path."
+          },
+          "paint_layer": {
+            "type": "integer",
+            "description": "Layer painted along the path (default: 1 = dirt/sand)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.create",
+      "category": "terrain",
+      "description": "Creates a VibeTerrain3D (heightmap terrain) and generates it from a preset: flat, plains, hills, mountains, island, archipelago, dunes, canyon, crater, volcano, valley. Also paints it (biome palette) and can add a sea.",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Node name.",
+          "default": "Terrain"
+        },
+        "size": {
+          "type": "number",
+          "description": "Width/depth in meters (the terrain is centered on its position).",
+          "default": 256.0
+        },
+        "cell_size": {
+          "type": "number",
+          "description": "Meters between vertices (default 1, or 2 for sizes above 512)."
+        },
+        "preset": {
+          "type": "string",
+          "description": "Landform generator.",
+          "default": "hills",
+          "enum": [
+            "flat",
+            "plains",
+            "hills",
+            "mountains",
+            "island",
+            "archipelago",
+            "dunes",
+            "canyon",
+            "crater",
+            "volcano",
+            "valley",
+            "none"
+          ]
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed (same seed = same terrain).",
+          "default": 1
+        },
+        "height": {
+          "type": "number",
+          "description": "Peak height in meters (auto per preset when omitted)."
+        },
+        "height_multiplier": {
+          "type": "number",
+          "description": "Scales the preset height (e.g. 1.5 = taller).",
+          "default": 1.0
+        },
+        "scale": {
+          "type": "number",
+          "description": "Feature size multiplier (bigger = broader shapes).",
+          "default": 1.0
+        },
+        "roughness": {
+          "type": "number",
+          "description": "0..1 amount of small detail.",
+          "default": 0.5
+        },
+        "palette": {
+          "type": "string",
+          "description": "Biome colors + auto-paint rules.",
+          "default": "temperate",
+          "enum": [
+            "temperate",
+            "tropical",
+            "snowy",
+            "desert",
+            "canyon",
+            "volcanic",
+            "autumn",
+            "alien",
+            "lunar",
+            "swamp",
+            "savanna"
+          ]
+        },
+        "water": {
+          "type": "boolean",
+          "description": "Adds a sea plane at water_level (islands/volcano usually want this).",
+          "default": false
+        },
+        "water_level": {
+          "type": "number",
+          "description": "Sea level (local height).",
+          "default": 0.0
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Paint layers from height/slope rules after generating.",
+          "default": true
+        },
+        "position": {
+          "type": "vector3",
+          "description": "Node position.",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace an existing terrain with the same name.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "default": "Terrain",
+            "description": "Node name."
+          },
+          "size": {
+            "type": "number",
+            "default": 256.0,
+            "description": "Width/depth in meters (the terrain is centered on its position)."
+          },
+          "cell_size": {
+            "type": "number",
+            "description": "Meters between vertices (default 1, or 2 for sizes above 512)."
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "flat",
+              "plains",
+              "hills",
+              "mountains",
+              "island",
+              "archipelago",
+              "dunes",
+              "canyon",
+              "crater",
+              "volcano",
+              "valley",
+              "none"
+            ],
+            "default": "hills",
+            "description": "Landform generator."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Random seed (same seed = same terrain)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Peak height in meters (auto per preset when omitted)."
+          },
+          "height_multiplier": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Scales the preset height (e.g. 1.5 = taller)."
+          },
+          "scale": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Feature size multiplier (bigger = broader shapes)."
+          },
+          "roughness": {
+            "type": "number",
+            "default": 0.5,
+            "description": "0..1 amount of small detail."
+          },
+          "palette": {
+            "type": "string",
+            "enum": [
+              "temperate",
+              "tropical",
+              "snowy",
+              "desert",
+              "canyon",
+              "volcanic",
+              "autumn",
+              "alien",
+              "lunar",
+              "swamp",
+              "savanna"
+            ],
+            "default": "temperate",
+            "description": "Biome colors + auto-paint rules."
+          },
+          "water": {
+            "type": "boolean",
+            "default": false,
+            "description": "Adds a sea plane at water_level (islands/volcano usually want this)."
+          },
+          "water_level": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Sea level (local height)."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Paint layers from height/slope rules after generating."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "default": [
+              0,
+              0,
+              0
+            ],
+            "description": "Node position."
+          },
+          "replace": {
+            "type": "boolean",
+            "default": false,
+            "description": "Replace an existing terrain with the same name."
+          }
+        }
+      },
+      "examples": [
+        {
+          "preset": "island",
+          "size": 256,
+          "palette": "tropical",
+          "water": true,
+          "seed": 7
+        }
+      ]
+    },
+    {
+      "name": "terrain.erode",
+      "category": "terrain",
+      "description": "Erosion for realism: 'hydraulic' (water carves gullies; iterations = droplets) or 'thermal' (slopes settle; iterations = passes).",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Erosion model.",
+          "default": "hydraulic",
+          "enum": [
+            "hydraulic",
+            "thermal"
+          ]
+        },
+        "iterations": {
+          "type": "integer",
+          "description": "Droplets (hydraulic, default ~0.35 per vertex) or passes (thermal, default 20)."
+        },
+        "strength": {
+          "type": "number",
+          "description": "Erosion strength.",
+          "default": 1.0
+        },
+        "talus": {
+          "type": "number",
+          "description": "Thermal: stable slope angle in degrees.",
+          "default": 34.0
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed (hydraulic).",
+          "default": 1
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Repaint layers afterwards.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "hydraulic",
+              "thermal"
+            ],
+            "default": "hydraulic",
+            "description": "Erosion model."
+          },
+          "iterations": {
+            "type": "integer",
+            "description": "Droplets (hydraulic, default ~0.35 per vertex) or passes (thermal, default 20)."
+          },
+          "strength": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Erosion strength."
+          },
+          "talus": {
+            "type": "number",
+            "default": 34.0,
+            "description": "Thermal: stable slope angle in degrees."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Random seed (hydraulic)."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Repaint layers afterwards."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.export_heightmap",
+      "category": "terrain",
+      "description": "Exports the heightmap: .exr keeps real heights (float), .png is a normalized 8-bit preview.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "path": {
+          "type": "string",
+          "description": "Output (res://... .png or .exr).",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Output (res://... .png or .exr)."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.flatten_area",
+      "category": "terrain",
+      "description": "Flattens a circular area (e.g. for a building, arena or camp).",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "position": {
+          "type": "position",
+          "description": "Center.",
+          "default": "center"
+        },
+        "radius": {
+          "type": "number",
+          "description": "Radius in meters.",
+          "default": 12.0
+        },
+        "height": {
+          "type": "number",
+          "description": "Target height (default: average height there)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "position": {
+            "default": "center",
+            "description": "Center. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "radius": {
+            "type": "number",
+            "default": 12.0,
+            "description": "Radius in meters."
+          },
+          "height": {
+            "type": "number",
+            "description": "Target height (default: average height there)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.generate",
+      "category": "terrain",
+      "description": "Regenerates (or layers) a preset on an existing terrain. mode: replace | add | max | min | blend.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "preset": {
+          "type": "string",
+          "description": "Landform generator.",
+          "enum": [
+            "flat",
+            "plains",
+            "hills",
+            "mountains",
+            "island",
+            "archipelago",
+            "dunes",
+            "canyon",
+            "crater",
+            "volcano",
+            "valley"
+          ],
+          "required": true
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed.",
+          "default": 1
+        },
+        "height": {
+          "type": "number",
+          "description": "Peak height in meters."
+        },
+        "height_multiplier": {
+          "type": "number",
+          "description": "Scales the preset height.",
+          "default": 1.0
+        },
+        "scale": {
+          "type": "number",
+          "description": "Feature size multiplier.",
+          "default": 1.0
+        },
+        "roughness": {
+          "type": "number",
+          "description": "0..1 detail.",
+          "default": 0.5
+        },
+        "mode": {
+          "type": "string",
+          "description": "How to combine with the current heights.",
+          "default": "replace",
+          "enum": [
+            "replace",
+            "add",
+            "max",
+            "min",
+            "blend"
+          ]
+        },
+        "strength": {
+          "type": "number",
+          "description": "Factor for add/blend.",
+          "default": 1.0
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Repaint layers afterwards.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "flat",
+              "plains",
+              "hills",
+              "mountains",
+              "island",
+              "archipelago",
+              "dunes",
+              "canyon",
+              "crater",
+              "volcano",
+              "valley"
+            ],
+            "description": "Landform generator."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Random seed."
+          },
+          "height": {
+            "type": "number",
+            "description": "Peak height in meters."
+          },
+          "height_multiplier": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Scales the preset height."
+          },
+          "scale": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Feature size multiplier."
+          },
+          "roughness": {
+            "type": "number",
+            "default": 0.5,
+            "description": "0..1 detail."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "add",
+              "max",
+              "min",
+              "blend"
+            ],
+            "default": "replace",
+            "description": "How to combine with the current heights."
+          },
+          "strength": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Factor for add/blend."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Repaint layers afterwards."
+          }
+        },
+        "required": [
+          "preset"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.height_at",
+      "category": "terrain",
+      "description": "Height, slope and layer weights at a position (useful to place things precisely).",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "position": {
+          "type": "position",
+          "description": "[x, z] or anchor.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "position": {
+            "description": "[x, z] or anchor. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          }
+        },
+        "required": [
+          "position"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.import_heightmap",
+      "category": "terrain",
+      "description": "Imports a grayscale image (PNG/EXR/...) as heights between min_height and max_height.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "path": {
+          "type": "string",
+          "description": "Image path (res:// or absolute).",
+          "required": true
+        },
+        "min_height": {
+          "type": "number",
+          "description": "Height of black.",
+          "default": 0.0
+        },
+        "max_height": {
+          "type": "number",
+          "description": "Height of white.",
+          "default": 60.0
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Repaint afterwards.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Image path (res:// or absolute)."
+          },
+          "min_height": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Height of black."
+          },
+          "max_height": {
+            "type": "number",
+            "default": 60.0,
+            "description": "Height of white."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Repaint afterwards."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.info",
+      "category": "terrain",
+      "description": "Size, resolution, height range, palette, layers and water of a terrain.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.paint",
+      "category": "terrain",
+      "description": "Paints a surface layer (0..3 or its name, e.g. 'Rocha') with a brush. Use 'points' to paint along a path.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "layer": {
+          "type": "any",
+          "description": "Layer index 0-3 or layer name.",
+          "required": true
+        },
+        "position": {
+          "type": "position",
+          "description": "Brush center.",
+          "default": "center"
+        },
+        "points": {
+          "type": "array",
+          "description": "Optional list of positions for a stroke."
+        },
+        "radius": {
+          "type": "number",
+          "description": "Brush radius in meters.",
+          "default": 8.0
+        },
+        "strength": {
+          "type": "number",
+          "description": "0..1.",
+          "default": 1.0
+        },
+        "hardness": {
+          "type": "number",
+          "description": "Edge hardness.",
+          "default": 0.4
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "layer": {
+            "description": "Layer index 0-3 or layer name."
+          },
+          "position": {
+            "default": "center",
+            "description": "Brush center. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "points": {
+            "type": "array",
+            "description": "Optional list of positions for a stroke."
+          },
+          "radius": {
+            "type": "number",
+            "default": 8.0,
+            "description": "Brush radius in meters."
+          },
+          "strength": {
+            "type": "number",
+            "default": 1.0,
+            "description": "0..1."
+          },
+          "hardness": {
+            "type": "number",
+            "default": 0.4,
+            "description": "Edge hardness."
+          }
+        },
+        "required": [
+          "layer"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.palette",
+      "category": "terrain",
+      "description": "Applies a biome palette to the 4 layers: temperate, tropical, snowy, desert, canyon, volcanic, autumn, alien, lunar, swamp, savanna.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "name": {
+          "type": "string",
+          "description": "Palette name (PT/EN aliases accepted).",
+          "enum": [
+            "temperate",
+            "tropical",
+            "snowy",
+            "desert",
+            "canyon",
+            "volcanic",
+            "autumn",
+            "alien",
+            "lunar",
+            "swamp",
+            "savanna"
+          ],
+          "required": true
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Repaint with the palette's rules.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "temperate",
+              "tropical",
+              "snowy",
+              "desert",
+              "canyon",
+              "volcanic",
+              "autumn",
+              "alien",
+              "lunar",
+              "swamp",
+              "savanna"
+            ],
+            "description": "Palette name (PT/EN aliases accepted)."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Repaint with the palette's rules."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.sculpt",
+      "category": "terrain",
+      "description": "Sculpts with a brush: raise, lower, smooth, flatten, set (exact height), noise, terrace. Use 'points' for a stroke along a path.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "op": {
+          "type": "string",
+          "description": "Brush operation.",
+          "enum": [
+            "raise",
+            "lower",
+            "smooth",
+            "flatten",
+            "set",
+            "noise",
+            "terrace"
+          ],
+          "required": true
+        },
+        "position": {
+          "type": "position",
+          "description": "Brush center.",
+          "default": "center"
+        },
+        "points": {
+          "type": "array",
+          "description": "Optional stroke: list of positions ([x,z]) to apply the brush along."
+        },
+        "radius": {
+          "type": "number",
+          "description": "Brush radius in meters.",
+          "default": 12.0
+        },
+        "strength": {
+          "type": "number",
+          "description": "Meters for raise/lower/noise; 0..1 for smooth/flatten/terrace.",
+          "default": 3.0
+        },
+        "height": {
+          "type": "number",
+          "description": "Target height for flatten/set."
+        },
+        "hardness": {
+          "type": "number",
+          "description": "0 = soft edge, 1 = hard edge.",
+          "default": 0.35
+        },
+        "step": {
+          "type": "number",
+          "description": "Terrace step height (terrace op).",
+          "default": 4.0
+        },
+        "spacing": {
+          "type": "number",
+          "description": "Distance between dabs along 'points' (default radius/3)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "raise",
+              "lower",
+              "smooth",
+              "flatten",
+              "set",
+              "noise",
+              "terrace"
+            ],
+            "description": "Brush operation."
+          },
+          "position": {
+            "default": "center",
+            "description": "Brush center. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "points": {
+            "type": "array",
+            "description": "Optional stroke: list of positions ([x,z]) to apply the brush along."
+          },
+          "radius": {
+            "type": "number",
+            "default": 12.0,
+            "description": "Brush radius in meters."
+          },
+          "strength": {
+            "type": "number",
+            "default": 3.0,
+            "description": "Meters for raise/lower/noise; 0..1 for smooth/flatten/terrace."
+          },
+          "height": {
+            "type": "number",
+            "description": "Target height for flatten/set."
+          },
+          "hardness": {
+            "type": "number",
+            "default": 0.35,
+            "description": "0 = soft edge, 1 = hard edge."
+          },
+          "step": {
+            "type": "number",
+            "default": 4.0,
+            "description": "Terrace step height (terrace op)."
+          },
+          "spacing": {
+            "type": "number",
+            "description": "Distance between dabs along 'points' (default radius/3)."
+          }
+        },
+        "required": [
+          "op"
+        ]
+      },
+      "examples": [
+        {
+          "op": "raise",
+          "position": [
+            30,
+            -20
+          ],
+          "radius": 25,
+          "strength": 15
+        },
+        {
+          "op": "smooth",
+          "position": "center",
+          "radius": 40,
+          "strength": 0.8
+        }
+      ]
+    },
+    {
+      "name": "terrain.set_layer",
+      "category": "terrain",
+      "description": "Edits one surface layer (colors, roughness, glow, rock strata, textures).",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "index": {
+          "type": "integer",
+          "description": "Layer 0-3.",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name."
+        },
+        "color_a": {
+          "type": "color",
+          "description": "Main color."
+        },
+        "color_b": {
+          "type": "color",
+          "description": "Variation color."
+        },
+        "noise_scale": {
+          "type": "number",
+          "description": "Variation patch frequency."
+        },
+        "strata": {
+          "type": "number",
+          "description": "0..1 rock banding."
+        },
+        "roughness": {
+          "type": "number",
+          "description": "0..1."
+        },
+        "emission": {
+          "type": "number",
+          "description": "Glow strength (lava, crystals)."
+        },
+        "albedo_texture": {
+          "type": "string",
+          "description": "res:// texture path ('' to remove)."
+        },
+        "normal_texture": {
+          "type": "string",
+          "description": "res:// normal map path ('' to remove)."
+        },
+        "uv_scale": {
+          "type": "number",
+          "description": "Meters per texture tile."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "index": {
+            "type": "integer",
+            "description": "Layer 0-3."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name."
+          },
+          "color_a": {
+            "type": "string",
+            "description": "Main color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "color_b": {
+            "type": "string",
+            "description": "Variation color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "noise_scale": {
+            "type": "number",
+            "description": "Variation patch frequency."
+          },
+          "strata": {
+            "type": "number",
+            "description": "0..1 rock banding."
+          },
+          "roughness": {
+            "type": "number",
+            "description": "0..1."
+          },
+          "emission": {
+            "type": "number",
+            "description": "Glow strength (lava, crystals)."
+          },
+          "albedo_texture": {
+            "type": "string",
+            "description": "res:// texture path ('' to remove)."
+          },
+          "normal_texture": {
+            "type": "string",
+            "description": "res:// normal map path ('' to remove)."
+          },
+          "uv_scale": {
+            "type": "number",
+            "description": "Meters per texture tile."
+          }
+        },
+        "required": [
+          "index"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.stamp",
+      "category": "terrain",
+      "description": "Adds a landform at a position: mountain, hill, crater, volcano, lake (adds water), plateau, pit.",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "shape": {
+          "type": "string",
+          "description": "Landform.",
+          "enum": [
+            "mountain",
+            "hill",
+            "crater",
+            "volcano",
+            "lake",
+            "plateau",
+            "pit"
+          ],
+          "required": true
+        },
+        "position": {
+          "type": "position",
+          "description": "Where.",
+          "default": "center"
+        },
+        "radius": {
+          "type": "number",
+          "description": "Radius in meters.",
+          "default": 30.0
+        },
+        "height": {
+          "type": "number",
+          "description": "Height (or depth for crater/lake/pit) in meters."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Noise seed.",
+          "default": 1
+        },
+        "auto_paint": {
+          "type": "boolean",
+          "description": "Repaint layers afterwards.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "shape": {
+            "type": "string",
+            "enum": [
+              "mountain",
+              "hill",
+              "crater",
+              "volcano",
+              "lake",
+              "plateau",
+              "pit"
+            ],
+            "description": "Landform."
+          },
+          "position": {
+            "default": "center",
+            "description": "Where. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "radius": {
+            "type": "number",
+            "default": 30.0,
+            "description": "Radius in meters."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height (or depth for crater/lake/pit) in meters."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Noise seed."
+          },
+          "auto_paint": {
+            "type": "boolean",
+            "default": true,
+            "description": "Repaint layers afterwards."
+          }
+        },
+        "required": [
+          "shape"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "terrain.water",
+      "category": "terrain",
+      "description": "Configures the sea/water plane (and optionally removes rivers/lakes).",
+      "editor_only": false,
+      "args": {
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node name (defaults to the first terrain in the scene)."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Show the sea plane.",
+          "default": true
+        },
+        "level": {
+          "type": "number",
+          "description": "Water level (local height)."
+        },
+        "deep_color": {
+          "type": "color",
+          "description": "Deep water color."
+        },
+        "shallow_color": {
+          "type": "color",
+          "description": "Shallow water color."
+        },
+        "clear_features": {
+          "type": "boolean",
+          "description": "Remove all rivers and lakes.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node name (defaults to the first terrain in the scene)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show the sea plane."
+          },
+          "level": {
+            "type": "number",
+            "description": "Water level (local height)."
+          },
+          "deep_color": {
+            "type": "string",
+            "description": "Deep water color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "shallow_color": {
+            "type": "string",
+            "description": "Shallow water color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "clear_features": {
+            "type": "boolean",
+            "default": false,
+            "description": "Remove all rivers and lakes."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "undo",
+      "category": "core",
+      "description": "Undoes the last change in the current scene (editor only).",
+      "editor_only": true,
+      "args": {
+        "steps": {
+          "type": "integer",
+          "description": "How many actions to undo.",
+          "default": 1
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "integer",
+            "default": 1,
+            "description": "How many actions to undo."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.define",
+      "category": "vfx",
+      "description": "Creates/overwrites a custom VFX preset saved as res://vfx_presets/<name>.json. Start from 'based_on' and override keys, or pass a full 'definition' (see vfx.describe for the format).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "New preset name.",
+          "required": true
+        },
+        "based_on": {
+          "type": "string",
+          "description": "Existing preset to copy first."
+        },
+        "definition": {
+          "type": "object",
+          "description": "Preset keys to set/override (layers, light, mesh_fx, one_shot...).",
+          "default": {}
+        },
+        "layer_overrides": {
+          "type": "object",
+          "description": "Keys applied to every emitter layer (e.g. {\"color_ramp\": [[0, \"#00ffffff\"], [1, \"#0000ff00\"]]}).",
+          "default": {}
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New preset name."
+          },
+          "based_on": {
+            "type": "string",
+            "description": "Existing preset to copy first."
+          },
+          "definition": {
+            "type": "object",
+            "default": {},
+            "description": "Preset keys to set/override (layers, light, mesh_fx, one_shot...)."
+          },
+          "layer_overrides": {
+            "type": "object",
+            "default": {},
+            "description": "Keys applied to every emitter layer (e.g. {\"color_ramp\": [[0, \"#00ffffff\"], [1, \"#0000ff00\"]]})."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.describe",
+      "category": "vfx",
+      "description": "Returns the full JSON definition of a preset (copy it, tweak it and save with vfx.define).",
+      "editor_only": false,
+      "args": {
+        "preset": {
+          "type": "string",
+          "description": "Preset name.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "description": "Preset name."
+          }
+        },
+        "required": [
+          "preset"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.list",
+      "category": "vfx",
+      "description": "Lists every VFX preset (built-in + custom from res://vfx_presets) with description and category.",
+      "editor_only": false,
+      "args": {
+        "category": {
+          "type": "string",
+          "description": "fire, smoke, impact, magic, ambient, weather, water."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "fire, smoke, impact, magic, ambient, weather, water."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.play",
+      "category": "vfx",
+      "description": "Restarts an effect (useful for one-shots like explosion/shockwave).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Effect name.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Effect name."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.remove",
+      "category": "vfx",
+      "description": "Removes an effect by name, or all effects (all: true).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Effect name."
+        },
+        "all": {
+          "type": "boolean",
+          "description": "Remove every effect.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Effect name."
+          },
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Remove every effect."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.set",
+      "category": "vfx",
+      "description": "Changes an existing effect (preset, style, color, size, intensity, speed, emitting, light).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Effect node name/path.",
+          "required": true
+        },
+        "preset": {
+          "type": "string",
+          "description": "New preset."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style.",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "color": {
+          "type": "color",
+          "description": "Tint ('none' to reset)."
+        },
+        "scale": {
+          "type": "number",
+          "description": "Size multiplier."
+        },
+        "intensity": {
+          "type": "number",
+          "description": "Amount multiplier."
+        },
+        "speed": {
+          "type": "number",
+          "description": "Simulation speed."
+        },
+        "emitting": {
+          "type": "boolean",
+          "description": "On/off."
+        },
+        "light_enabled": {
+          "type": "boolean",
+          "description": "Effect light on/off."
+        },
+        "position": {
+          "type": "position",
+          "description": "Move it."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Effect node name/path."
+          },
+          "preset": {
+            "type": "string",
+            "description": "New preset."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style."
+          },
+          "color": {
+            "type": "string",
+            "description": "Tint ('none' to reset). (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "scale": {
+            "type": "number",
+            "description": "Size multiplier."
+          },
+          "intensity": {
+            "type": "number",
+            "description": "Amount multiplier."
+          },
+          "speed": {
+            "type": "number",
+            "description": "Simulation speed."
+          },
+          "emitting": {
+            "type": "boolean",
+            "description": "On/off."
+          },
+          "light_enabled": {
+            "type": "boolean",
+            "description": "Effect light on/off."
+          },
+          "position": {
+            "description": "Move it. ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "vfx.spawn",
+      "category": "vfx",
+      "description": "Adds a visual effect: fire, campfire, torch, embers, sparks, smoke, steam, explosion, volcano_plume, magic_aura, portal, heal, fireflies, rain, snowfall, dust, leaves, mist, fountain, waterfall, bubbles, lightning, shockwave, force_field, confetti. Accepts PT/EN names (fogueira, explosão, chuva...). Weather presets follow the camera.",
+      "editor_only": false,
+      "args": {
+        "preset": {
+          "type": "string",
+          "description": "Effect preset (or alias).",
+          "required": true
+        },
+        "position": {
+          "type": "position",
+          "description": "Where ([x,z] snaps to the terrain).",
+          "default": "center"
+        },
+        "name": {
+          "type": "string",
+          "description": "Node name (default: preset name)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style (default: scene style or realistic).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "color": {
+          "type": "color",
+          "description": "Tint/hue shift, e.g. 'blue' for blue fire."
+        },
+        "scale": {
+          "type": "number",
+          "description": "Effect size multiplier.",
+          "default": 1.0
+        },
+        "intensity": {
+          "type": "number",
+          "description": "Particle amount multiplier.",
+          "default": 1.0
+        },
+        "speed": {
+          "type": "number",
+          "description": "Simulation speed.",
+          "default": 1.0
+        },
+        "y_offset": {
+          "type": "number",
+          "description": "Extra height above the ground.",
+          "default": 0.0
+        },
+        "follow_camera": {
+          "type": "boolean",
+          "description": "Keep around the camera (default true for weather)."
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent node (default scene root)."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Seed for anchor positions (flat, random...).",
+          "default": 0
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "description": "Effect preset (or alias)."
+          },
+          "position": {
+            "default": "center",
+            "description": "Where ([x,z] snaps to the terrain). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Node name (default: preset name)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style (default: scene style or realistic)."
+          },
+          "color": {
+            "type": "string",
+            "description": "Tint/hue shift, e.g. 'blue' for blue fire. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "scale": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Effect size multiplier."
+          },
+          "intensity": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Particle amount multiplier."
+          },
+          "speed": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Simulation speed."
+          },
+          "y_offset": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Extra height above the ground."
+          },
+          "follow_camera": {
+            "type": "boolean",
+            "description": "Keep around the camera (default true for weather)."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent node (default scene root)."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0,
+            "description": "Seed for anchor positions (flat, random...)."
+          }
+        },
+        "required": [
+          "preset"
+        ]
+      },
+      "examples": [
+        {
+          "preset": "campfire",
+          "position": "flat"
+        },
+        {
+          "preset": "fire",
+          "position": [
+            12,
+            -4
+          ],
+          "color": "blue",
+          "scale": 1.5
+        }
+      ]
+    },
+    {
+      "name": "vibe",
+      "category": "core",
+      "description": "Builds a whole world from a free-form description in Portuguese or English (e.g. 'ilha tropical ao pôr do sol com fogueira e vagalumes'). Returns the recipe it interpreted; refine it and call world.build for full control.",
+      "editor_only": false,
+      "args": {
+        "prompt": {
+          "type": "string",
+          "description": "What you want, in natural language.",
+          "required": true
+        },
+        "scene": {
+          "type": "string",
+          "description": "Scene to create/replace (optional; defaults to the current scene)."
+        },
+        "apply": {
+          "type": "boolean",
+          "description": "false = only return the interpreted recipe.",
+          "default": true
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "Remove previously generated terrain/grass/VFX first.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "What you want, in natural language."
+          },
+          "scene": {
+            "type": "string",
+            "description": "Scene to create/replace (optional; defaults to the current scene)."
+          },
+          "apply": {
+            "type": "boolean",
+            "default": true,
+            "description": "false = only return the interpreted recipe."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true,
+            "description": "Remove previously generated terrain/grass/VFX first."
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "examples": [
+        {
+          "prompt": "montanhas nevadas ao amanhecer com um lago"
+        },
+        {
+          "prompt": "desert canyon at sunset with a river and 3 campfires"
+        }
+      ]
+    },
+    {
+      "name": "world.build",
+      "category": "world",
+      "description": "Builds a world from a declarative recipe (terrain + features + grass + VFX + environment + camera). See world.example for the format.",
+      "editor_only": false,
+      "args": {
+        "recipe": {
+          "type": "object",
+          "description": "Recipe object (see world.example)."
+        },
+        "path": {
+          "type": "string",
+          "description": "Or a JSON recipe file (res://recipes/x.json)."
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "Remove previously generated terrain/grass/VFX first.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "recipe": {
+            "type": "object",
+            "description": "Recipe object (see world.example)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Or a JSON recipe file (res://recipes/x.json)."
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true,
+            "description": "Remove previously generated terrain/grass/VFX first."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "world.clear",
+      "category": "world",
+      "description": "Removes every Vibe terrain, grass, VFX, the Vibe environment/sun and the Vibe camera from the scene.",
+      "editor_only": false,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "world.example",
+      "category": "world",
+      "description": "Returns example recipes for world.build (names: ilha_tropical, montanhas_nevadas, deserto_canion, vulcao, campo_noturno).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Example name (all examples when empty)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Example name (all examples when empty)."
+          }
+        }
+      },
+      "examples": []
+    }
+  ]
+}

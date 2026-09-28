@@ -297,13 +297,12 @@ func resolve_position(value: Variant, y_offset: float = 0.0, seed_value: int = 0
 
 # --- Resources / saving ---------------------------------------------------------------
 
-## Folder where generated data (terrain heightmaps, grass density...) is stored.
+## Folder where generated data (terrain heightmaps, grass density...) is stored:
+## next to the scene (res://levels/ilha.tscn -> res://levels/ilha_data/).
 func data_dir() -> String:
-	var base := "untitled"
 	if scene_path != "":
-		base = scene_path.get_file().get_basename()
-	elif root != null:
-		base = str(root.name)
+		return scene_path.get_base_dir().path_join(Util.slugify(scene_path.get_file().get_basename()) + "_data")
+	var base := str(root.name) if root != null else "untitled"
 	return "res://vibe_data".path_join(Util.slugify(base))
 
 

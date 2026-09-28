@@ -178,6 +178,7 @@ var _rebuild_queued := false
 var _water_queued := false
 var _built_resolution := -1
 var _applying_palette := false
+var _grass_overlays: Array = []
 
 
 func _init() -> void:
@@ -210,10 +211,13 @@ func _externalize_data() -> void:
 	var path := data.resource_path
 	if path == "" or path.contains("::"):
 		var root := get_tree().edited_scene_root if is_inside_tree() else null
-		var base := "untitled"
-		if root != null:
-			base = root.scene_file_path.get_file().get_basename() if root.scene_file_path != "" else str(root.name)
-		var dir := "res://vibe_data/" + Palettes.normalize(base).replace(" ", "_")
+		var dir := "res://vibe_data/untitled"
+		if root != null and root.scene_file_path != "":
+			# Next to the scene: res://levels/ilha.tscn -> res://levels/ilha_data/
+			var file := root.scene_file_path
+			dir = file.get_base_dir().path_join(file.get_file().get_basename().to_lower().replace(" ", "_") + "_data")
+		elif root != null:
+			dir = "res://vibe_data/" + str(root.name).to_lower().replace(" ", "_")
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 		path = dir.path_join("%s_terrain.res" % Palettes.normalize(str(name)).replace(" ", "_"))
 		var n := 2
@@ -603,6 +607,39 @@ func clear_water_features() -> void:
 
 
 ## Shows the circular brush cursor (local position) on the terrain surface.
+## Ground tint painted by grass layers (called by VibeGrass3D). Up to 3 grass
+## layers tint the terrain, so grassy areas keep their color far away where the
+## blades are no longer drawn. Colors: rgb + strength in alpha.
+func set_grass_overlay(owner_id: int, density: Texture2D, near_color: Color, far_color: Color, view_distance: float) -> void:
+	var entry := {"id": owner_id, "tex": density, "near": near_color, "far": far_color, "range": view_distance}
+	for o in _grass_overlays:
+		if o.id == owner_id:
+			o.merge(entry, true)
+			_apply_grass_overlays()
+			return
+	_grass_overlays.append(entry)
+	_apply_grass_overlays()
+
+
+func remove_grass_overlay(owner_id: int) -> void:
+	for i in range(_grass_overlays.size() - 1, -1, -1):
+		if _grass_overlays[i].id == owner_id:
+			_grass_overlays.remove_at(i)
+	_apply_grass_overlays()
+
+
+func _apply_grass_overlays() -> void:
+	var mat := _active_material()
+	if mat == null:
+		return
+	for i in 3:
+		var o: Dictionary = _grass_overlays[i] if i < _grass_overlays.size() else {}
+		mat.set_shader_parameter("grass_map_%d" % i, o.get("tex", null))
+		mat.set_shader_parameter("grass_near_%d" % i, o.get("near", Color(0, 0, 0, 0)))
+		mat.set_shader_parameter("grass_far_%d" % i, o.get("far", Color(0, 0, 0, 0)))
+		mat.set_shader_parameter("grass_range_%d" % i, float(o.get("range", 70.0)))
+
+
 func show_brush(local_pos: Vector3, radius: float, color: Color = Color(1.0, 0.75, 0.2)) -> void:
 	var mat := _active_material()
 	if mat == null:
@@ -699,6 +736,7 @@ func _update_material() -> void:
 	mat.set_shader_parameter("terrain_half_size", get_size() * 0.5)
 	mat.set_shader_parameter("skirt_depth", maxf(2.0, data.cell_size * 4.0))
 	mat.set_shader_parameter("blend_sharpness", blend_sharpness)
+	mat.set_shader_parameter("vertex_jitter", data.cell_size * lowpoly_step * 0.4 if style == "lowpoly" else 0.0)
 	match style:
 		"cel":
 			mat.set_shader_parameter("bands", 2.0)
@@ -731,6 +769,7 @@ func _update_material() -> void:
 		mat.set_shader_parameter(p + "use_normal", nrm != null)
 		mat.set_shader_parameter(p + "normal", nrm)
 		mat.set_shader_parameter(p + "uv_scale", l.uv_scale)
+	_apply_grass_overlays()
 
 
 func _clear_children(root: Node) -> void:
@@ -774,62 +813,74 @@ func _build_chunks() -> void:
 	_built_resolution = data.resolution
 
 
-## Ring of coarse geometry around the terrain. With the terrain shader, points
-## outside the heightmap sample the border texels, so the terrain edge simply
-## continues to the horizon (generators flatten the borders for this).
+## Ring of coarse geometry around the terrain: concentric square loops whose
+## inner loop matches the terrain border. Points outside the heightmap sample
+## the border texels in the shader, so the ground continues seamlessly, then
+## rises into distant hills that frame the scene and fade into the fog.
+## (VERTEX.y of ring vertices = extra hill height, see terrain_common.)
 func _build_horizon_mesh() -> ArrayMesh:
 	var half := get_size() * 0.5
 	var far := maxf(half * horizon_extent, half + 200.0)
-	var cell: float = data.cell_size
-	var along: Array = []
-	var s := half
-	while s < far:
-		along.push_front(-s)
-		along.append(s)
-		s *= 2.0
-	along.push_front(-far)
-	along.append(far)
-	var inner: Array = []
-	var step := float(chunk_size) * cell
-	var x := -half + step
-	while x < half - 0.001:
-		inner.append(x)
-		x += step
-	var xs: Array = []
-	for v in along:
-		if v <= -half:
-			xs.append(v)
-	xs.append_array(inner)
-	for v in along:
-		if v >= half:
-			xs.append(v)
+	var r := data.height_range()
+	var relief := maxf(r.y - r.x, 12.0)
+	var noise := FastNoiseLite.new()
+	noise.seed = int(hash(str(name))) % 10000 + 17
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.fractal_type = FastNoiseLite.FRACTAL_RIDGED
+	noise.fractal_octaves = 4
+	noise.frequency = 1.0 / maxf(half * 1.1, 60.0)
+	var hills := func(x: float, z: float) -> float:
+		var o := maxf(absf(x), absf(z)) - half
+		var ramp := smoothstep(half * 0.35, half * 2.4, o)
+		var amp := relief * (0.55 + 0.9 * smoothstep(half * 2.0, far * 0.6, o))
+		var n := noise.get_noise_2d(x, z) * 0.5 + 0.5
+		return ramp * amp * (0.25 + 0.75 * n * n)
 	var outs: Array = [0.0]
-	var d := 8.0
-	while half + d < far:
-		outs.append(d)
-		d *= 2.5
+	var o := maxf(half * 0.05, data.cell_size * 4.0)
+	while half + o < far:
+		outs.append(o)
+		o *= 1.32
 	outs.append(far - half)
+	var per_side := 48
+	var loop_len := per_side * 4
 	var verts := PackedVector3Array()
-	var idx := PackedInt32Array()
-	# North (-Z) and south (+Z) strips span the full width; west/east strips fill the middle.
-	for side in [-1.0, 1.0]:
-		var base := verts.size()
-		for o in outs:
-			for vx in xs:
-				verts.append(Vector3(vx, 0.0, side * (half + o)))
-		_grid_indices(idx, base, xs.size(), outs.size(), side > 0.0)
-	var zs: Array = [-half]
-	zs.append_array(inner)
-	zs.append(half)
-	for side in [-1.0, 1.0]:
-		var base := verts.size()
-		for o in outs:
-			for vz in zs:
-				verts.append(Vector3(side * (half + o), 0.0, vz))
-		_grid_indices(idx, base, zs.size(), outs.size(), side < 0.0)
 	var normals := PackedVector3Array()
-	normals.resize(verts.size())
-	normals.fill(Vector3.UP)
+	var top := r.y
+	for k in outs.size():
+		var e: float = half + float(outs[k])
+		for i in loop_len:
+			var side := floori(float(i) / float(per_side))
+			var t := float(i % per_side) / float(per_side) * 2.0 - 1.0
+			var x := 0.0
+			var z := 0.0
+			match side:
+				0:
+					x = t * e
+					z = -e
+				1:
+					x = e
+					z = t * e
+				2:
+					x = -t * e
+					z = e
+				_:
+					x = -e
+					z = -t * e
+			var y: float = 0.0 if k == 0 else hills.call(x, z)
+			top = maxf(top, r.y + y)
+			var step := maxf(e * 0.02, 2.0)
+			var dx: float = hills.call(x + step, z) - hills.call(x - step, z)
+			var dz: float = hills.call(x, z + step) - hills.call(x, z - step)
+			verts.append(Vector3(x, y, z))
+			normals.append(Vector3(-dx, 2.0 * step, -dz).normalized() if k > 0 else Vector3.UP)
+	var idx := PackedInt32Array()
+	for k in outs.size() - 1:
+		var a0 := k * loop_len
+		var b0 := (k + 1) * loop_len
+		for i in loop_len:
+			var j := (i + 1) % loop_len
+			# Clockwise seen from above (Godot front faces).
+			idx.append_array([b0 + i, b0 + j, a0 + j, b0 + i, a0 + j, a0 + i])
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -837,23 +888,8 @@ func _build_horizon_mesh() -> ArrayMesh:
 	arrays[Mesh.ARRAY_INDEX] = idx
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	var r := data.height_range()
-	mesh.custom_aabb = AABB(Vector3(-far, r.x - 5.0, -far), Vector3(far * 2.0, r.y - r.x + 10.0, far * 2.0))
+	mesh.custom_aabb = AABB(Vector3(-far, r.x - 5.0, -far), Vector3(far * 2.0, top - r.x + 10.0, far * 2.0))
 	return mesh
-
-
-## Adds two triangles per grid cell; `flip` keeps faces pointing up on every strip.
-func _grid_indices(idx: PackedInt32Array, base: int, cols: int, rows: int, flip: bool) -> void:
-	for r in rows - 1:
-		for c in cols - 1:
-			var a := base + r * cols + c
-			var b := a + 1
-			var cc := a + cols + 1
-			var dd := a + cols
-			if flip:
-				idx.append_array([a, b, cc, a, cc, dd])
-			else:
-				idx.append_array([a, cc, b, a, dd, cc])
 
 
 func _build_chunk_mesh(x0: int, z0: int, qw: int, qh: int) -> ArrayMesh:
@@ -992,7 +1028,8 @@ func _update_water_material() -> void:
 			_water_material.set_shader_parameter("softness", 0.005 if style == "cel" else (0.1 if style == "stylized" else 0.02))
 			_water_material.set_shader_parameter("color_bands", 2.0 if style == "cel" else (6.0 if style == "stylized" else 3.0))
 		"lowpoly":
-			deep = Color.from_hsv(deep.h, deep.s, clampf(deep.v * 1.7, 0.0, 1.0), 0.95)
+			deep = Color.from_hsv(deep.h, minf(deep.s * 0.95, 1.0), clampf(deep.v * 2.4, 0.0, 1.0), 0.96)
+			shallow = Color.from_hsv(shallow.h, shallow.s, clampf(shallow.v * 1.35, 0.0, 1.0), 0.9)
 	_water_material.set_shader_parameter("deep_color", deep)
 	_water_material.set_shader_parameter("shallow_color", shallow)
 	if data != null:
@@ -1056,29 +1093,32 @@ func _build_water() -> void:
 			_water_root.add_child(mi, false, Node.INTERNAL_MODE_BACK)
 
 
+## Lake surface: a square grid clipped to the circle (even triangles, so the
+## faceted low-poly waves look right; the shore is where it meets the ground).
 func _disc_mesh(center: Vector2, radius: float, level: float) -> ArrayMesh:
+	var n := clampi(int(radius / 1.6), 12, 72)
+	var step := radius * 2.0 / float(n)
+	var origin := center - Vector2(radius, radius)
 	var verts := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var idx := PackedInt32Array()
-	var seg := 48
-	var rings := 4
-	verts.append(Vector3(center.x, level, center.y))
-	uvs.append(Vector2(0.5, 0.5))
-	for r in range(1, rings + 1):
-		var rr := radius * float(r) / float(rings)
-		for s in seg:
-			var a := TAU * float(s) / float(seg)
-			verts.append(Vector3(center.x + cos(a) * rr, level, center.y + sin(a) * rr))
-			uvs.append(Vector2(0.5 + cos(a) * 0.5 * float(r) / rings, 0.5 + sin(a) * 0.5 * float(r) / rings))
-	for s in seg:
-		var s2 := (s + 1) % seg
-		idx.append_array([0, 1 + s, 1 + s2])
-	for r in range(1, rings):
-		var inner := 1 + (r - 1) * seg
-		var outer := 1 + r * seg
-		for s in seg:
-			var s2 := (s + 1) % seg
-			idx.append_array([inner + s, outer + s, outer + s2, inner + s, outer + s2, inner + s2])
+	for gz in n + 1:
+		for gx in n + 1:
+			verts.append(Vector3(origin.x + gx * step, level, origin.y + gz * step))
+			uvs.append(Vector2(float(gx) / n, float(gz) / n))
+	for gz in n:
+		for gx in n:
+			var cc := origin + Vector2(gx + 0.5, gz + 0.5) * step
+			if cc.distance_to(center) > radius + step * 0.75:
+				continue
+			var a := gz * (n + 1) + gx
+			var b := a + 1
+			var c := a + n + 2
+			var d := a + n + 1
+			if (gx + gz) % 2 == 0:
+				idx.append_array([a, b, c, a, c, d])
+			else:
+				idx.append_array([a, b, d, b, c, d])
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts

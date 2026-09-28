@@ -96,7 +96,7 @@ func register(reg) -> void:
 		"description": "Adds (or replaces) the main camera. type 'fly' attaches a WASD + mouse fly-camera script for exploring the world when the game runs.",
 		"args": {
 			"type": {"type": "string", "default": "fly", "enum": ["fly", "static"], "description": "Camera behavior."},
-			"view": {"type": "string", "default": "aerial", "enum": ["aerial", "ground", "top", "north", "south", "east", "west"], "description": "Automatic framing of the terrain."},
+			"view": {"type": "string", "default": "aerial", "enum": ["aerial", "hero", "ground", "top", "north", "south", "east", "west"], "description": "Automatic framing of the terrain ('hero' = low three-quarter shot across the landscape)."},
 			"position": {"type": "position", "description": "Explicit camera position (overrides view)."},
 			"look_at": {"type": "position", "description": "Point to look at."},
 			"name": {"type": "string", "default": "VibeCamera", "description": "Node name."},
@@ -108,7 +108,7 @@ func register(reg) -> void:
 		"aliases": ["scene.screenshot", "editor.screenshot", "capture"],
 		"args": {
 			"path": {"type": "string", "description": "Output PNG (default res://.vibe/screenshots/shot_<time>.png)."},
-			"view": {"type": "string", "default": "aerial", "enum": ["aerial", "top", "ground", "north", "south", "east", "west", "editor"], "description": "Automatic camera placement ('editor' = what the editor viewport shows)."},
+			"view": {"type": "string", "default": "aerial", "enum": ["aerial", "hero", "top", "ground", "north", "south", "east", "west", "camera", "editor"], "description": "Automatic camera placement: 'hero' = low three-quarter shot across the landscape, 'camera' = the scene's camera, 'editor' = what the editor viewport shows."},
 			"target": {"type": "string", "description": "Node name/path to frame (e.g. a VFX)."},
 			"position": {"type": "position", "description": "Camera position (overrides view)."},
 			"look_at": {"type": "position", "description": "Point to look at (with position)."},
@@ -568,10 +568,51 @@ func auto_view(ctx, view: String) -> Array:
 			var look := eye + to_center.normalized() * 30.0
 			look.y = terrain.get_height_at_world(look) + 3.0
 			return [eye, look]
+		"hero":
+			return _hero_view(ctx, terrain, center, s)
 		"north", "south", "east", "west":
 			var dir: Vector3 = {"north": Vector3(0, 0, -1), "south": Vector3(0, 0, 1), "east": Vector3(1, 0, 0), "west": Vector3(-1, 0, 0)}[view]
 			return [center + dir * s * 0.62 + Vector3.UP * (peak + s * 0.12), center + Vector3.UP * (mid * 0.6)]
-	return [center + Vector3(s * 0.42, peak + s * 0.3, s * 0.42), center + Vector3.UP * (mid * 0.5)]
+	return [center + Vector3(s * 0.36, peak * 0.75 + s * 0.24, s * 0.36), center + Vector3.UP * (mid * 0.5)]
+
+
+## Low three-quarter view across the landscape: tries 32 spots around the
+## center and keeps one over land, with a clear line of sight and the sun
+## behind/beside the camera (front-lit terrain reads best).
+func _hero_view(ctx, terrain: Node, center: Vector3, s: float) -> Array:
+	var to_sun := Vector3(0.35, 0.0, 0.94)
+	for n in ctx.all_nodes():
+		if n is DirectionalLight3D and (n as DirectionalLight3D).visible:
+			var z := (n as DirectionalLight3D).global_transform.basis.z
+			if Vector2(z.x, z.z).length() > 0.01:
+				to_sun = Vector3(z.x, 0.0, z.z).normalized()
+			break
+	var water: float = terrain.water_level if terrain.water_enabled else -INF
+	var target := center
+	target.y = maxf(terrain.get_height_at_world(center), water) + s * 0.02
+	var best: Array = [center + Vector3(s * 0.3, s * 0.1, s * 0.3), target]
+	var best_score := -INF
+	for i in 16:
+		var ang := TAU * float(i) / 16.0
+		var dir := Vector3(cos(ang), 0.0, sin(ang))
+		for rf in [0.24, 0.34]:
+			var xz: Vector3 = center + dir * s * rf
+			var g: float = terrain.get_height_at_world(xz)
+			var eye := Vector3(xz.x, maxf(g, water) + maxf(6.0, s * 0.045), xz.z)
+			var score := 0.0
+			if g < water + 0.5:
+				score -= 3.0
+			for k in range(1, 12):
+				var p := eye.lerp(target, float(k) / 12.0)
+				if terrain.get_height_at_world(p) > p.y - 1.0:
+					score -= 1.5
+			var v := target - eye
+			v.y = 0.0
+			score -= absf(v.normalized().dot(to_sun) + 0.45) * 1.2
+			if score > best_score:
+				best_score = score
+				best = [eye, target]
+	return best
 
 
 func _scene_bounds(ctx) -> AABB:
@@ -665,6 +706,11 @@ func _screenshot(args: Dictionary, ctx) -> Variant:
 			var ecam: Camera3D = ev.get_camera_3d()
 			pos_target = [ecam.global_position, ecam.global_position - ecam.global_transform.basis.z * 10.0]
 			cam.fov = ecam.fov
+	if args.view == "camera":
+		var scam := _scene_camera(ctx)
+		if scam != null:
+			pos_target = [scam.global_position, scam.global_position - scam.global_transform.basis.z * 10.0]
+			cam.fov = scam.fov
 	if str(args.get("target", "")) != "":
 		var n: Node = ctx.find_node(args.target)
 		if n == null or not (n is Node3D):
@@ -740,6 +786,17 @@ func _screenshot(args: Dictionary, ctx) -> Variant:
 		"size": [img.get_width(), img.get_height()],
 		"camera": {"position": pos_target[0], "look_at": pos_target[1]},
 	}
+
+
+func _scene_camera(ctx) -> Camera3D:
+	var first: Camera3D = null
+	for n in ctx.all_nodes():
+		if n is Camera3D:
+			if (n as Camera3D).current:
+				return n
+			if first == null:
+				first = n
+	return first
 
 
 func _scene_has_sun(ctx) -> bool:

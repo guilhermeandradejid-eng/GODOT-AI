@@ -21,6 +21,8 @@ void fragment() {
 	vec3 albedo = c0.rgb * hb.x + c1.rgb * hb.y + c2.rgb * hb.z + c3.rgb * hb.w;
 	vec3 emission = c0.rgb * layer0_emission * hb.x + c1.rgb * layer1_emission * hb.y
 		+ c2.rgb * layer2_emission * hb.z + c3.rgb * layer3_emission * hb.w;
+	float grass = 0.0;
+	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, grass);
 	float m = t_fbm(v_local * 0.01);
 	albedo = mix(albedo * vec3(0.92, 0.95, 1.06), albedo * vec3(1.08, 1.04, 0.92), m);
 	albedo *= 1.08;

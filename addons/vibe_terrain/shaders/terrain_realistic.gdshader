@@ -11,6 +11,9 @@ void fragment() {
 	vec4 w = raw_weights();
 	vec3 n_ws = normalize(v_normal_ws);
 	vec3 p = v_local;
+	vec3 dpdx = dFdx(p);
+	vec3 dpdy = dFdy(p);
+	float far = smoothstep(far_start, far_end, dist);
 
 	vec4 a0 = vec4(0.0); vec4 a1 = vec4(0.0); vec4 a2 = vec4(0.0); vec4 a3 = vec4(0.0);
 	vec3 n0 = n_ws; vec3 n1 = n_ws; vec3 n2 = n_ws; vec3 n3 = n_ws;
@@ -18,7 +21,7 @@ void fragment() {
 
 	if (w.x > 0.003) {
 		if (layer0_use_albedo) {
-			a0 = sample_layer(layer0_albedo, layer0_normal, layer0_use_normal, layer0_uv_scale, p, n_ws, layer0_roughness, n0, r0);
+			a0 = sample_layer(layer0_albedo, layer0_normal, layer0_use_normal, layer0_uv_scale, p, dpdx, dpdy, n_ws, layer0_roughness, far, n0, r0);
 			a0.rgb *= layer0_tint;
 		} else {
 			a0 = procedural_layer(layer0_color_a, layer0_color_b, layer0_noise_scale, layer0_strata, layer0_emission, p, detail);
@@ -26,7 +29,7 @@ void fragment() {
 	}
 	if (w.y > 0.003) {
 		if (layer1_use_albedo) {
-			a1 = sample_layer(layer1_albedo, layer1_normal, layer1_use_normal, layer1_uv_scale, p, n_ws, layer1_roughness, n1, r1);
+			a1 = sample_layer(layer1_albedo, layer1_normal, layer1_use_normal, layer1_uv_scale, p, dpdx, dpdy, n_ws, layer1_roughness, far, n1, r1);
 			a1.rgb *= layer1_tint;
 		} else {
 			a1 = procedural_layer(layer1_color_a, layer1_color_b, layer1_noise_scale, layer1_strata, layer1_emission, p, detail);
@@ -34,7 +37,7 @@ void fragment() {
 	}
 	if (w.z > 0.003) {
 		if (layer2_use_albedo) {
-			a2 = sample_layer(layer2_albedo, layer2_normal, layer2_use_normal, layer2_uv_scale, p, n_ws, layer2_roughness, n2, r2);
+			a2 = sample_layer(layer2_albedo, layer2_normal, layer2_use_normal, layer2_uv_scale, p, dpdx, dpdy, n_ws, layer2_roughness, far, n2, r2);
 			a2.rgb *= layer2_tint;
 		} else {
 			a2 = procedural_layer(layer2_color_a, layer2_color_b, layer2_noise_scale, layer2_strata, layer2_emission, p, detail);
@@ -42,7 +45,7 @@ void fragment() {
 	}
 	if (w.w > 0.003) {
 		if (layer3_use_albedo) {
-			a3 = sample_layer(layer3_albedo, layer3_normal, layer3_use_normal, layer3_uv_scale, p, n_ws, layer3_roughness, n3, r3);
+			a3 = sample_layer(layer3_albedo, layer3_normal, layer3_use_normal, layer3_uv_scale, p, dpdx, dpdy, n_ws, layer3_roughness, far, n3, r3);
 			a3.rgb *= layer3_tint;
 		} else {
 			a3 = procedural_layer(layer3_color_a, layer3_color_b, layer3_noise_scale, layer3_strata, layer3_emission, p, detail);
@@ -54,6 +57,13 @@ void fragment() {
 	vec3 wn = normalize(n0 * hb.x + n1 * hb.y + n2 * hb.z + n3 * hb.w);
 	float rough = r0 * hb.x + r1 * hb.y + r2 * hb.z + r3 * hb.w;
 	float height = dot(vec4(a0.a, a1.a, a2.a, a3.a), hb);
+
+	// Grass layers tint the ground so meadows still read as grass far away.
+	float grass = 0.0;
+	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, grass);
+	wn = normalize(mix(wn, n_ws, grass * 0.6));
+	rough = mix(rough, 0.95, grass);
+	height = mix(height, 0.45, grass);
 
 	vec3 emission = vec3(0.0);
 	emission += a0.rgb * layer0_emission * hb.x * pow(1.0 - a0.a, 2.0);
