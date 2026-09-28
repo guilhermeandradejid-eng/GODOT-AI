@@ -1,0 +1,19 @@
+# Godot 4
+.godot/
+*.translation
+export_presets.cfg
+/android/
+
+# Vibe Suite runtime files (screenshots, CLI state)
+.vibe/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test scratch output
+tests/tmp/
