@@ -614,6 +614,8 @@ func _update_material() -> void:
 			mat.set_shader_parameter("cell_size", t.data.cell_size)
 			mat.set_shader_parameter("has_terrain", true)
 			mat.set_shader_parameter("water_level", t.water_level if t.water_enabled else -100000.0)
+			# The coarse low-poly terrain surface differs a bit from the heightmap near the shore.
+			mat.set_shader_parameter("shore_margin", 0.9 if str(t.style) == "lowpoly" else 0.15)
 		else:
 			mat.set_shader_parameter("has_terrain", false)
 			mat.set_shader_parameter("water_level", -100000.0)

@@ -1,0 +1,160 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_a8j0a"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_0qv5a"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_e4c3a"]
+[ext_resource type="Resource" path="res://demos/vulcao_data/terrain_terrain.res" id="4_vgjc1"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_lmf0u"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="6_v2h2u"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="7_f44s7"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="8_e2mi8"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="9_xxfmm"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1xxm1"]
+shader = ExtResource("1_a8j0a")
+shader_parameter/top_color = Color(0.11372549, 0.14117648, 0.18039216, 1)
+shader_parameter/horizon_color = Color(0.2901961, 0.33333334, 0.3882353, 1)
+shader_parameter/ground_color = Color(0.13333334, 0.14901961, 0.17254902, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(0.6666667, 0.7058824, 0.76862746, 1)
+shader_parameter/sun_size = 0.0
+shader_parameter/sun_glow = 0.0
+shader_parameter/moon = 0.0
+shader_parameter/stars = 0.0
+shader_parameter/cloud_coverage = 1.0
+shader_parameter/cloud_color = Color(0.22745098, 0.25882354, 0.30588236, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 0.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_0qv5a")
+
+[sub_resource type="Sky" id="Sky_7cgnq"]
+sky_material = SubResource("ShaderMaterial_1xxm1")
+
+[sub_resource type="Environment" id="Environment_rnqe6"]
+background_mode = 2
+sky = SubResource("Sky_7cgnq")
+ambient_light_source = 3
+ambient_light_energy = 0.45
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.1
+tonemap_white = 6.0
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 0.64
+glow_bloom = 0.024
+fog_enabled = true
+fog_light_color = Color(0.24313726, 0.2784314, 0.3254902, 1)
+fog_density = 0.0045
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+
+[sub_resource type="Resource" id="Resource_epifq"]
+script = ExtResource("5_lmf0u")
+name = "Cinzas"
+color_a = Color(0.16862746, 0.16078432, 0.15294118, 1)
+color_b = Color(0.2901961, 0.27058825, 0.25490198, 1)
+noise_scale = 0.3
+roughness = 0.95
+texture_set = "ash"
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_allnl"]
+script = ExtResource("5_lmf0u")
+name = "Basalto"
+color_a = Color(0.09019608, 0.08235294, 0.078431375, 1)
+color_b = Color(0.18039216, 0.16470589, 0.15686275, 1)
+noise_scale = 0.5
+roughness = 0.7
+texture_set = "gravel"
+tint = Color(0.3529412, 0.32156864, 0.2901961, 1)
+uv_scale = 2.5
+
+[sub_resource type="Resource" id="Resource_u8cdu"]
+script = ExtResource("5_lmf0u")
+name = "Rocha"
+color_a = Color(0.23137255, 0.18039216, 0.15294118, 1)
+color_b = Color(0.36078432, 0.27450982, 0.22745098, 1)
+noise_scale = 0.25
+strata = 0.3
+roughness = 0.85
+texture_set = "rock"
+tint = Color(0.41568628, 0.3529412, 0.32156864, 1)
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_q8ofv"]
+script = ExtResource("5_lmf0u")
+name = "Lava"
+color_a = Color(1, 0.2901961, 0, 1)
+color_b = Color(1, 0.7607843, 0.2, 1)
+noise_scale = 0.4
+roughness = 0.4
+emission = 4.0
+texture_set = "lava"
+uv_scale = 5.0
+
+[node name="Vulcao" type="Node3D" unique_id=1587455196]
+metadata/vibe_style = "realistic"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=1605714037]
+environment = SubResource("Environment_rnqe6")
+metadata/vibe_preset = "stormy"
+metadata/vibe_style = "realistic"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=881012590]
+transform = Transform3D(0.9848077, -0.09960051, 0.14224426, 0, 0.81915206, 0.57357645, -0.17364818, -0.56486255, 0.80670726, 0, 0, 0)
+light_color = Color(0.6666667, 0.7058824, 0.76862746, 1)
+light_energy = 0.35
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=1211996316]
+script = ExtResource("3_e4c3a")
+data = ExtResource("4_vgjc1")
+palette = "volcanic"
+layer_0 = SubResource("Resource_epifq")
+layer_1 = SubResource("Resource_allnl")
+layer_2 = SubResource("Resource_u8cdu")
+layer_3 = SubResource("Resource_q8ofv")
+water_enabled = true
+
+[node name="Pluma" type="Node3D" parent="." unique_id=123998631]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 84.0399, 12)
+script = ExtResource("6_v2h2u")
+preset = "volcano_plume"
+
+[node name="Embers" type="Node3D" parent="." unique_id=1729015026]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 84.0399, 12)
+script = ExtResource("6_v2h2u")
+preset = "embers"
+size = 2.0
+
+[node name="Lightning" type="Node3D" parent="." unique_id=938229153]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.047019, 48.226227, 38.27114)
+script = ExtResource("6_v2h2u")
+preset = "lightning"
+
+[node name="Smoke" type="Node3D" parent="." unique_id=63846965]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.047019, 48.226227, 38.27114)
+script = ExtResource("6_v2h2u")
+preset = "smoke"
+
+[node name="Smoke2" type="Node3D" parent="." unique_id=1124792102]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.822521, 72.986176, 9.116891)
+script = ExtResource("6_v2h2u")
+preset = "smoke"
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=1981190463]
+transform = Transform3D(0.38268343, 0.09657173, 0.9188184, 0, 0.9945219, -0.10452849, -0.9238795, 0.040001318, 0.38058704, 165.5592, 12.8, 68.576866)
+current = true
+script = ExtResource("7_f44s7")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1655280708 instance=ExtResource("8_e2mi8")]
+layer = 10
+script = ExtResource("9_xxfmm")
+title = "Ilha vulcânica"
+subtitle = "realistic · tempestade · lava, pluma e raios"
+prompt = "ilha vulcânica em erupção durante uma tempestade, com lava, brasas e raios"

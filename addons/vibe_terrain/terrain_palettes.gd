@@ -34,7 +34,10 @@ const PALETTES := {
 			{"name": "Rocha", "color_a": "#4d4a48", "color_b": "#7b7672", "noise_scale": 0.25, "strata": 0.4, "roughness": 0.85},
 			{"name": "Gelo", "color_a": "#a9cde6", "color_b": "#d8ecf7", "noise_scale": 0.15, "roughness": 0.15},
 		],
-		"rules": {"beach_layer": 3, "beach_band": 1.5, "cliff_layer": 2, "cliff_slope": 38.0, "steep_layer": 1, "steep_slope": 28.0, "peak_layer": -1},
+		# Snow sticks to fairly steep slopes (and covers the upper half even
+		# steeper): only real cliffs show rock.
+		"rules": {"beach_layer": 3, "beach_band": 1.5, "cliff_layer": 2, "cliff_slope": 52.0, "steep_layer": 1, "steep_slope": 44.0,
+			"peak_layer": 0, "peak_height": 0.45, "peak_max_slope": 60.0},
 	},
 	"desert": {
 		"description": "Areia dourada, cascalho, arenito e rocha escura / golden sand, gravel, sandstone, dark rock",
@@ -122,7 +125,7 @@ const PALETTES := {
 const TEXTURES := {
 	"temperate": [["grass_ground", "#95bd8c", 3.0], ["dirt", "#ffffff", 3.0], ["rock", "#ffffff", 6.0], ["snow", "#ffffff", 5.0]],
 	"tropical": [["grass_ground", "#72ba70", 3.0], ["sand", "#ffffff", 4.0], ["rock", "#8a847e", 6.0], ["moss", "#ffffff", 3.0]],
-	"snowy": [["snow", "#ffffff", 5.0], ["gravel", "#c8d0dc", 2.5], ["rock", "#ffffff", 6.0], ["ice", "#ffffff", 5.0]],
+	"snowy": [["snow", "#ffffff", 5.0], ["gravel", "#c8d0dc", 2.5], ["rock", "#8e949c", 6.0], ["ice", "#ffffff", 5.0]],
 	"desert": [["sand", "#ffffff", 4.0], ["gravel", "#e0c098", 2.5], ["sandstone", "#ffffff", 7.0], ["rock", "#a07a5c", 6.0]],
 	"canyon": [["sand", "#f0a878", 4.0], ["dirt", "#e09a68", 3.0], ["sandstone", "#ffffff", 7.0], ["sandstone", "#f4dcc0", 5.0]],
 	"volcanic": [["ash", "#ffffff", 3.0], ["gravel", "#5a524a", 2.5], ["rock", "#6a5a52", 6.0], ["lava", "#ffffff", 5.0]],

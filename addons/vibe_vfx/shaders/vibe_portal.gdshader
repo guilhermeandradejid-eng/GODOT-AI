@@ -5,7 +5,7 @@ render_mode blend_add, depth_draw_never, cull_disabled, unshaded, shadows_disabl
 uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
 uniform vec3 color_inner : source_color = vec3(0.62, 0.95, 1.0);
 uniform vec3 color_outer : source_color = vec3(0.54, 0.36, 1.0);
-uniform float intensity = 2.5;
+uniform float intensity = 1.5;
 uniform float swirl = 3.0;
 uniform float speed = 0.6;
 uniform float bands = 0.0;
@@ -20,7 +20,8 @@ void fragment() {
 	float n2 = texture(noise_tex, suv * 2.3 + vec2(0.3, 0.7)).r;
 	float ring = (1.0 - smoothstep(0.82, 1.0, r)) * smoothstep(0.0, 0.35, r + n * 0.15);
 	float glow = pow(clamp(1.0 - r, 0.0, 1.0), 1.5);
-	float v = clamp(ring * (0.35 + n * 0.9 + n2 * 0.35) + glow * 0.6, 0.0, 2.0);
+	// Bright swirling rim, dimmer depth in the middle (reads as a hole, not a lamp).
+	float v = clamp(ring * (0.3 + n * 0.85 + n2 * 0.3) + glow * 0.3, 0.0, 1.6);
 	if (bands > 0.5) {
 		v = floor(v * bands) / bands;
 	}

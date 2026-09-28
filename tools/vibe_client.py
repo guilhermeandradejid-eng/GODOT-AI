@@ -49,9 +49,17 @@ def find_project(start: str | os.PathLike | None = None) -> Path:
     raise VibeError("project.godot not found (run inside the Godot project or pass --project)")
 
 
-def find_godot(explicit: str | None = None) -> str:
+def find_godot(explicit: str | None = None, project: Path | None = None) -> str:
+    """Godot binary: explicit > GODOT_BIN/GODOT > PATH > the one remembered for
+    this project (.vibe/state.json, written by earlier runs) > usual locations."""
+    remembered = None
+    if project is not None:
+        try:
+            remembered = json.loads((Path(project) / STATE_FILE).read_text(encoding="utf-8")).get("godot")
+        except (OSError, ValueError):
+            remembered = None
     candidates = [explicit, os.environ.get("GODOT_BIN"), os.environ.get("GODOT"),
-                  "godot4", "godot", "godot-4", "Godot", "godot.exe", "Godot_v4.exe"]
+                  "godot4", "godot", "godot-4", "Godot", "godot.exe", "Godot_v4.exe", remembered]
     for c in candidates:
         if not c:
             continue
@@ -169,8 +177,9 @@ class VibeClient:
         subprocess.run([godot, "--headless", "--path", str(self.project), "--import"],
                        capture_output=True, text=True, timeout=self.timeout)
 
-    def _run_headless(self, commands: list[dict], render: bool = False, keep_going: bool = False) -> dict:
-        godot = find_godot(self.godot)
+    def _run_headless(self, commands: list[dict], render: bool = False, keep_going: bool = False,
+                      save: bool = True) -> dict:
+        godot = find_godot(self.godot, self.project)
         self._ensure_imported(godot)
         scene = self.scene or self.load_state().get("scene", "")
         args = [godot]
@@ -181,6 +190,8 @@ class VibeClient:
             args += ["--scene", scene]
         if keep_going:
             args.append("--keep-going")
+        if not save:
+            args.append("--no-save")
         args += ["--cmd", json.dumps(commands)]
         env = dict(os.environ)
         if render and sys.platform.startswith("linux") and not env.get("DISPLAY") and not env.get("WAYLAND_DISPLAY"):
@@ -194,15 +205,20 @@ class VibeClient:
             if line.startswith(MARKER):
                 result = json.loads(line[len(MARKER):])
                 result["seconds"] = round(time.time() - started, 2)
+                # Remember the scene and the Godot binary (so the MCP server,
+                # started by Claude Code without GODOT_BIN, finds it too).
+                remember = {"godot": str(Path(godot).resolve())}
                 if result.get("scene"):
-                    self.save_state(scene=result["scene"])
+                    remember["scene"] = result["scene"]
+                self.save_state(**remember)
                 return result
         errors = [l for l in (proc.stderr + "\n" + proc.stdout).splitlines() if "ERROR" in l or "error" in l.lower()]
         raise VibeError("Godot did not return a result (exit %s).\n%s" % (proc.returncode, "\n".join(errors[-15:])))
 
     # ------------------------------------------------------------------ public API
-    def run(self, commands: list[dict], keep_going: bool = False) -> dict:
-        """Runs one or more commands. Returns {"ok", "mode", "results": [...]}."""
+    def run(self, commands: list[dict], keep_going: bool = False, save: bool = True) -> dict:
+        """Runs one or more commands. Returns {"ok", "mode", "results": [...]}.
+        save=False (headless only) leaves the scene file untouched."""
         live = None if self.mode == "headless" else self.live_available()
         if self.mode == "live" and live is None:
             raise VibeError("the Godot editor is not running with the Vibe plugins (no live bridge found)")
@@ -213,7 +229,7 @@ class VibeClient:
             r = self._http(live, "POST", "/batch", {"commands": commands, "stop_on_error": not keep_going})
             return {"ok": r.get("ok", False), "mode": "live", "results": r.get("results", [])}
         render = any(c.get("cmd") in RENDER_COMMANDS for c in commands)
-        return self._run_headless(commands, render=render, keep_going=keep_going)
+        return self._run_headless(commands, render=render, keep_going=keep_going, save=save)
 
     def call(self, cmd: str, args: dict | None = None) -> dict:
         """Runs a single command and returns its result dict ({"ok", "result"|"error", ...})."""
@@ -235,7 +251,7 @@ class VibeClient:
         snap = self.project / "addons" / "vibe_core" / "commands.schema.json"
         if snap.exists():
             return json.loads(snap.read_text(encoding="utf-8")).get("commands", [])
-        godot = find_godot(self.godot)
+        godot = find_godot(self.godot, self.project)
         self._ensure_imported(godot)
         proc = subprocess.run([godot, "--headless", "--path", str(self.project), "--script", CLI_SCRIPT, "--", "--schema"],
                               capture_output=True, text=True, timeout=self.timeout)

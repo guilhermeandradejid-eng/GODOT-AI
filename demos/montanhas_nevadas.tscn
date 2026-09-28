@@ -1,0 +1,156 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_fpt37"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_wbhd8"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_xe75o"]
+[ext_resource type="Resource" path="res://demos/montanhas_nevadas_data/terrain_terrain.res" id="4_f3use"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_ndxmr"]
+[ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_0q2ym"]
+[ext_resource type="Resource" path="res://demos/montanhas_nevadas_data/grass_grass.res" id="7_u8u7l"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="8_3m1u3"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="9_0c3nr"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="10_ac4qs"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="11_s8wfp"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6qd2d"]
+shader = ExtResource("1_fpt37")
+shader_parameter/top_color = Color(0.32941177, 0.4392157, 0.6901961, 1)
+shader_parameter/horizon_color = Color(1, 0.7764706, 0.6509804, 1)
+shader_parameter/ground_color = Color(0.2901961, 0.26666668, 0.3137255, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(1, 0.8156863, 0.68235296, 1)
+shader_parameter/sun_size = 0.032
+shader_parameter/sun_glow = 0.6
+shader_parameter/moon = 0.0
+shader_parameter/stars = 0.0
+shader_parameter/cloud_coverage = 0.3
+shader_parameter/cloud_color = Color(1, 0.84705883, 0.78431374, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 0.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_wbhd8")
+
+[sub_resource type="Sky" id="Sky_2622q"]
+sky_material = SubResource("ShaderMaterial_6qd2d")
+
+[sub_resource type="Environment" id="Environment_v1ror"]
+background_mode = 2
+sky = SubResource("Sky_2622q")
+ambient_light_source = 3
+ambient_light_energy = 0.5
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 0.95
+tonemap_white = 6.0
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 0.64
+glow_bloom = 0.024
+fog_enabled = true
+fog_light_color = Color(0.8392157, 0.76862746, 0.83137256, 1)
+fog_density = 0.0008
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+
+[sub_resource type="Resource" id="Resource_wcebx"]
+script = ExtResource("5_ndxmr")
+name = "Neve"
+color_a = Color(0.9019608, 0.92941177, 0.9607843, 1)
+color_b = Color(1, 1, 1, 1)
+noise_scale = 0.2
+roughness = 0.5
+texture_set = "snow"
+uv_scale = 5.0
+
+[sub_resource type="Resource" id="Resource_nl2c2"]
+script = ExtResource("5_ndxmr")
+name = "Cascalho"
+color_a = Color(0.43529412, 0.42745098, 0.41960785, 1)
+color_b = Color(0.6117647, 0.59607846, 0.5803922, 1)
+noise_scale = 0.7
+texture_set = "gravel"
+tint = Color(0.78431374, 0.8156863, 0.8627451, 1)
+uv_scale = 2.5
+
+[sub_resource type="Resource" id="Resource_5eh4k"]
+script = ExtResource("5_ndxmr")
+name = "Rocha"
+color_a = Color(0.3019608, 0.2901961, 0.28235295, 1)
+color_b = Color(0.48235294, 0.4627451, 0.44705883, 1)
+noise_scale = 0.25
+strata = 0.4
+roughness = 0.85
+texture_set = "rock"
+tint = Color(0.5568628, 0.5803922, 0.6117647, 1)
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_yj4pl"]
+script = ExtResource("5_ndxmr")
+name = "Gelo"
+color_a = Color(0.6627451, 0.8039216, 0.9019608, 1)
+color_b = Color(0.84705883, 0.9254902, 0.96862745, 1)
+noise_scale = 0.15
+roughness = 0.15
+texture_set = "ice"
+uv_scale = 5.0
+
+[node name="MontanhasNevadas" type="Node3D" unique_id=1949008556]
+metadata/vibe_style = "realistic"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=466322326]
+environment = SubResource("Environment_v1ror")
+metadata/vibe_preset = "dawn"
+metadata/vibe_style = "realistic"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=379049003]
+transform = Transform3D(0.42261824, -0.21925572, 0.8793866, 0, 0.9702957, 0.2419219, -0.9063078, -0.10224061, 0.41006467, 0, 0, 0)
+light_color = Color(1, 0.8156863, 0.68235296, 1)
+light_energy = 1.25
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=953756440]
+script = ExtResource("3_xe75o")
+data = ExtResource("4_f3use")
+palette = "snowy"
+layer_0 = SubResource("Resource_wcebx")
+layer_1 = SubResource("Resource_nl2c2")
+layer_2 = SubResource("Resource_5eh4k")
+layer_3 = SubResource("Resource_yj4pl")
+
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=2016107955]
+script = ExtResource("6_0q2ym")
+data = ExtResource("7_u8u7l")
+preset = "tundra"
+blades_per_clump = 5
+blade_height = 0.22
+blade_width = 0.035
+blade_curve = 0.3
+density_per_m2 = 3.5
+color_base = Color(0.18431373, 0.22745098, 0.14901961, 1)
+color_tip = Color(0.6156863, 0.64705884, 0.5137255, 1)
+dry_color = Color(0.7137255, 0.6784314, 0.5411765, 1)
+dry_amount = 0.4
+sss_color = Color(0.78431374, 0.8156863, 0.627451, 1)
+flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
+wind_strength = 0.45
+
+[node name="Snowfall" type="Node3D" parent="." unique_id=923939704]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 77.26403, 0)
+script = ExtResource("8_3m1u3")
+preset = "snowfall"
+follow_camera = true
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=1277465089]
+transform = Transform3D(1, -9.253121e-18, 6.0529166e-17, 0, 0.9885162, 0.15111493, -6.123234e-17, -0.15111493, 0.9885162, 6.270192e-15, 74.925125, 102.4)
+current = true
+script = ExtResource("9_0c3nr")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=328725254 instance=ExtResource("10_ac4qs")]
+layer = 10
+script = ExtResource("11_s8wfp")
+title = "Montanhas nevadas"
+subtitle = "realistic · amanhecer · cordilheira com erosão"
+prompt = "cordilheira nevada ao amanhecer com neve caindo"

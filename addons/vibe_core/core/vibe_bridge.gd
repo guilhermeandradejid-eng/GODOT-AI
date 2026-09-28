@@ -126,7 +126,10 @@ func poll() -> void:
 		if available > 0:
 			var r: Array = peer.get_partial_data(available)
 			if r[0] == OK:
-				(c.buf as PackedByteArray).append_array(r[1])
+				# Packed arrays are values: append to a local copy and store it back.
+				var buf: PackedByteArray = c.buf
+				buf.append_array(r[1])
+				c.buf = buf
 		var req := _parse_request(c.buf)
 		if req.is_empty():
 			if Time.get_ticks_msec() - int(c.t) > TIMEOUT_MS:
@@ -203,6 +206,9 @@ func _handle(c: Dictionary, req: Dictionary) -> void:
 		var parsed = JSON.parse_string(req.body) if req.body != "" else {}
 		if not (parsed is Dictionary):
 			_respond(c, 400, {"ok": false, "error": "body must be a JSON object"})
+			return
+		if not context_factory.is_valid():
+			_respond(c, 500, {"ok": false, "error": "bridge has no command context"})
 			return
 		var ctx = context_factory.call()
 		if path == "/cmd":

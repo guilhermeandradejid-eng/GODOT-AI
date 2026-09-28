@@ -9,7 +9,7 @@
     "preset": "flat",
     "size": 96,
     "seed": 1,
-    "palette": "volcanic"
+    "palette": "lunar"
   },
   "vfx": [
     {
@@ -75,7 +75,7 @@
         0,
         -7
       ],
-      "scale": 0.35
+      "scale": 0.25
     },
     {
       "preset": "magic_aura",
@@ -124,7 +124,7 @@
         13,
         7
       ],
-      "scale": 0.6
+      "scale": 0.45
     },
     {
       "preset": "bubbles",
@@ -141,7 +141,7 @@
         -26,
         21
       ],
-      "scale": 0.4
+      "scale": 0.35
     },
     {
       "preset": "lightning",
@@ -180,13 +180,13 @@
     "type": "fly",
     "position": [
       0,
-      17,
-      46
+      21,
+      33
     ],
     "look_at": [
       0,
-      1,
-      2
+      0,
+      -3
     ]
   },
   "commands": [
@@ -197,13 +197,13 @@
         "name": "Label_fire",
         "position": [
           -26,
-          0.9,
+          0.6,
           -16.8
         ],
         "properties": {
           "text": "fogo",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -218,13 +218,13 @@
         "name": "Label_campfire",
         "position": [
           -13,
-          0.9,
+          0.6,
           -16.8
         ],
         "properties": {
           "text": "fogueira",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -239,13 +239,13 @@
         "name": "Label_torch",
         "position": [
           0,
-          0.9,
+          0.6,
           -16.8
         ],
         "properties": {
           "text": "tocha",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -260,13 +260,13 @@
         "name": "Label_embers",
         "position": [
           13,
-          0.9,
+          0.6,
           -16.8
         ],
         "properties": {
           "text": "brasas",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -281,13 +281,13 @@
         "name": "Label_sparks",
         "position": [
           26,
-          0.9,
+          0.6,
           -16.8
         ],
         "properties": {
           "text": "faíscas",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -302,13 +302,13 @@
         "name": "Label_smoke",
         "position": [
           -26,
-          0.9,
+          0.6,
           -2.8
         ],
         "properties": {
           "text": "fumaça",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -323,13 +323,13 @@
         "name": "Label_steam",
         "position": [
           -13,
-          0.9,
+          0.6,
           -2.8
         ],
         "properties": {
           "text": "vapor",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -344,13 +344,13 @@
         "name": "Label_volcano_plume",
         "position": [
           0,
-          0.9,
+          0.6,
           -2.8
         ],
         "properties": {
           "text": "pluma vulcânica",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -365,13 +365,13 @@
         "name": "Label_magic_aura",
         "position": [
           13,
-          0.9,
+          0.6,
           -2.8
         ],
         "properties": {
           "text": "aura mágica",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -386,13 +386,13 @@
         "name": "Label_portal",
         "position": [
           26,
-          0.9,
+          0.6,
           -2.8
         ],
         "properties": {
           "text": "portal",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -407,13 +407,13 @@
         "name": "Label_heal",
         "position": [
           -26,
-          0.9,
+          0.6,
           11.2
         ],
         "properties": {
           "text": "cura",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -428,13 +428,13 @@
         "name": "Label_force_field",
         "position": [
           -13,
-          0.9,
+          0.6,
           11.2
         ],
         "properties": {
           "text": "campo de força",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -449,13 +449,13 @@
         "name": "Label_fountain",
         "position": [
           0,
-          0.9,
+          0.6,
           11.2
         ],
         "properties": {
           "text": "fonte",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -470,13 +470,13 @@
         "name": "Label_waterfall",
         "position": [
           13,
-          0.9,
+          0.6,
           11.2
         ],
         "properties": {
           "text": "cachoeira",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -491,13 +491,13 @@
         "name": "Label_bubbles",
         "position": [
           26,
-          0.9,
+          0.6,
           11.2
         ],
         "properties": {
           "text": "bolhas",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -512,13 +512,13 @@
         "name": "Label_fireflies",
         "position": [
           -26,
-          0.9,
+          0.6,
           25.2
         ],
         "properties": {
           "text": "vagalumes",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -533,13 +533,13 @@
         "name": "Label_lightning",
         "position": [
           -13,
-          0.9,
+          0.6,
           25.2
         ],
         "properties": {
           "text": "raio",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -554,13 +554,13 @@
         "name": "Label_explosion",
         "position": [
           0,
-          0.9,
+          0.6,
           25.2
         ],
         "properties": {
           "text": "explosão",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -584,13 +584,13 @@
         "name": "Label_shockwave",
         "position": [
           13,
-          0.9,
+          0.6,
           25.2
         ],
         "properties": {
           "text": "onda de choque",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",
@@ -614,13 +614,13 @@
         "name": "Label_confetti",
         "position": [
           26,
-          0.9,
+          0.6,
           25.2
         ],
         "properties": {
           "text": "confete",
           "font_size": 96,
-          "pixel_size": 0.008,
+          "pixel_size": 0.013,
           "billboard": 1,
           "outline_size": 18,
           "modulate": "#ffffff",

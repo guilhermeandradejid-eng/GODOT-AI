@@ -1,6 +1,6 @@
 {
   "generated_by": "vibe_cli.gd --write-schema",
-  "godot": "4.7.2-stable (custom_build)",
+  "requires_godot": "4.3+",
   "modules": [
     "vibe_core",
     "vibe_grass",
@@ -25,10 +25,11 @@
         },
         "view": {
           "type": "string",
-          "description": "Automatic framing of the terrain.",
+          "description": "Automatic framing of the terrain ('hero' = low three-quarter shot across the landscape).",
           "default": "aerial",
           "enum": [
             "aerial",
+            "hero",
             "ground",
             "top",
             "north",
@@ -67,6 +68,7 @@
             "type": "string",
             "enum": [
               "aerial",
+              "hero",
               "ground",
               "top",
               "north",
@@ -75,7 +77,7 @@
               "west"
             ],
             "default": "aerial",
-            "description": "Automatic framing of the terrain."
+            "description": "Automatic framing of the terrain ('hero' = low three-quarter shot across the landscape)."
           },
           "position": {
             "description": "Explicit camera position (overrides view). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
@@ -1089,6 +1091,11 @@
           "type": "object",
           "description": "Property values to set, e.g. {\"light_color\": \"#ffaa55\", \"omni_range\": 12}.",
           "default": {}
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace a node with the same name under the parent (instead of adding 'Name2').",
+          "default": false
         }
       },
       "input_schema": {
@@ -1113,6 +1120,11 @@
             "type": "object",
             "default": {},
             "description": "Property values to set, e.g. {\"light_color\": \"#ffaa55\", \"omni_range\": 12}."
+          },
+          "replace": {
+            "type": "boolean",
+            "default": false,
+            "description": "Replace a node with the same name under the parent (instead of adding 'Name2')."
           }
         },
         "required": [
@@ -1386,16 +1398,18 @@
         },
         "view": {
           "type": "string",
-          "description": "Automatic camera placement ('editor' = what the editor viewport shows).",
+          "description": "Automatic camera placement: 'hero' = low three-quarter shot across the landscape, 'camera' = the scene's camera, 'editor' = what the editor viewport shows.",
           "default": "aerial",
           "enum": [
             "aerial",
+            "hero",
             "top",
             "ground",
             "north",
             "south",
             "east",
             "west",
+            "camera",
             "editor"
           ]
         },
@@ -1443,16 +1457,18 @@
             "type": "string",
             "enum": [
               "aerial",
+              "hero",
               "top",
               "ground",
               "north",
               "south",
               "east",
               "west",
+              "camera",
               "editor"
             ],
             "default": "aerial",
-            "description": "Automatic camera placement ('editor' = what the editor viewport shows)."
+            "description": "Automatic camera placement: 'hero' = low three-quarter shot across the landscape, 'camera' = the scene's camera, 'editor' = what the editor viewport shows."
           },
           "target": {
             "type": "string",

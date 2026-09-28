@@ -67,6 +67,7 @@ func register(reg) -> void:
 			"parent": {"type": "string", "description": "Parent node path/name (defaults to the scene root)."},
 			"position": {"type": "position", "description": "Where to place it (Node3D only)."},
 			"properties": {"type": "object", "default": {}, "description": "Property values to set, e.g. {\"light_color\": \"#ffaa55\", \"omni_range\": 12}."},
+			"replace": {"type": "boolean", "default": false, "description": "Replace a node with the same name under the parent (instead of adding 'Name2')."},
 		},
 		"handler": _node_add,
 		"examples": [{"type": "MeshInstance3D", "name": "Pedra", "position": [10, 4], "properties": {"mesh": {"type": "SphereMesh", "radius": 2}}}],
@@ -466,6 +467,10 @@ func _node_add(args: Dictionary, ctx) -> Variant:
 		if parent == null:
 			node.free()
 			return Util.err("parent not found: %s" % args.parent)
+	if Util.to_bool(args.get("replace", false)) and str(args.get("name", "")) != "":
+		var old: Node = parent.get_node_or_null(NodePath(str(args.name)))
+		if old != null and old != ctx.root:
+			ctx.remove_node(old)
 	node.name = ctx.unique_name(str(args.get("name", "")) if str(args.get("name", "")) != "" else str(args.type).get_file().get_basename(), parent)
 	_apply_properties(node, args.properties, ctx, false)
 	var world_pos = null
@@ -576,9 +581,12 @@ func auto_view(ctx, view: String) -> Array:
 	return [center + Vector3(s * 0.36, peak * 0.75 + s * 0.24, s * 0.36), center + Vector3.UP * (mid * 0.5)]
 
 
-## Low three-quarter view across the landscape: tries 32 spots around the
-## center and keeps one over land, with a clear line of sight and the sun
-## behind/beside the camera (front-lit terrain reads best).
+## Three-quarter view across the landscape, framed like a photo. Tries 80
+## spots around the center (5 distances x 16 directions), each looking toward
+## it with the pitch that puts the skyline in the upper third, and keeps the
+## best: skyline where the pitch can frame it, no slope right in front of the
+## lens, the sun behind/beside the camera (front-lit terrain reads best),
+## over land and, with a sea, some water in the picture.
 func _hero_view(ctx, terrain: Node, center: Vector3, s: float) -> Array:
 	var to_sun := Vector3(0.35, 0.0, 0.94)
 	for n in ctx.all_nodes():
@@ -587,31 +595,50 @@ func _hero_view(ctx, terrain: Node, center: Vector3, s: float) -> Array:
 			if Vector2(z.x, z.z).length() > 0.01:
 				to_sun = Vector3(z.x, 0.0, z.z).normalized()
 			break
-	var water: float = terrain.water_level if terrain.water_enabled else -INF
-	var target := center
-	target.y = maxf(terrain.get_height_at_world(center), water) + s * 0.02
-	var best: Array = [center + Vector3(s * 0.3, s * 0.1, s * 0.3), target]
+	var has_sea: bool = terrain.water_enabled
+	var water: float = terrain.water_level if has_sea else -INF
+	var third := deg_to_rad(10.0)  # skyline this far above the view center = upper third (60° fov)
+	var best: Array = [center + Vector3(s * 0.3, s * 0.1, s * 0.3), center]
 	var best_score := -INF
 	for i in 16:
 		var ang := TAU * float(i) / 16.0
 		var dir := Vector3(cos(ang), 0.0, sin(ang))
-		for rf in [0.24, 0.34]:
+		var fwd := -dir
+		for rf in [0.2, 0.3, 0.42, 0.56, 0.7]:
 			var xz: Vector3 = center + dir * s * rf
 			var g: float = terrain.get_height_at_world(xz)
-			var eye := Vector3(xz.x, maxf(g, water) + maxf(6.0, s * 0.045), xz.z)
+			var eye := Vector3(xz.x, maxf(g, water) + maxf(7.0, s * 0.05), xz.z)
 			var score := 0.0
-			if g < water + 0.5:
-				score -= 3.0
-			for k in range(1, 12):
-				var p := eye.lerp(target, float(k) / 12.0)
-				if terrain.get_height_at_world(p) > p.y - 1.0:
+			if g < water + 0.3:
+				score -= 1.0
+			# Skyline (highest elevation angle of the terrain ahead) and slopes
+			# rising right in front of the lens.
+			var skyline := -INF
+			for k in range(1, 25):
+				var d := s * 0.05 * k
+				var h: float = terrain.get_height_at_world(eye + fwd * d)
+				skyline = maxf(skyline, atan2(h - eye.y, d))
+				if d < s * 0.12 and h > eye.y - 1.0:
 					score -= 1.5
-			var v := target - eye
-			v.y = 0.0
-			score -= absf(v.normalized().dot(to_sun) + 0.45) * 1.2
+			var pitch := clampf(skyline - third, deg_to_rad(-14.0), deg_to_rad(6.0))
+			score -= absf(skyline - pitch - third) / third
+			score -= absf(fwd.dot(to_sun) + 0.45) * 1.2
+			if has_sea:
+				var wet := 0
+				var total := 0
+				for yaw in [-0.5, -0.25, 0.0, 0.25, 0.5]:
+					var ray := fwd.rotated(Vector3.UP, yaw)
+					for k in range(1, 7):
+						total += 1
+						if terrain.get_height_at_world(eye + ray * s * 0.13 * k) < water:
+							wet += 1
+				score += 1.0 - 2.5 * absf(float(wet) / float(total) - 0.3)
+			elif rf > 0.5:
+				score -= 0.4  # prefer standing on the terrain itself
 			if score > best_score:
 				best_score = score
-				best = [eye, target]
+				var look := (fwd * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
+				best = [eye, eye + look * 60.0]
 	return best
 
 
@@ -721,8 +748,11 @@ func _screenshot(args: Dictionary, ctx) -> Variant:
 			radius = n.get_effect_radius()
 		elif n is VisualInstance3D:
 			radius = maxf((n as VisualInstance3D).get_aabb().size.length() * 0.5, 1.0)
-		var tp: Vector3 = (n as Node3D).global_position + Vector3.UP * radius * 0.4
-		pos_target = [tp + Vector3(1.0, 0.55, 1.0).normalized() * radius * 3.2, tp]
+		var focus := radius * 0.4
+		if n.has_method("get_effect_focus_height"):
+			focus = n.get_effect_focus_height()
+		var tp: Vector3 = (n as Node3D).global_position + Vector3.UP * focus
+		pos_target = [tp + Vector3(1.0, 0.45, 1.0).normalized() * radius * 3.2, tp]
 	if args.has("position"):
 		var p = ctx.resolve_position(args.position, 1.8)
 		if Util.is_err(p):

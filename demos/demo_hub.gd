@@ -62,9 +62,13 @@ func _relayout() -> void:
 
 
 func _load_manifest() -> Array:
-	if not FileAccess.file_exists(MANIFEST):
-		return []
-	var parsed = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
+	var parsed = null
+	# As a JSON resource first (works in exported games), raw file as fallback.
+	var res = load(MANIFEST) if ResourceLoader.exists(MANIFEST) else null
+	if res is JSON:
+		parsed = (res as JSON).data
+	elif FileAccess.file_exists(MANIFEST):
+		parsed = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
 	if parsed is Dictionary:
 		parsed = parsed.get("demos", [])
 	return parsed if parsed is Array else []

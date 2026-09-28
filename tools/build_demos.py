@@ -37,11 +37,18 @@ SHOTS: dict[str, list[dict]] = {
     "vale_cel": [{"shot": "chao", "view": "ground"}],
     "planeta_alien": [{"shot": "portal", "target": "Portal"}],
     "vfx_showcase": [{"shot": "fogueira", "target": "FX_campfire"}, {"shot": "portal", "target": "FX_portal"},
-                     {"shot": "campo_de_forca", "target": "FX_force_field"}, {"shot": "aura", "target": "FX_magic_aura"},
-                     {"shot": "cachoeira", "target": "FX_waterfall"}],
+                     {"shot": "campo_de_forca", "target": "FX_force_field"}, {"shot": "aura", "target": "FX_magic_aura"}],
 }
 MAIN_VIEW = {"vfx_showcase": "camera"}
 SIZE = (1280, 720)
+# The VFX showcase also gets a labeled close-up of every effect, combined into
+# docs/img/vfx_biblioteca.webp.
+FX_LABELS = {"fire": "fogo", "campfire": "fogueira", "torch": "tocha", "embers": "brasas", "sparks": "faíscas",
+             "smoke": "fumaça", "steam": "vapor", "volcano_plume": "pluma vulcânica", "magic_aura": "aura mágica",
+             "portal": "portal", "heal": "cura", "force_field": "campo de força", "fountain": "fonte",
+             "waterfall": "cachoeira", "bubbles": "bolhas", "fireflies": "vagalumes", "lightning": "raio",
+             "explosion": "explosão", "shockwave": "onda de choque", "confetti": "confete"}
+GRID_SIZE = (480, 270)
 
 
 def log(*a) -> None:
@@ -64,19 +71,35 @@ def shoot(name: str, recipe: dict) -> list[tuple[str, Path]]:
     client = VibeClient(ROOT, scene=recipe["scene"], mode="headless", timeout=1800)
     shots = [{"shot": "hero", "view": MAIN_VIEW.get(name, "hero")}, {"shot": "aerial", "view": "aerial"}]
     shots += SHOTS.get(name, [])
+    fx_shots = []
+    if name == "vfx_showcase":
+        for v in recipe.get("vfx", []):
+            shot = {"shot": "fx_" + v["preset"], "target": v["name"], "size": GRID_SIZE, "frames": 24}
+            if v["preset"] in ("explosion", "shockwave", "confetti", "lightning"):
+                # Trigger the one-shot/periodic effect right before capturing it.
+                shot.update({"play": v["name"], "frames": {"lightning": 4, "shockwave": 4}.get(v["preset"], 8)})
+            fx_shots.append(shot)
     cmds, out = [], []
-    for s in shots:
+    for s in shots + fx_shots:
+        if fx_shots and s is fx_shots[0]:
+            # Close-ups carry their own labels in the grid image: hide the 3D ones.
+            for c in recipe.get("commands", []):
+                if c["cmd"] == "node.add" and c["args"].get("type") == "Label3D":
+                    cmds.append({"cmd": "node.set", "args": {"path": c["args"]["name"], "properties": {"visible": False}}})
+        if "play" in s:
+            cmds.append({"cmd": "vfx.play", "args": {"name": s["play"]}})
         path = f"res://.vibe/screenshots/demos/{name}_{s['shot']}.png"
-        args = {"path": path, "width": SIZE[0], "height": SIZE[1], "frames": int(s.get("frames", 16))}
+        w, h = s.get("size", SIZE)
+        args = {"path": path, "width": w, "height": h, "frames": int(s.get("frames", 16))}
         for k in ("view", "target", "position", "look_at"):
             if k in s:
                 args[k] = s[k]
         cmds.append({"cmd": "screenshot", "args": args})
         out.append((s["shot"], ROOT / path.replace("res://", "")))
     t = time.time()
-    r = client.run(cmds, keep_going=True)
+    r = client.run(cmds, keep_going=True, save=False)
     errors = [x.get("error") for x in r.get("results", []) if not x.get("ok")]
-    log(f"{name}: {len(cmds)} screenshots in {time.time() - t:.1f}s" + (f", errors: {errors}" if errors else ""))
+    log(f"{name}: {len(out)} screenshots in {time.time() - t:.1f}s" + (f", errors: {errors}" if errors else ""))
     return [(shot, p) for shot, p in out if p.exists()]
 
 
@@ -87,7 +110,12 @@ def export_images(name: str, files: list[tuple[str, Path]]) -> dict:
     img_dir.mkdir(parents=True, exist_ok=True)
     thumb_dir.mkdir(parents=True, exist_ok=True)
     images = []
+    fx = [(shot[3:], png) for shot, png in files if shot.startswith("fx_")]
+    if fx:
+        images.append(vfx_grid(fx))
     for shot, png in files:
+        if shot.startswith("fx_"):
+            continue
         im = Image.open(png).convert("RGB")
         dst = img_dir / f"{name}_{shot}.webp"
         im.save(dst, "WEBP", quality=86, method=6)
@@ -95,6 +123,30 @@ def export_images(name: str, files: list[tuple[str, Path]]) -> dict:
         if shot == "hero":
             im.resize((480, 270), Image.LANCZOS).save(thumb_dir / f"{name}.webp", "WEBP", quality=85, method=6)
     return {"images": images, "thumb": f"res://demos/thumbs/{name}.webp"}
+
+
+def vfx_grid(fx: list[tuple[str, Path]]) -> str:
+    """Labeled 5-column grid with a close-up of every effect."""
+    from PIL import Image, ImageDraw, ImageFont
+    tw, th = GRID_SIZE
+    cols = 5
+    rows = (len(fx) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * tw, rows * th), (10, 12, 18))
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 22)
+    except OSError:
+        font = ImageFont.load_default()
+    for i, (preset, png) in enumerate(fx):
+        im = Image.open(png).convert("RGB").resize((tw, th), Image.LANCZOS)
+        d = ImageDraw.Draw(im)
+        label = f"{FX_LABELS.get(preset, preset)}  ·  {preset}"
+        d.rectangle([0, th - 36, tw, th], fill=(0, 0, 0))
+        d.text((12, th - 31), label, fill=(255, 255, 255), font=font)
+        sheet.paste(im, ((i % cols) * tw, (i // cols) * th))
+    dst = ROOT / "docs" / "img" / "vfx_biblioteca.webp"
+    sheet.save(dst, "WEBP", quality=84, method=6)
+    log("vfx grid: docs/img/vfx_biblioteca.webp")
+    return str(dst.relative_to(ROOT))
 
 
 def contact_sheet(names: list[str]) -> None:
@@ -114,6 +166,31 @@ def contact_sheet(names: list[str]) -> None:
         sheet.paste(im, ((i % cols) * tw, (i // cols) * th))
     sheet.save(ROOT / "docs" / "img" / "demos_sheet.webp", "WEBP", quality=84, method=6)
     log("contact sheet: docs/img/demos_sheet.webp")
+
+
+def hub_screenshot() -> None:
+    """Imports the new thumbnails and captures the demo hub with Godot's movie writer."""
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+    from vibe_client import find_godot
+    from PIL import Image
+    godot = find_godot(None)
+    subprocess.run([godot, "--headless", "--path", str(ROOT), "--import"], capture_output=True, text=True, timeout=900)
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "hub.png"
+        cmd = [godot, "--path", str(ROOT), "--resolution", "1280x720", "--fixed-fps", "10", "--quit-after", "8",
+               "--write-movie", str(out), "res://demos/demo_hub.tscn"]
+        if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and shutil.which("xvfb-run"):
+            cmd = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + cmd
+        subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        frames = sorted(Path(tmp).glob("hub*.png"))
+        if frames:
+            Image.open(frames[-1]).convert("RGB").save(ROOT / "docs" / "img" / "hub.webp", "WEBP", quality=88, method=6)
+            log("hub screenshot: docs/img/hub.webp")
+        else:
+            log("hub screenshot: no frames written (needs a display or xvfb-run)")
 
 
 def main() -> int:
@@ -149,6 +226,7 @@ def main() -> int:
     manifest_path.write_text(json.dumps({"demos": ordered}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not a.no_shots:
         contact_sheet([d["name"] for d in ordered])
+        hub_screenshot()
     log("done" + (f"; failed: {failed}" if failed else ""))
     return 1 if failed else 0
 

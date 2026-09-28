@@ -1,0 +1,201 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_fnegr"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_t5oag"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_hl8rn"]
+[ext_resource type="Resource" path="res://demos/vale_cel_data/terrain_terrain.res" id="4_5d6lk"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_q1pej"]
+[ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_y3ojq"]
+[ext_resource type="Resource" path="res://demos/vale_cel_data/grass_grass.res" id="7_fb5re"]
+[ext_resource type="Resource" path="res://demos/vale_cel_data/trigo_grass.res" id="8_qnbvs"]
+[ext_resource type="Resource" path="res://demos/vale_cel_data/flores_grass.res" id="9_kotfm"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="10_ibw8w"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="11_gsvyy"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="12_3ack7"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="13_bs0r1"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5okqc"]
+shader = ExtResource("1_fnegr")
+shader_parameter/top_color = Color(0.18431373, 0.43529412, 0.7882353, 1)
+shader_parameter/horizon_color = Color(0.65882355, 0.79607844, 0.9019608, 1)
+shader_parameter/ground_color = Color(0.41568628, 0.38039216, 0.33333334, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(1, 0.9529412, 0.8745098, 1)
+shader_parameter/sun_size = 0.028
+shader_parameter/sun_glow = 0.35
+shader_parameter/moon = 0.0
+shader_parameter/stars = 0.0
+shader_parameter/cloud_coverage = 0.38
+shader_parameter/cloud_color = Color(1, 1, 1, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 1.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_t5oag")
+
+[sub_resource type="Sky" id="Sky_3d2f0"]
+sky_material = SubResource("ShaderMaterial_5okqc")
+
+[sub_resource type="Environment" id="Environment_tj4au"]
+background_mode = 2
+sky = SubResource("Sky_3d2f0")
+ambient_light_source = 3
+ambient_light_energy = 0.4725
+reflected_light_source = 2
+tonemap_exposure = 0.5808
+glow_enabled = true
+glow_intensity = 0.4864
+glow_bloom = 0.00864
+fog_enabled = true
+fog_light_color = Color(0.7176471, 0.8156863, 0.9098039, 1)
+fog_density = 0.0002
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+adjustment_enabled = true
+adjustment_contrast = 1.08
+adjustment_saturation = 1.08
+
+[sub_resource type="Resource" id="Resource_3sdjx"]
+script = ExtResource("5_q1pej")
+name = "Grama"
+color_a = Color(0.20392157, 0.32156864, 0.12156863, 1)
+color_b = Color(0.3529412, 0.47843137, 0.18039216, 1)
+noise_scale = 0.12
+roughness = 0.92
+texture_set = "grass_ground"
+tint = Color(0.58431375, 0.7411765, 0.54901963, 1)
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_l4qg4"]
+script = ExtResource("5_q1pej")
+name = "Terra"
+color_a = Color(0.30980393, 0.23137255, 0.16078432, 1)
+color_b = Color(0.4627451, 0.34901962, 0.23137255, 1)
+noise_scale = 0.5
+roughness = 0.95
+texture_set = "dirt"
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_fstyd"]
+script = ExtResource("5_q1pej")
+name = "Rocha"
+color_a = Color(0.3647059, 0.34901962, 0.33333334, 1)
+color_b = Color(0.5568628, 0.5372549, 0.5137255, 1)
+noise_scale = 0.25
+strata = 0.35
+roughness = 0.85
+texture_set = "rock"
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_ghh5g"]
+script = ExtResource("5_q1pej")
+name = "Neve"
+color_a = Color(0.8745098, 0.90588236, 0.9411765, 1)
+color_b = Color(1, 1, 1, 1)
+noise_scale = 0.3
+roughness = 0.55
+texture_set = "snow"
+uv_scale = 5.0
+
+[node name="ValeCel" type="Node3D" unique_id=1259167104]
+metadata/vibe_style = "cel"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=1368579828]
+environment = SubResource("Environment_tj4au")
+metadata/vibe_preset = "day"
+metadata/vibe_style = "cel"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=1533506947]
+transform = Transform3D(0.81915206, 0.4262504, -0.38379753, 0, 0.66913056, 0.74314487, 0.57357645, -0.6087487, 0.54811966, 0, 0, 0)
+light_color = Color(1, 0.9529412, 0.8745098, 1)
+light_energy = 1.3
+shadow_enabled = true
+shadow_blur = 0.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=879128588]
+script = ExtResource("3_hl8rn")
+data = ExtResource("4_5d6lk")
+style = "cel"
+layer_0 = SubResource("Resource_3sdjx")
+layer_1 = SubResource("Resource_l4qg4")
+layer_2 = SubResource("Resource_fstyd")
+layer_3 = SubResource("Resource_ghh5g")
+rivers = [{
+"levels": PackedFloat32Array(42.162148, 41.775257, 41.366657, 40.95891, 40.550182, 40.16153, 39.46869, 38.736458, 37.984978, 37.26291, 36.602898, 36.03047, 35.56563, 35.150383, 34.76719, 34.434963, 34.131424, 33.866245, 33.63462, 33.426018, 33.227985, 33.01349, 32.698715, 32.228905, 31.648878, 30.948643, 30.099606, 29.115524, 28.029518, 26.843172, 25.548458, 24.142288, 22.659405, 21.196642, 19.772919, 18.39575, 17.071497, 15.794493, 14.554731, 13.343982, 12.1631565, 11.019555, 9.919636, 8.860265, 7.845137, 6.877757, 5.9550676, 5.0915823, 4.295204, 3.5664992, 3.1648135, 2.7879574, 2.433837, 2.101011, 1.7898675),
+"points": PackedVector2Array(-70.13059, 79.78482, -69.28258, 80.314804, -68.44861, 80.86661, -67.606445, 81.40582, -66.75055, 81.92297, -65.887726, 82.42848, -65.020836, 82.92699, -64.157074, 83.43089, -63.296753, 83.94064, -62.433258, 84.44499, -61.574173, 84.95682, -60.728714, 85.49086, -59.91107, 86.06659, -59.139503, 86.70273, -58.43019, 87.40762, -57.82087, 88.20055, -57.362785, 89.08946, -57.049614, 90.039154, -56.69718, 90.97499, -56.29232, 91.88937, -55.926727, 92.820145, -55.70227, 93.79463, -55.593086, 94.78865, -55.58532, 95.78862, -55.679, 96.784225, -55.86387, 97.76698, -56.101013, 98.738464, -56.330902, 99.711685, -56.520195, 100.6936, -56.667435, 101.68271, -56.769188, 102.67752, -56.8226, 103.67609, -56.82834, 104.67607, -56.789383, 105.67531, -56.712517, 106.67235, -56.612785, 107.66736, -56.49199, 108.660034, -56.344254, 109.64906, -56.178047, 110.63515, -56.007095, 111.62042, -55.83497, 112.6055, -55.65677, 113.58949, -55.468033, 114.57152, -55.269592, 115.551636, -55.066185, 116.53073, -54.859344, 117.50911, -54.653275, 118.48764, -54.45462, 119.46771, -54.26571, 120.44971, -54.082924, 121.43286, -53.90274, 122.41649, -53.724663, 123.4005, -53.548805, 124.38492, -53.37548, 125.36978, -53.206978, 126.355484),
+"width": 7.0
+}]
+
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=1999892274]
+script = ExtResource("6_y3ojq")
+data = ExtResource("7_fb5re")
+preset = "lush"
+style = "cel"
+blades_per_clump = 7
+blade_height = 0.55
+blade_width = 0.05
+blade_curve = 0.3
+density_per_m2 = 7.5
+color_base = Color(0.10980392, 0.25882354, 0.078431375, 1)
+color_tip = Color(0.4, 0.6901961, 0.25882354, 1)
+dry_color = Color(0.54901963, 0.6039216, 0.23529412, 1)
+dry_amount = 0.08
+sss_color = Color(0.7137255, 0.9411765, 0.47843137, 1)
+flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
+wind_strength = 0.3
+
+[node name="Trigo" type="Node3D" parent="Terrain" unique_id=1366097236]
+script = ExtResource("6_y3ojq")
+data = ExtResource("8_qnbvs")
+preset = "wheat"
+style = "cel"
+blade_height = 0.95
+blade_width = 0.025
+blade_curve = 0.2
+density_per_m2 = 8.0
+flower_size = 0.03
+wheat = true
+color_base = Color(0.41960785, 0.3529412, 0.13333334, 1)
+color_tip = Color(0.9019608, 0.77254903, 0.41568628, 1)
+dry_color = Color(0.9411765, 0.8352941, 0.5411765, 1)
+dry_amount = 0.3
+sss_color = Color(1, 0.8862745, 0.6039216, 1)
+flower_colors = PackedColorArray(0.8784314, 0.7176471, 0.36078432, 1, 0.8509804, 0.6627451, 0.2901961, 1, 0.9254902, 0.79607844, 0.4627451, 1, 0.7882353, 0.6, 0.2901961, 1)
+wind_strength = 0.5
+
+[node name="Flores" type="Node3D" parent="Terrain" unique_id=1926819432]
+script = ExtResource("6_y3ojq")
+data = ExtResource("9_kotfm")
+preset = "flowers"
+style = "cel"
+blade_height = 0.38
+blade_width = 0.035
+blade_curve = 0.3
+density_per_m2 = 4.5
+flower_chance = 0.35
+flower_size = 0.06
+color_base = Color(0.16470589, 0.2901961, 0.09411765, 1)
+color_tip = Color(0.5254902, 0.6784314, 0.29803923, 1)
+dry_amount = 0.1
+flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
+wind_strength = 0.3
+
+[node name="Leaves" type="Node3D" parent="." unique_id=26465721]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0167787e-28, 0)
+script = ExtResource("10_ibw8w")
+preset = "leaves"
+style = "cel"
+follow_camera = true
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=1186284746]
+transform = Transform3D(0.9238795, -0.08232348, 0.3737238, 0, 0.9765873, 0.2151216, -0.38268346, -0.19874643, 0.902249, 19.593391, 14.868863, 47.30263)
+current = true
+script = ExtResource("11_gsvyy")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=859281353 instance=ExtResource("12_3ack7")]
+layer = 10
+script = ExtResource("13_bs0r1")
+title = "Vale anime"
+subtitle = "cel shading · dia · rio, trigo e folhas"
+prompt = "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando"

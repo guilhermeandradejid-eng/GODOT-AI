@@ -118,6 +118,10 @@ func play() -> void:
 	for l in _built.get("lights", []):
 		if is_instance_valid(l):
 			l.light_energy = l.get_meta("base_energy", 1.0)
+	if str(preset) == "lightning":
+		# play() on lightning = strike right now.
+		_strike_t = -1.0
+		_next_strike = 0.0
 
 
 func stop() -> void:
@@ -131,14 +135,41 @@ func is_one_shot() -> bool:
 	return bool(_def.get("one_shot", false))
 
 
+## Approximate size of the effect (used to frame screenshots and the editor view).
 func get_effect_radius() -> float:
 	var s := size * float(_def.get("scale", 1.0))
+	match str(preset):
+		"volcano_plume":
+			return 7.0 * s
+		"lightning":
+			return 9.0 * s
+		"smoke", "steam", "waterfall":
+			return 3.2 * s
+		"fountain", "portal", "force_field":
+			return 2.4 * s
 	match str(_def.get("category", "")):
 		"weather":
 			return 12.0
 		"impact":
-			return 4.0 * s
+			return 3.2 * s
 	return maxf(1.5 * s, 1.0)
+
+
+## Height (above the node) of the visual center of the effect.
+func get_effect_focus_height() -> float:
+	var s := size * float(_def.get("scale", 1.0))
+	match str(preset):
+		"volcano_plume":
+			return 8.0 * s
+		"lightning":
+			return 9.0 * s
+		"smoke", "steam":
+			return 3.0 * s
+		"waterfall", "portal", "force_field", "fountain":
+			return 1.9 * s
+		"confetti", "bubbles", "fireflies":
+			return 1.5 * s
+	return get_effect_radius() * 0.4
 
 
 func get_info() -> Dictionary:

@@ -40,10 +40,11 @@ float ground_height(vec2 xz) {
 		return -1000.0;
 	}
 	ivec2 size = textureSize(heightmap, 0);
-	vec2 t = (xz + vec2(terrain_half_size)) / cell_size;
-	if (t.x < 0.0 || t.y < 0.0 || t.x > float(size.x - 1) || t.y > float(size.y - 1)) {
-		return -1000.0;
-	}
+	vec2 t_raw = (xz + vec2(terrain_half_size)) / cell_size;
+	// Beyond the heightmap the seabed continues from the border and keeps
+	// sinking, so there is no hard line in the water at the terrain edge.
+	vec2 t = clamp(t_raw, vec2(0.0), vec2(size - ivec2(1)));
+	float sink = length(t_raw - t) * cell_size * 0.25;
 	ivec2 c = ivec2(floor(t));
 	vec2 f = fract(t);
 	ivec2 m = size - 1;
@@ -51,7 +52,7 @@ float ground_height(vec2 xz) {
 	float h10 = texelFetch(heightmap, clamp(c + ivec2(1, 0), ivec2(0), m), 0).r;
 	float h01 = texelFetch(heightmap, clamp(c + ivec2(0, 1), ivec2(0), m), 0).r;
 	float h11 = texelFetch(heightmap, clamp(c + ivec2(1, 1), ivec2(0), m), 0).r;
-	return mix(mix(h00, h10, f.x), mix(h01, h11, f.x), f.y);
+	return mix(mix(h00, h10, f.x), mix(h01, h11, f.x), f.y) - sink;
 }
 
 void vertex() {

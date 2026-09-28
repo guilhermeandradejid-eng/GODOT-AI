@@ -206,8 +206,10 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 	if extra is Array:
 		for c in extra:
 			if c is Dictionary and str(c.get("cmd", "")) != "":
-				var cargs = c.get("args", {})
-				await _step(registry, ctx, str(c.cmd), cargs if cargs is Dictionary else {})
+				var cargs: Dictionary = (c.get("args", {}) as Dictionary).duplicate() if c.get("args", {}) is Dictionary else {}
+				if str(c.cmd) == "node.add" and not cargs.has("replace"):
+					cargs["replace"] = true  # rebuilding a recipe must not duplicate its extra nodes
+				await _step(registry, ctx, str(c.cmd), cargs)
 
 	return {"ok": ok, "scene": ctx.scene_path, "terrain": terrain_name, "style": style if style != "" else "realistic", "steps": steps}
 

@@ -1,0 +1,142 @@
+{
+  "demos": [
+    {
+      "name": "ilha_tropical",
+      "title": "Ilha tropical",
+      "subtitle": "realistic · pôr do sol · ilha + mar",
+      "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores",
+      "style": "realistic",
+      "scene": "res://demos/ilha_tropical.tscn",
+      "recipe": "recipes/ilha_tropical.json",
+      "images": [
+        "docs/img/ilha_tropical_hero.webp",
+        "docs/img/ilha_tropical_aerial.webp",
+        "docs/img/ilha_tropical_fogueira.webp"
+      ],
+      "thumb": "res://demos/thumbs/ilha_tropical.webp"
+    },
+    {
+      "name": "montanhas_nevadas",
+      "title": "Montanhas nevadas",
+      "subtitle": "realistic · amanhecer · cordilheira com erosão",
+      "prompt": "cordilheira nevada ao amanhecer com neve caindo",
+      "style": "realistic",
+      "scene": "res://demos/montanhas_nevadas.tscn",
+      "recipe": "recipes/montanhas_nevadas.json",
+      "images": [
+        "docs/img/montanhas_nevadas_hero.webp",
+        "docs/img/montanhas_nevadas_aerial.webp"
+      ],
+      "thumb": "res://demos/thumbs/montanhas_nevadas.webp"
+    },
+    {
+      "name": "deserto_canion",
+      "title": "Cânion no deserto",
+      "subtitle": "stylized · entardecer · rio esculpido",
+      "prompt": "cânion vermelho no entardecer com um rio, capim seco, poeira e uma fogueira",
+      "style": "stylized",
+      "scene": "res://demos/deserto_canion.tscn",
+      "recipe": "recipes/deserto_canion.json",
+      "images": [
+        "docs/img/deserto_canion_hero.webp",
+        "docs/img/deserto_canion_aerial.webp",
+        "docs/img/deserto_canion_fogueira.webp"
+      ],
+      "thumb": "res://demos/thumbs/deserto_canion.webp"
+    },
+    {
+      "name": "vulcao",
+      "title": "Ilha vulcânica",
+      "subtitle": "realistic · tempestade · lava, pluma e raios",
+      "prompt": "ilha vulcânica em erupção durante uma tempestade, com lava, brasas e raios",
+      "style": "realistic",
+      "scene": "res://demos/vulcao.tscn",
+      "recipe": "recipes/vulcao.json",
+      "images": [
+        "docs/img/vulcao_hero.webp",
+        "docs/img/vulcao_aerial.webp",
+        "docs/img/vulcao_pluma.webp"
+      ],
+      "thumb": "res://demos/thumbs/vulcao.webp"
+    },
+    {
+      "name": "campo_noturno",
+      "title": "Campo noturno",
+      "subtitle": "toon · noite · lago, vagalumes e portal",
+      "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo",
+      "style": "toon",
+      "scene": "res://demos/campo_noturno.tscn",
+      "recipe": "recipes/campo_noturno.json",
+      "images": [
+        "docs/img/campo_noturno_hero.webp",
+        "docs/img/campo_noturno_aerial.webp",
+        "docs/img/campo_noturno_portal.webp",
+        "docs/img/campo_noturno_fogueira.webp"
+      ],
+      "thumb": "res://demos/thumbs/campo_noturno.webp"
+    },
+    {
+      "name": "vale_cel",
+      "title": "Vale anime",
+      "subtitle": "cel shading · dia · rio, trigo e folhas",
+      "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando",
+      "style": "cel",
+      "scene": "res://demos/vale_cel.tscn",
+      "recipe": "recipes/vale_cel.json",
+      "images": [
+        "docs/img/vale_cel_hero.webp",
+        "docs/img/vale_cel_aerial.webp",
+        "docs/img/vale_cel_chao.webp"
+      ],
+      "thumb": "res://demos/thumbs/vale_cel.webp"
+    },
+    {
+      "name": "arquipelago_lowpoly",
+      "title": "Arquipélago low poly",
+      "subtitle": "lowpoly · dia · ilhas facetadas",
+      "prompt": "arquipélago low poly com mar azul, grama e fogueiras nas praias",
+      "style": "lowpoly",
+      "scene": "res://demos/arquipelago_lowpoly.tscn",
+      "recipe": "recipes/arquipelago_lowpoly.json",
+      "images": [
+        "docs/img/arquipelago_lowpoly_hero.webp",
+        "docs/img/arquipelago_lowpoly_aerial.webp"
+      ],
+      "thumb": "res://demos/thumbs/arquipelago_lowpoly.webp"
+    },
+    {
+      "name": "planeta_alien",
+      "title": "Planeta alienígena",
+      "subtitle": "stylized · céu alien · cristais e grama brilhante",
+      "prompt": "planeta alienígena com crateras, cristais brilhantes, grama roxa luminosa e um portal",
+      "style": "stylized",
+      "scene": "res://demos/planeta_alien.tscn",
+      "recipe": "recipes/planeta_alien.json",
+      "images": [
+        "docs/img/planeta_alien_hero.webp",
+        "docs/img/planeta_alien_aerial.webp",
+        "docs/img/planeta_alien_portal.webp"
+      ],
+      "thumb": "res://demos/thumbs/planeta_alien.webp"
+    },
+    {
+      "name": "vfx_showcase",
+      "title": "Vitrine de VFX",
+      "subtitle": "stylized · noite · todos os efeitos da biblioteca",
+      "prompt": "",
+      "style": "stylized",
+      "scene": "res://demos/vfx_showcase.tscn",
+      "recipe": "recipes/vfx_showcase.json",
+      "images": [
+        "docs/img/vfx_biblioteca.webp",
+        "docs/img/vfx_showcase_hero.webp",
+        "docs/img/vfx_showcase_aerial.webp",
+        "docs/img/vfx_showcase_fogueira.webp",
+        "docs/img/vfx_showcase_portal.webp",
+        "docs/img/vfx_showcase_campo_de_forca.webp",
+        "docs/img/vfx_showcase_aura.webp"
+      ],
+      "thumb": "res://demos/thumbs/vfx_showcase.webp"
+    }
+  ]
+}

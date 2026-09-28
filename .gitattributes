@@ -3,3 +3,6 @@
 *.png binary
 *.res binary
 *.jpg binary
+*.webp binary
+*.exr binary
+*.scn binary

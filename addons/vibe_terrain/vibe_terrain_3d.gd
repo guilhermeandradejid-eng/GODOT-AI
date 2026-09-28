@@ -1059,10 +1059,10 @@ func _build_water() -> void:
 		var sea := MeshInstance3D.new()
 		var plane := PlaneMesh.new()
 		if style == "lowpoly":
-			# Denser, smaller plane so the faceted waves are visible.
-			plane.size = Vector2.ONE * get_size() * 2.5
-			plane.subdivide_width = 160
-			plane.subdivide_depth = 160
+			# Subdivided so the faceted waves are visible, and big enough to reach the horizon.
+			plane.size = Vector2.ONE * maxf(get_size() * 8.0, 2048.0)
+			plane.subdivide_width = 255
+			plane.subdivide_depth = 255
 		else:
 			plane.size = Vector2.ONE * maxf(get_size() * 16.0, 8192.0)
 			plane.subdivide_width = 128

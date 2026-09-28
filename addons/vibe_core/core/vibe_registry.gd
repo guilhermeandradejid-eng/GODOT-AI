@@ -74,6 +74,15 @@ func remove(command_name: String) -> void:
 	_commands.erase(command_name)
 
 
+## Drops every command and module (breaks handler <-> module reference cycles
+## so nothing is reported as leaked when the process exits).
+func shutdown() -> void:
+	_commands.clear()
+	_aliases.clear()
+	_modules.clear()
+	history.clear()
+
+
 func has_command(command_name: String) -> bool:
 	return resolve_name(command_name) != ""
 

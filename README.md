@@ -38,10 +38,22 @@ resultado e refina.
 | ![](docs/img/deserto_canion_hero.webp) **Cânion no deserto** — stylized, rio esculpido | ![](docs/img/vulcao_hero.webp) **Ilha vulcânica** — tempestade, lava, pluma e raios |
 | ![](docs/img/campo_noturno_hero.webp) **Campo noturno** — toon, lago, vagalumes, portal | ![](docs/img/vale_cel_hero.webp) **Vale anime** — cel shading, rio, trigo |
 | ![](docs/img/arquipelago_lowpoly_hero.webp) **Arquipélago** — low poly | ![](docs/img/planeta_alien_hero.webp) **Planeta alienígena** — grama luminosa, cristais |
-| ![](docs/img/vfx_showcase_hero.webp) **Vitrine de VFX** — todos os efeitos | ![](docs/img/vfx_showcase_portal.webp) portal mágico de perto |
+| ![](docs/img/ilha_tropical_fogueira.webp) fogueira na praia (close) | ![](docs/img/vfx_showcase_campo_de_forca.webp) **Vitrine de VFX** — campo de força |
+
+### Biblioteca de VFX
+
+Os 25 efeitos vêm de dados (JSON) e aceitam cor, escala, intensidade e estilo. Os 20 efeitos
+posicionáveis, de perto (demo `vfx_showcase`); chuva, neve, poeira, folhas e névoa seguem a câmera:
+
+![Biblioteca de VFX](docs/img/vfx_biblioteca.webp)
 
 Cada demo é uma receita JSON em [`recipes/`](recipes/) — o mesmo formato que o Claude usa para
 montar mundos. Para reconstruir: `python3 tools/build_demos.py [nome]`.
+
+Rodando o projeto (F5) abre o hub; em cada demo: botão direito + mouse para olhar, WASD para voar,
+**M** volta ao menu.
+
+![Hub de demos](docs/img/hub.webp)
 
 ## Instalação
 
@@ -61,6 +73,8 @@ para as ferramentas de terminal.
   Também dá para copiar só as pastas `addons/vibe_*` e ativar em *Projeto → Configurações → Plugins*.
 
 Diga ao terminal onde está o Godot, se ele não estiver no PATH: `export GODOT_BIN=/caminho/godot`.
+Depois do primeiro uso o caminho fica salvo em `.vibe/state.json`, e o servidor MCP (que o Claude
+Code inicia sem essa variável) passa a encontrá-lo sozinho.
 
 ## Vibecoding com o Claude Code
 
@@ -164,7 +178,8 @@ tests/                 run_tests.py, render_gallery.py
 ```bash
 GODOT_BIN=/caminho/godot python3 tests/run_tests.py            # importação, comandos, prompts, schema, MCP
 GODOT_BIN=/caminho/godot python3 tests/run_tests.py --render   # + renderiza os 5 estilos (janela ou xvfb-run)
-python3 tests/render_gallery.py                                # galeria de estilos
+GODOT_BIN=/caminho/godot python3 tests/run_tests.py --editor   # + abre o editor e testa a ponte ao vivo (HTTP)
+python3 tests/render_gallery.py --export                       # galeria de estilos (docs/img/estilos.webp)
 ```
 
 ## Créditos

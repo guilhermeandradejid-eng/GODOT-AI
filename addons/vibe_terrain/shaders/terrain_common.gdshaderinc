@@ -197,8 +197,8 @@ vec3 unpack_normal(vec4 nr) {
 // Samples a packed layer (albedo+height / normal+roughness) with triplanar
 // projection on steep terrain. dpdx/dpdy are the screen-space derivatives of p,
 // taken once in uniform control flow (so mip selection stays valid inside
-// branches and across detiling cells). far (0..1) blends the top projection to
-// a larger-scale sample and toward the average color of the texture.
+// branches and across detiling cells). far (0..1) blends to a larger-scale
+// sample and toward the average color of the texture.
 // Returns albedo+height; out world normal & roughness.
 vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float uv_scale, vec3 p, vec3 dpdx, vec3 dpdy,
 		vec3 n_ws, float fallback_rough, float far, out vec3 out_normal, out float out_rough) {
@@ -214,21 +214,6 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 	vec3 tn_y = unpack_normal(nr);
 	// Rotate the tangent-space normal back (inverse of the detile UV rotation).
 	tn_y.xy = tn_y.xy * rot;
-	if (far > 0.001) {
-		float k = 0.21;
-		vec2 uv_m = p.xz * inv * k + vec2(0.37, 0.61);
-		vec2 mx = dpdx.xz * inv * k;
-		vec2 my = dpdy.xz * inv * k;
-		vec4 alb_m = textureGrad(alb_tex, uv_m, mx, my);
-		vec4 avg = textureLod(alb_tex, vec2(0.5), 14.0);
-		// Fully the average color at the far end: no repetition on the horizon.
-		alb_m = mix(alb_m, avg, 0.3 + 0.7 * smoothstep(0.35, 1.0, far));
-		vec4 nr_m = has_normal ? textureGrad(nrm_tex, uv_m, mx, my) : vec4(0.5, 0.5, 1.0, fallback_rough);
-		float fm = smoothstep(0.0, 0.6, far);
-		alb = mix(alb, alb_m, fm);
-		nr.a = mix(nr.a, nr_m.a, fm);
-		tn_y = normalize(mix(tn_y, mix(unpack_normal(nr_m), vec3(0.0, 0.0, 1.0), 0.5 * far), fm));
-	}
 	vec3 wn = vec3(tn_y.x + n_ws.x, n_ws.y * tn_y.z, tn_y.y * -1.0 + n_ws.z);
 	float rough = nr.a;
 	if (blend.y < 0.98) {
@@ -238,10 +223,14 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 		vec2 gxy = dpdy.zy * inv;
 		vec2 gzx = dpdx.xy * inv;
 		vec2 gzy = dpdy.xy * inv;
-		vec4 alb_x = textureGrad(alb_tex, uv_x, gxx, gxy);
-		vec4 alb_z = textureGrad(alb_tex, uv_z, gzx, gzy);
-		vec4 nr_x = has_normal ? textureGrad(nrm_tex, uv_x, gxx, gxy) : vec4(0.5, 0.5, 1.0, fallback_rough);
-		vec4 nr_z = has_normal ? textureGrad(nrm_tex, uv_z, gzx, gzy) : vec4(0.5, 0.5, 1.0, fallback_rough);
+		// Cliffs: two scales mixed by a soft noise mask, so big rock faces do
+		// not show the texture grid.
+		float k2 = 0.43;
+		float mask = smoothstep(0.3, 0.7, t_vnoise(p * 0.045));
+		vec4 alb_x = mix(textureGrad(alb_tex, uv_x, gxx, gxy), textureGrad(alb_tex, uv_x * k2 + 0.37, gxx * k2, gxy * k2), mask);
+		vec4 alb_z = mix(textureGrad(alb_tex, uv_z, gzx, gzy), textureGrad(alb_tex, uv_z * k2 + 0.61, gzx * k2, gzy * k2), mask);
+		vec4 nr_x = has_normal ? mix(textureGrad(nrm_tex, uv_x, gxx, gxy), textureGrad(nrm_tex, uv_x * k2 + 0.37, gxx * k2, gxy * k2), mask) : vec4(0.5, 0.5, 1.0, fallback_rough);
+		vec4 nr_z = has_normal ? mix(textureGrad(nrm_tex, uv_z, gzx, gzy), textureGrad(nrm_tex, uv_z * k2 + 0.61, gzx * k2, gzy * k2), mask) : vec4(0.5, 0.5, 1.0, fallback_rough);
 		vec3 tn_x = unpack_normal(nr_x);
 		vec3 tn_z = unpack_normal(nr_z);
 		// UDN blend (Ben Golus)
@@ -251,6 +240,18 @@ vec4 sample_layer(sampler2D alb_tex, sampler2D nrm_tex, bool has_normal, float u
 		alb = alb_x * blend.x + alb * blend.y + alb_z * blend.z;
 		wn = wx * blend.x + wn * blend.y + wz * blend.z;
 		rough = nr_x.a * blend.x + rough * blend.y + nr_z.a * blend.z;
+	}
+	if (far > 0.001) {
+		// Far away: a larger-scale sample, then the texture's average color (no
+		// repetition toward the horizon). Steep faces use the average directly.
+		float k = 0.21;
+		vec2 uv_m = p.xz * inv * k + vec2(0.37, 0.61);
+		vec4 alb_m = textureGrad(alb_tex, uv_m, dpdx.xz * inv * k, dpdy.xz * inv * k);
+		vec4 avg = textureLod(alb_tex, vec2(0.5), 14.0);
+		alb_m = mix(alb_m, avg, max(0.3 + 0.7 * smoothstep(0.35, 1.0, far), 1.0 - blend.y));
+		float fm = smoothstep(0.0, 0.6, far);
+		alb = mix(alb, alb_m, fm);
+		wn = mix(normalize(wn), n_ws, fm * 0.7);
 	}
 	out_normal = normalize(wn);
 	out_rough = has_normal ? rough : fallback_rough;

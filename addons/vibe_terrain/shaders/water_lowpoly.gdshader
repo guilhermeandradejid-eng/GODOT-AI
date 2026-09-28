@@ -16,17 +16,20 @@ uniform bool has_terrain = false;
 
 varying vec3 v_local;
 varying vec3 v_world;
+// Depth at the provoking vertex: one flat color per facet (no pixel stair-steps).
+varying flat float v_depth;
 
 float ground_height(vec2 xz) {
 	if (!has_terrain) {
 		return -1000.0;
 	}
 	ivec2 size = textureSize(heightmap, 0);
-	vec2 t = (xz + vec2(terrain_half_size)) / cell_size;
-	if (t.x < 0.0 || t.y < 0.0 || t.x > float(size.x - 1) || t.y > float(size.y - 1)) {
-		return -1000.0;
-	}
-	return texelFetch(heightmap, clamp(ivec2(t), ivec2(0), size - 1), 0).r;
+	vec2 t_raw = (xz + vec2(terrain_half_size)) / cell_size;
+	// Beyond the heightmap the seabed continues from the border and keeps
+	// sinking, so there is no hard line in the water at the terrain edge.
+	vec2 t = clamp(t_raw, vec2(0.0), vec2(size - ivec2(1)));
+	float sink = length(t_raw - t) * cell_size * 0.25;
+	return texelFetch(heightmap, clamp(ivec2(t), ivec2(0), size - 1), 0).r - sink;
 }
 
 void vertex() {
@@ -35,11 +38,11 @@ void vertex() {
 	float w = sin(v_world.x * 0.21 + t) * 0.6 + sin(v_world.z * 0.17 - t * 1.3) * 0.4 + sin((v_world.x + v_world.z) * 0.37 + t * 0.7) * 0.3;
 	VERTEX.y += w * wave_height;
 	v_local = VERTEX;
+	v_depth = VERTEX.y - ground_height(VERTEX.xz);
 }
 
 void fragment() {
-	float depth = v_local.y - ground_height(v_local.xz);
-	float d = clamp(depth / depth_fade, 0.0, 1.0);
+	float d = clamp(v_depth / depth_fade, 0.0, 1.0);
 	vec4 col = mix(shallow_color, deep_color, d);
 	NORMAL = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
 	ALBEDO = col.rgb;

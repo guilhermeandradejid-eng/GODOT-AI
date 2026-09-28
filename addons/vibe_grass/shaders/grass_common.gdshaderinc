@@ -15,6 +15,8 @@ uniform float cell_size = 1.0;
 uniform float terrain_half_size = 128.0;
 uniform bool has_terrain = false;
 uniform float water_level = -100000.0;
+// No blades this close above the water line (bigger for the coarse low-poly terrain).
+uniform float shore_margin = 0.15;
 uniform float view_distance = 70.0;
 uniform float fade_length = 18.0;
 uniform float width_scale = 1.0;
@@ -71,12 +73,21 @@ void vertex() {
 	float r0 = g_hash12(inst.xz);
 	float r1 = g_hash12(inst.zx + vec2(17.31, 5.17));
 	vec3 tl = (world_to_terrain * vec4(inst, 1.0)).xyz;
-	float ground_local = has_terrain ? g_ground((tl.xz + vec2(terrain_half_size)) / cell_size) : tl.y;
+	vec2 texel = (tl.xz + vec2(terrain_half_size)) / cell_size;
+	float ground_local = has_terrain ? g_ground(texel) : tl.y;
 	vec3 ground = (terrain_to_world * vec4(tl.x, ground_local, tl.z, 1.0)).xyz;
+	// Ground normal: blades are lit like the slope they grow on (so grass and
+	// terrain agree on light and shade, e.g. with a low sun).
+	vec3 ground_n = vec3(0.0, 1.0, 0.0);
+	if (has_terrain) {
+		float hx = g_ground(texel + vec2(1.0, 0.0));
+		float hz = g_ground(texel + vec2(0.0, 1.0));
+		ground_n = normalize((terrain_to_world * vec4(ground_local - hx, cell_size, ground_local - hz, 0.0)).xyz);
+	}
 	vec2 duv = (tl.xz + vec2(terrain_half_size)) / (2.0 * terrain_half_size);
 	bool inside = duv.x >= 0.0 && duv.y >= 0.0 && duv.x <= 1.0 && duv.y <= 1.0;
 	float density = texture(density_map, duv).r;
-	float keep = (inside && r0 < density && ground_local > water_level + 0.15) ? 1.0 : 0.0;
+	float keep = (inside && r0 < density && ground_local > water_level + shore_margin) ? 1.0 : 0.0;
 
 	float dist = distance(ground, CAMERA_POSITION_WORLD);
 	float fade = 1.0 - smoothstep(view_distance - fade_length, view_distance, dist);
@@ -105,7 +116,7 @@ void vertex() {
 
 	VERTEX = ground + rel;
 	v_dist = dist;
-	v_normal_w = normalize(mix(NORMAL, vec3(0.0, 1.0, 0.0), 0.5 + 0.4 * smoothstep(8.0, view_distance, dist)));
+	v_normal_w = normalize(mix(NORMAL, ground_n, 0.5 + 0.4 * smoothstep(8.0, view_distance, dist)));
 	NORMAL = v_normal_w;
 	v_hf = hf;
 	v_rand = COLOR.g * 0.5 + r1 * 0.5;

@@ -216,6 +216,48 @@ def test_mcp() -> None:
         proc.wait(timeout=10)
 
 
+def test_editor(godot: str) -> None:
+    """Starts the editor (headless), waits for the live bridge and drives it over HTTP."""
+    print("[editor bridge]")
+    bridge = ROOT / ".godot" / "vibe_bridge.json"
+    if bridge.exists():
+        bridge.unlink()
+    proc = subprocess.Popen([godot, "--headless", "-e", "--path", str(ROOT)],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        client = VibeClient(ROOT, godot=godot, mode="live", timeout=300)
+        t0 = time.time()
+        while time.time() - t0 < 240 and client.live_available() is None:
+            time.sleep(1)
+        if not check(client.live_available() is not None, "editor starts the live bridge"):
+            return
+        cmds = [
+            {"cmd": "scene.new", "args": {"path": "res://tests/tmp/test_editor.tscn", "overwrite": True}},
+            {"cmd": "terrain.create", "args": {"preset": "hills", "size": 64, "seed": 5}},
+            {"cmd": "grass.create", "args": {"preset": "meadow"}},
+            {"cmd": "grass.fill", "args": {"density": 0.5}},
+            {"cmd": "vfx.spawn", "args": {"preset": "torch", "position": "center", "name": "Tocha"}},
+            {"cmd": "undo", "args": {}},
+            {"cmd": "status", "args": {}},
+            {"cmd": "scene.save", "args": {}},
+        ]
+        out = client.run(cmds, keep_going=True)
+        check(out.get("mode") == "live", "commands go through the bridge", out.get("mode"))
+        res = out.get("results", [])
+        for c, r in zip(cmds, res):
+            check(bool(r.get("ok")), f"live {c['cmd']}", r.get("error", ""))
+        status = res[6].get("result", {}) if len(res) > 6 else {}
+        names = json.dumps(status, ensure_ascii=False)
+        check("Tocha" not in names and "Terrain" in names, "undo removed the last change only", names[:300])
+        check((ROOT / "tests" / "tmp" / "test_editor.tscn").exists(), "editor saved the scene")
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
 def test_render(client: VibeClient) -> None:
     print("[render]")
     shots = []
@@ -237,6 +279,7 @@ def test_render(client: VibeClient) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--render", action="store_true", help="also render every style (needs a display or xvfb-run)")
+    ap.add_argument("--editor", action="store_true", help="also start the editor and test the live HTTP bridge")
     ap.add_argument("--skip-import", action="store_true")
     a = ap.parse_args()
     godot = find_godot(None)
@@ -254,6 +297,8 @@ def main() -> int:
     test_mcp()
     if a.render:
         test_render(client)
+    if a.editor:
+        test_editor(godot)
     print(f"\n{PASSES} passed, {len(FAILS)} failed")
     for f in FAILS:
         print("  -", f)

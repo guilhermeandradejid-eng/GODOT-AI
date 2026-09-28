@@ -28,6 +28,7 @@ def main() -> int:
     ap.add_argument("--out", default="res://.vibe/screenshots")
     ap.add_argument("--size", default="960x540")
     ap.add_argument("--skip-build", action="store_true")
+    ap.add_argument("--export", action="store_true", help="also write docs/img/estilos.webp")
     a = ap.parse_args()
     w, h = (int(v) for v in a.size.split("x"))
     c = VibeClient(ROOT, scene=a.scene, mode="headless")
@@ -66,7 +67,30 @@ def main() -> int:
     out = ROOT / a.out.replace("res://", "") / "gallery_sheet.png"
     sheet.save(out)
     print("sheet:", out)
+    if a.export:
+        export_styles(ROOT / a.out.replace("res://", ""), a.styles.split(","))
     return 0
+
+
+def export_styles(shots_dir: Path, styles: list[str]) -> None:
+    """docs/img/estilos.webp: the 'hero' shot of each style, labeled (3 x 2 grid)."""
+    from PIL import Image, ImageDraw
+    tiles = [(s, shots_dir / f"gallery_{s}_hero.png") for s in styles]
+    tiles.append(("realistic (aerial)", shots_dir / "gallery_realistic_aerial.png"))
+    tiles = [(n, p) for n, p in tiles if p.exists()]
+    tw, th, cols = 640, 360, 3
+    rows = (len(tiles) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * tw, rows * th), (14, 16, 22))
+    for i, (name, p) in enumerate(tiles):
+        im = Image.open(p).convert("RGB").resize((tw, th), Image.LANCZOS)
+        d = ImageDraw.Draw(im)
+        d.rectangle([0, 0, 12 + 8 * len(name), 26], fill=(0, 0, 0))
+        d.text((8, 7), name, fill=(255, 255, 255))
+        sheet.paste(im, ((i % cols) * tw, (i // cols) * th))
+    dst = ROOT / "docs" / "img" / "estilos.webp"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(dst, "WEBP", quality=86, method=6)
+    print("styles:", dst)
 
 
 if __name__ == "__main__":

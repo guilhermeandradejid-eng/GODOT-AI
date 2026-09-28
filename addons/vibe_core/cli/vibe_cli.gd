@@ -66,22 +66,24 @@ func _main() -> void:
 	if opts.schema or opts.write_schema != "":
 		var schema := {
 			"generated_by": "vibe_cli.gd --write-schema",
-			"godot": Engine.get_version_info().get("string", ""),
+			"requires_godot": "4.3+",
 			"modules": modules,
 			"commands": registry.get_schema(),
 		}
+		var code := 0
 		if opts.write_schema != "":
 			var f := FileAccess.open(opts.write_schema, FileAccess.WRITE)
 			if f == null:
 				_emit({"ok": false, "error": "cannot write %s" % opts.write_schema})
-				quit(1)
-				return
-			f.store_string(JSON.stringify(schema, "  ", false) + "\n")
-			f.close()
-			_emit({"ok": true, "written": opts.write_schema, "commands": registry.get_command_names().size()})
+				code = 1
+			else:
+				f.store_string(JSON.stringify(schema, "  ", false) + "\n")
+				f.close()
+				_emit({"ok": true, "written": opts.write_schema, "commands": registry.get_command_names().size()})
 		else:
 			_emit(schema)
-		quit(0)
+		registry.shutdown()
+		quit(code)
 		return
 
 	var commands: Array = []
@@ -157,5 +159,7 @@ func _main() -> void:
 	if ctx.root != null and is_instance_valid(ctx.root):
 		ctx.root.queue_free()
 		ctx.root = null
+	ctx.registry = null
+	registry.shutdown()
 	await process_frame
 	quit(0 if all_ok else 1)

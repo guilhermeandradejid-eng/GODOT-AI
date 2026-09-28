@@ -1,0 +1,440 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_f6x6t"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_2uuhp"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_tgfao"]
+[ext_resource type="Resource" path="res://demos/vfx_showcase_data/terrain_terrain.res" id="4_2mmqo"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_x7lyf"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="6_8sx6v"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="7_epjoc"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="8_kpcin"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="9_a7fwe"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ll7im"]
+shader = ExtResource("1_f6x6t")
+shader_parameter/top_color = Color(0.011764706, 0.023529412, 0.101960786, 1)
+shader_parameter/horizon_color = Color(0.08627451, 0.13333334, 0.2901961, 1)
+shader_parameter/ground_color = Color(0.015686275, 0.019607844, 0.039215688, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(0.62352943, 0.7058824, 1, 1)
+shader_parameter/sun_size = 0.05
+shader_parameter/sun_glow = 0.1
+shader_parameter/moon = 1.0
+shader_parameter/stars = 1.0
+shader_parameter/cloud_coverage = 0.18
+shader_parameter/cloud_color = Color(0.16470589, 0.20392157, 0.34509805, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 0.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_2uuhp")
+
+[sub_resource type="Sky" id="Sky_cvvfo"]
+sky_material = SubResource("ShaderMaterial_ll7im")
+
+[sub_resource type="Environment" id="Environment_xhd7o"]
+background_mode = 2
+sky = SubResource("Sky_cvvfo")
+ambient_light_source = 3
+ambient_light_energy = 0.33
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.25
+tonemap_white = 6.0
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 1.076
+glow_bloom = 0.0676
+fog_enabled = true
+fog_light_color = Color(0.047058824, 0.078431375, 0.1882353, 1)
+fog_density = 0.00096
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+adjustment_enabled = true
+adjustment_contrast = 1.04
+adjustment_saturation = 1.1
+
+[sub_resource type="Resource" id="Resource_3itq6"]
+script = ExtResource("5_x7lyf")
+name = "Regolito"
+color_a = Color(0.42745098, 0.42745098, 0.42745098, 1)
+color_b = Color(0.6039216, 0.6039216, 0.6039216, 1)
+noise_scale = 0.3
+roughness = 0.98
+texture_set = "regolith"
+uv_scale = 5.0
+
+[sub_resource type="Resource" id="Resource_84ivc"]
+script = ExtResource("5_x7lyf")
+name = "Poeira escura"
+color_a = Color(0.24313726, 0.24313726, 0.2509804, 1)
+color_b = Color(0.34509805, 0.34509805, 0.35686275, 1)
+noise_scale = 0.5
+roughness = 0.98
+texture_set = "ash"
+tint = Color(0.627451, 0.627451, 0.627451, 1)
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_pgwjo"]
+script = ExtResource("5_x7lyf")
+name = "Rocha"
+color_a = Color(0.5411765, 0.53333336, 0.5254902, 1)
+color_b = Color(0.72156864, 0.70980394, 0.69411767, 1)
+noise_scale = 0.2
+strata = 0.2
+texture_set = "rock"
+tint = Color(0.8156863, 0.8156863, 0.8156863, 1)
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_ckf30"]
+script = ExtResource("5_x7lyf")
+name = "Ejecta"
+color_a = Color(0.78431374, 0.78431374, 0.78431374, 1)
+color_b = Color(0.9254902, 0.9254902, 0.9254902, 1)
+noise_scale = 0.4
+roughness = 0.95
+texture_set = "regolith"
+tint = Color(0.9411765, 0.9411765, 0.9411765, 1)
+uv_scale = 3.0
+
+[node name="VfxShowcase" type="Node3D" unique_id=1337162060]
+metadata/vibe_style = "stylized"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=952817387]
+environment = SubResource("Environment_xhd7o")
+metadata/vibe_preset = "night"
+metadata/vibe_style = "stylized"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=989413033]
+transform = Transform3D(0.90630776, -0.2601898, 0.33302775, 0, 0.7880108, 0.6156615, -0.42261827, -0.5579788, 0.7141803, 0, 0, 0)
+light_color = Color(0.62352943, 0.7058824, 1, 1)
+light_energy = 0.5
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=995513343]
+script = ExtResource("3_tgfao")
+data = ExtResource("4_2mmqo")
+style = "stylized"
+palette = "lunar"
+layer_0 = SubResource("Resource_3itq6")
+layer_1 = SubResource("Resource_84ivc")
+layer_2 = SubResource("Resource_pgwjo")
+layer_3 = SubResource("Resource_ckf30")
+
+[node name="FX_fire" type="Node3D" parent="." unique_id=161414521]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, -0.06483331, -21)
+script = ExtResource("6_8sx6v")
+style = "stylized"
+
+[node name="FX_campfire" type="Node3D" parent="." unique_id=2014138621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.1720018, -21)
+script = ExtResource("6_8sx6v")
+preset = "campfire"
+style = "stylized"
+
+[node name="FX_torch" type="Node3D" parent="." unique_id=931274800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.10117408, -21)
+script = ExtResource("6_8sx6v")
+preset = "torch"
+style = "stylized"
+
+[node name="FX_embers" type="Node3D" parent="." unique_id=605464273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.064909995, -21)
+script = ExtResource("6_8sx6v")
+preset = "embers"
+style = "stylized"
+
+[node name="FX_sparks" type="Node3D" parent="." unique_id=63797544]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.12714882, -21)
+script = ExtResource("6_8sx6v")
+preset = "sparks"
+style = "stylized"
+
+[node name="FX_smoke" type="Node3D" parent="." unique_id=595347341]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, -0.14930712, -7)
+script = ExtResource("6_8sx6v")
+preset = "smoke"
+style = "stylized"
+
+[node name="FX_steam" type="Node3D" parent="." unique_id=1759377385]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, -0.02408075, -7)
+script = ExtResource("6_8sx6v")
+preset = "steam"
+style = "stylized"
+
+[node name="FX_volcano_plume" type="Node3D" parent="." unique_id=523728864]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.022824442, -7)
+script = ExtResource("6_8sx6v")
+preset = "volcano_plume"
+style = "stylized"
+size = 0.25
+
+[node name="FX_magic_aura" type="Node3D" parent="." unique_id=864513993]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.048827328, -7)
+script = ExtResource("6_8sx6v")
+preset = "magic_aura"
+style = "stylized"
+
+[node name="FX_portal" type="Node3D" parent="." unique_id=1777824843]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.022014618, -7)
+script = ExtResource("6_8sx6v")
+preset = "portal"
+style = "stylized"
+
+[node name="FX_heal" type="Node3D" parent="." unique_id=437853718]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.07118683, 7)
+script = ExtResource("6_8sx6v")
+preset = "heal"
+style = "stylized"
+
+[node name="FX_force_field" type="Node3D" parent="." unique_id=1175150396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, -0.12189421, 7)
+script = ExtResource("6_8sx6v")
+preset = "force_field"
+style = "stylized"
+
+[node name="FX_fountain" type="Node3D" parent="." unique_id=1528143080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02197979, 7)
+script = ExtResource("6_8sx6v")
+preset = "fountain"
+style = "stylized"
+
+[node name="FX_waterfall" type="Node3D" parent="." unique_id=1256105541]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, -0.04339455, 7)
+script = ExtResource("6_8sx6v")
+preset = "waterfall"
+style = "stylized"
+size = 0.45
+
+[node name="FX_bubbles" type="Node3D" parent="." unique_id=1636495622]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, -0.067591354, 7)
+script = ExtResource("6_8sx6v")
+preset = "bubbles"
+style = "stylized"
+
+[node name="FX_fireflies" type="Node3D" parent="." unique_id=1971951474]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.056661516, 21)
+script = ExtResource("6_8sx6v")
+preset = "fireflies"
+style = "stylized"
+size = 0.35
+
+[node name="FX_lightning" type="Node3D" parent="." unique_id=1916077653]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, -0.018293658, 21)
+script = ExtResource("6_8sx6v")
+preset = "lightning"
+style = "stylized"
+
+[node name="FX_explosion" type="Node3D" parent="." unique_id=1157466832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.14405224, 21)
+script = ExtResource("6_8sx6v")
+preset = "explosion"
+style = "stylized"
+loop_interval = 3.5
+
+[node name="FX_shockwave" type="Node3D" parent="." unique_id=2109277862]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.08510066, 21)
+script = ExtResource("6_8sx6v")
+preset = "shockwave"
+style = "stylized"
+loop_interval = 3.5
+
+[node name="FX_confetti" type="Node3D" parent="." unique_id=230526702]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, -0.14318655, 21)
+script = ExtResource("6_8sx6v")
+preset = "confetti"
+style = "stylized"
+loop_interval = 3.5
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=413105595]
+transform = Transform3D(1, 0, 0, 0, 0.8637789, 0.503871, 0, -0.503871, 0.8637789, 0, 21, 33)
+current = true
+script = ExtResource("7_epjoc")
+
+[node name="Label_fire" type="Label3D" parent="." unique_id=1881739896]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.6, -16.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "fogo"
+font_size = 96
+outline_size = 18
+
+[node name="Label_campfire" type="Label3D" parent="." unique_id=138775954]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.6, -16.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "fogueira"
+font_size = 96
+outline_size = 18
+
+[node name="Label_torch" type="Label3D" parent="." unique_id=2018875190]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -16.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "tocha"
+font_size = 96
+outline_size = 18
+
+[node name="Label_embers" type="Label3D" parent="." unique_id=1829523755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.6, -16.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "brasas"
+font_size = 96
+outline_size = 18
+
+[node name="Label_sparks" type="Label3D" parent="." unique_id=1882974995]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.6, -16.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "faíscas"
+font_size = 96
+outline_size = 18
+
+[node name="Label_smoke" type="Label3D" parent="." unique_id=1918694032]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.6, -2.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "fumaça"
+font_size = 96
+outline_size = 18
+
+[node name="Label_steam" type="Label3D" parent="." unique_id=1234350506]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.6, -2.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "vapor"
+font_size = 96
+outline_size = 18
+
+[node name="Label_volcano_plume" type="Label3D" parent="." unique_id=1431910005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -2.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "pluma vulcânica"
+font_size = 96
+outline_size = 18
+
+[node name="Label_magic_aura" type="Label3D" parent="." unique_id=886530814]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.6, -2.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "aura mágica"
+font_size = 96
+outline_size = 18
+
+[node name="Label_portal" type="Label3D" parent="." unique_id=1525705241]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.6, -2.8)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "portal"
+font_size = 96
+outline_size = 18
+
+[node name="Label_heal" type="Label3D" parent="." unique_id=1617490686]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.6, 11.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "cura"
+font_size = 96
+outline_size = 18
+
+[node name="Label_force_field" type="Label3D" parent="." unique_id=532890266]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.6, 11.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "campo de força"
+font_size = 96
+outline_size = 18
+
+[node name="Label_fountain" type="Label3D" parent="." unique_id=993090369]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 11.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "fonte"
+font_size = 96
+outline_size = 18
+
+[node name="Label_waterfall" type="Label3D" parent="." unique_id=543334961]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.6, 11.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "cachoeira"
+font_size = 96
+outline_size = 18
+
+[node name="Label_bubbles" type="Label3D" parent="." unique_id=1970287052]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.6, 11.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "bolhas"
+font_size = 96
+outline_size = 18
+
+[node name="Label_fireflies" type="Label3D" parent="." unique_id=2087669077]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.6, 25.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "vagalumes"
+font_size = 96
+outline_size = 18
+
+[node name="Label_lightning" type="Label3D" parent="." unique_id=1723525737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0.6, 25.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "raio"
+font_size = 96
+outline_size = 18
+
+[node name="Label_explosion" type="Label3D" parent="." unique_id=1531381018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 25.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "explosão"
+font_size = 96
+outline_size = 18
+
+[node name="Label_shockwave" type="Label3D" parent="." unique_id=789610579]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0.6, 25.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "onda de choque"
+font_size = 96
+outline_size = 18
+
+[node name="Label_confetti" type="Label3D" parent="." unique_id=1135591116]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.6, 25.2)
+pixel_size = 0.013
+billboard = 1
+outline_modulate = Color(0, 0, 0, 0.8)
+text = "confete"
+font_size = 96
+outline_size = 18
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=579302869 instance=ExtResource("8_kpcin")]
+layer = 10
+script = ExtResource("9_a7fwe")
+title = "Vitrine de VFX"
+subtitle = "stylized · noite · todos os efeitos da biblioteca"

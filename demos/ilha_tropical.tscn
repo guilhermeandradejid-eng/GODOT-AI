@@ -1,0 +1,181 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_432kc"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_p0ts3"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_xgxdd"]
+[ext_resource type="Resource" path="res://demos/ilha_tropical_data/terrain_terrain.res" id="4_chwwn"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_vucuo"]
+[ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_7unm8"]
+[ext_resource type="Resource" path="res://demos/ilha_tropical_data/grass_grass.res" id="7_lwphg"]
+[ext_resource type="Resource" path="res://demos/ilha_tropical_data/flores_grass.res" id="8_w63x1"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="9_8qdx1"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="10_01jdl"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="11_grxh6"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="12_8744c"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dpurh"]
+shader = ExtResource("1_432kc")
+shader_parameter/top_color = Color(0.22745098, 0.30980393, 0.56078434, 1)
+shader_parameter/horizon_color = Color(1, 0.5882353, 0.3372549, 1)
+shader_parameter/ground_color = Color(0.2509804, 0.1882353, 0.17254902, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(1, 0.7647059, 0.5647059, 1)
+shader_parameter/sun_size = 0.035
+shader_parameter/sun_glow = 0.9
+shader_parameter/moon = 0.0
+shader_parameter/stars = 0.0
+shader_parameter/cloud_coverage = 0.45
+shader_parameter/cloud_color = Color(1, 0.70980394, 0.5411765, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 0.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_p0ts3")
+
+[sub_resource type="Sky" id="Sky_ywcyx"]
+sky_material = SubResource("ShaderMaterial_dpurh")
+
+[sub_resource type="Environment" id="Environment_y6es4"]
+background_mode = 2
+sky = SubResource("Sky_ywcyx")
+ambient_light_source = 3
+ambient_light_energy = 0.78
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.05
+tonemap_white = 6.0
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 0.64
+glow_bloom = 0.024
+fog_enabled = true
+fog_light_color = Color(0.76862746, 0.627451, 0.5568628, 1)
+fog_density = 0.0005
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+
+[sub_resource type="Resource" id="Resource_3dsdx"]
+script = ExtResource("5_vucuo")
+name = "Grama tropical"
+color_a = Color(0.17254902, 0.3529412, 0.12156863, 1)
+color_b = Color(0.30980393, 0.49803922, 0.16470589, 1)
+noise_scale = 0.14
+texture_set = "grass_ground"
+tint = Color(0.44705883, 0.7294118, 0.4392157, 1)
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_bpo4v"]
+script = ExtResource("5_vucuo")
+name = "Areia"
+color_a = Color(0.7882353, 0.69803923, 0.49411765, 1)
+color_b = Color(0.8862745, 0.827451, 0.6431373, 1)
+noise_scale = 0.6
+roughness = 0.97
+texture_set = "sand"
+
+[sub_resource type="Resource" id="Resource_ymk48"]
+script = ExtResource("5_vucuo")
+name = "Rocha vulcânica"
+color_a = Color(0.23529412, 0.22745098, 0.21960784, 1)
+color_b = Color(0.37254903, 0.3529412, 0.33333334, 1)
+noise_scale = 0.3
+strata = 0.15
+roughness = 0.8
+texture_set = "rock"
+tint = Color(0.5411765, 0.5176471, 0.49411765, 1)
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_84bu6"]
+script = ExtResource("5_vucuo")
+name = "Musgo"
+color_a = Color(0.12156863, 0.25882354, 0.13333334, 1)
+color_b = Color(0.20784314, 0.37254903, 0.16470589, 1)
+noise_scale = 0.2
+texture_set = "moss"
+uv_scale = 3.0
+
+[node name="IlhaTropical" type="Node3D" unique_id=366130726]
+metadata/vibe_style = "realistic"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=2103680902]
+environment = SubResource("Environment_y6es4")
+metadata/vibe_preset = "sunset"
+metadata/vibe_style = "realistic"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=140885055]
+transform = Transform3D(0.34202015, 0.1793018, -0.9224278, 0, 0.98162717, 0.190809, 0.9396926, -0.06526052, 0.33573627, 0, 0, 0)
+light_color = Color(1, 0.7647059, 0.5647059, 1)
+light_energy = 1.55
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=1872635187]
+script = ExtResource("3_xgxdd")
+data = ExtResource("4_chwwn")
+palette = "tropical"
+layer_0 = SubResource("Resource_3dsdx")
+layer_1 = SubResource("Resource_bpo4v")
+layer_2 = SubResource("Resource_ymk48")
+layer_3 = SubResource("Resource_84bu6")
+water_enabled = true
+
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=1783953540]
+script = ExtResource("6_7unm8")
+data = ExtResource("7_lwphg")
+preset = "lush"
+blades_per_clump = 7
+blade_height = 0.55
+blade_width = 0.05
+blade_curve = 0.3
+density_per_m2 = 7.5
+color_base = Color(0.10980392, 0.25882354, 0.078431375, 1)
+color_tip = Color(0.4, 0.6901961, 0.25882354, 1)
+dry_color = Color(0.54901963, 0.6039216, 0.23529412, 1)
+dry_amount = 0.08
+sss_color = Color(0.7137255, 0.9411765, 0.47843137, 1)
+flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
+wind_strength = 0.3
+
+[node name="Flores" type="Node3D" parent="Terrain" unique_id=110697535]
+script = ExtResource("6_7unm8")
+data = ExtResource("8_w63x1")
+preset = "flowers"
+blade_height = 0.38
+blade_width = 0.035
+blade_curve = 0.3
+density_per_m2 = 4.5
+flower_chance = 0.35
+flower_size = 0.06
+color_base = Color(0.16470589, 0.2901961, 0.09411765, 1)
+color_tip = Color(0.5254902, 0.6784314, 0.29803923, 1)
+dry_amount = 0.1
+flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
+wind_strength = 0.3
+
+[node name="Fogueira" type="Node3D" parent="." unique_id=1057022805]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.20495148, 1.3329691, -74.9992)
+script = ExtResource("9_8qdx1")
+preset = "campfire"
+
+[node name="Fireflies" type="Node3D" parent="." unique_id=926123808]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.154575, 17.614508, 3.6301134)
+script = ExtResource("9_8qdx1")
+preset = "fireflies"
+
+[node name="Fireflies2" type="Node3D" parent="." unique_id=496698380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -51.336872, 13.853165, 24.50012)
+script = ExtResource("9_8qdx1")
+preset = "fireflies"
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=432870988]
+transform = Transform3D(-0.70710677, 0.10324291, -0.69952905, 0, 0.9892835, 0.14600752, 0.70710677, 0.10324291, -0.69952905, -36.20387, 28.005943, -36.20387)
+current = true
+script = ExtResource("10_01jdl")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1579077602 instance=ExtResource("11_grxh6")]
+layer = 10
+script = ExtResource("12_8744c")
+title = "Ilha tropical"
+subtitle = "realistic · pôr do sol · ilha + mar"
+prompt = "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores"

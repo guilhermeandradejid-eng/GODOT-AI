@@ -35,7 +35,8 @@ ferramentas (`terrain.sculpt` → `terrain_sculpt`; `screenshot` devolve a image
   (127.0.0.1, token em `.godot/vibe_bridge.json`), aparecem na hora e aceitam Ctrl+Z.
 - **Modo headless**: sem editor, o Godot roda em segundo plano, abre a cena alvo, aplica e
   salva. A cena alvo fica em `.vibe/state.json` (troque com `scene.open`/`scene.new` ou `--scene`).
-- Binário: `GODOT_BIN=/caminho/godot` (4.3+). `screenshot` precisa de janela (ou `xvfb-run` no Linux).
+- Binário: `GODOT_BIN=/caminho/godot` (4.3+); depois do primeiro uso fica lembrado em `.vibe/state.json`
+  (o MCP também usa). `screenshot` precisa de janela (ou `xvfb-run` no Linux).
 
 ## Fluxo de vibecoding
 

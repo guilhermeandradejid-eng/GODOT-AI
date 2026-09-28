@@ -1,0 +1,201 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_lltak"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_qj85x"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_5y8yf"]
+[ext_resource type="Resource" path="res://demos/planeta_alien_data/terrain_terrain.res" id="4_elcbu"]
+[ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_5wdxy"]
+[ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_ugr5w"]
+[ext_resource type="Resource" path="res://demos/planeta_alien_data/grass_grass.res" id="7_sxnt4"]
+[ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="8_n0ava"]
+[ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="9_4fbed"]
+[ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="10_54dyw"]
+[ext_resource type="Script" path="res://demos/demo_hud.gd" id="11_xdlie"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jmhk7"]
+shader = ExtResource("1_lltak")
+shader_parameter/top_color = Color(0.11372549, 0.043137256, 0.23921569, 1)
+shader_parameter/horizon_color = Color(1, 0.3647059, 0.63529414, 1)
+shader_parameter/ground_color = Color(0.101960786, 0.047058824, 0.14117648, 1)
+shader_parameter/horizon_sharpness = null
+shader_parameter/sun_color = Color(0.5411765, 1, 0.84705883, 1)
+shader_parameter/sun_size = 0.06
+shader_parameter/sun_glow = 0.7
+shader_parameter/moon = 0.0
+shader_parameter/stars = 0.5
+shader_parameter/cloud_coverage = 0.35
+shader_parameter/cloud_color = Color(0.72156864, 0.41960785, 1, 1)
+shader_parameter/cloud_offset = null
+shader_parameter/bands = 0.0
+shader_parameter/toon = 0.0
+shader_parameter/energy = null
+shader_parameter/noise_tex = ExtResource("2_qj85x")
+
+[sub_resource type="Sky" id="Sky_hc8o4"]
+sky_material = SubResource("ShaderMaterial_jmhk7")
+
+[sub_resource type="Environment" id="Environment_m3qem"]
+background_mode = 2
+sky = SubResource("Sky_hc8o4")
+ambient_light_source = 3
+ambient_light_energy = 0.605
+reflected_light_source = 2
+tonemap_mode = 2
+tonemap_exposure = 1.05
+tonemap_white = 6.0
+ssao_enabled = true
+glow_enabled = true
+glow_intensity = 1.024
+glow_bloom = 0.0624
+fog_enabled = true
+fog_light_color = Color(0.47843137, 0.18431373, 0.56078434, 1)
+fog_density = 0.00096
+fog_aerial_perspective = 0.4
+fog_sky_affect = 0.25
+adjustment_enabled = true
+adjustment_contrast = 1.04
+adjustment_saturation = 1.1
+
+[sub_resource type="Resource" id="Resource_qetgx"]
+script = ExtResource("5_5wdxy")
+name = "Grama alien"
+color_a = Color(0.2901961, 0.14117648, 0.4392157, 1)
+color_b = Color(0.49019608, 0.25882354, 0.6784314, 1)
+noise_scale = 0.15
+roughness = 0.8
+texture_set = "moss"
+tint = Color(0.7529412, 0.5019608, 1, 1)
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_c4mrp"]
+script = ExtResource("5_5wdxy")
+name = "Solo"
+color_a = Color(0.078431375, 0.3254902, 0.3529412, 1)
+color_b = Color(0.13725491, 0.47843137, 0.47058824, 1)
+noise_scale = 0.5
+texture_set = "dirt"
+tint = Color(0.3764706, 0.8156863, 0.8156863, 1)
+uv_scale = 3.0
+
+[sub_resource type="Resource" id="Resource_lxfky"]
+script = ExtResource("5_5wdxy")
+name = "Rocha"
+color_a = Color(0.16470589, 0.14117648, 0.2509804, 1)
+color_b = Color(0.29411766, 0.24705882, 0.43137255, 1)
+noise_scale = 0.25
+strata = 0.4
+roughness = 0.7
+texture_set = "rock"
+tint = Color(0.5647059, 0.4392157, 0.8156863, 1)
+uv_scale = 6.0
+
+[sub_resource type="Resource" id="Resource_6ah0j"]
+script = ExtResource("5_5wdxy")
+name = "Cristal"
+color_a = Color(0, 0.8980392, 1, 1)
+color_b = Color(0.72156864, 1, 1, 1)
+noise_scale = 0.6
+roughness = 0.2
+emission = 2.5
+texture_set = "crystal"
+
+[node name="PlanetaAlien" type="Node3D" unique_id=1555870094]
+metadata/vibe_style = "stylized"
+
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=610921787]
+environment = SubResource("Environment_m3qem")
+metadata/vibe_preset = "alien"
+metadata/vibe_style = "stylized"
+
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=1224653518]
+transform = Transform3D(0.64278764, 0.3237444, -0.69427204, 0, 0.90630776, 0.42261827, 0.76604444, -0.2716538, 0.5825634, 0, 0, 0)
+light_color = Color(0.5411765, 1, 0.84705883, 1)
+light_energy = 1.1
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_max_distance = 250.0
+
+[node name="Terrain" type="Node3D" parent="." unique_id=1016094490]
+script = ExtResource("3_5y8yf")
+data = ExtResource("4_elcbu")
+style = "stylized"
+palette = "alien"
+layer_0 = SubResource("Resource_qetgx")
+layer_1 = SubResource("Resource_c4mrp")
+layer_2 = SubResource("Resource_lxfky")
+layer_3 = SubResource("Resource_6ah0j")
+
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=1133348734]
+script = ExtResource("6_ugr5w")
+data = ExtResource("7_sxnt4")
+preset = "alien"
+style = "stylized"
+blades_per_clump = 5
+blade_height = 0.6
+blade_width = 0.05
+blade_curve = 0.6
+density_per_m2 = 5.0
+flower_chance = 0.25
+flower_size = 0.06
+color_base = Color(0.12156863, 0.043137256, 0.21960784, 1)
+color_tip = Color(0.7607843, 0.48235294, 1, 1)
+dry_color = Color(0.18431373, 0.8392157, 1, 1)
+dry_amount = 0.3
+sss_color = Color(1, 0.54901963, 0.9411765, 1)
+emission = 1.4
+flower_colors = PackedColorArray(0, 0.9411765, 1, 1, 1, 0.30980393, 0.84705883, 1, 0.6156863, 1, 0.41568628, 1, 1, 1, 1, 1)
+wind_strength = 0.4
+
+[node name="Portal" type="Node3D" parent="." unique_id=1420760058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.390467, -15.130272, 13.251861)
+script = ExtResource("8_n0ava")
+preset = "portal"
+style = "stylized"
+color = Color(0.2509804, 1, 0.8156863, 1)
+size = 1.5
+
+[node name="MagicAura" type="Node3D" parent="." unique_id=447087465]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -10.01, 0)
+script = ExtResource("8_n0ava")
+preset = "magic_aura"
+style = "stylized"
+
+[node name="ForceField" type="Node3D" parent="." unique_id=717736790]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 70.4, 10.103571, 0)
+script = ExtResource("8_n0ava")
+preset = "force_field"
+style = "stylized"
+size = 2.0
+
+[node name="Fireflies" type="Node3D" parent="." unique_id=2124583397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.390467, -15.130272, 13.251861)
+script = ExtResource("8_n0ava")
+preset = "fireflies"
+style = "stylized"
+color = Color(0.5019608, 1, 0.9411765, 1)
+
+[node name="Fireflies2" type="Node3D" parent="." unique_id=519050562]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45.24843, 16.63005, 55.03802)
+script = ExtResource("8_n0ava")
+preset = "fireflies"
+style = "stylized"
+color = Color(0.5019608, 1, 0.9411765, 1)
+
+[node name="Fireflies3" type="Node3D" parent="." unique_id=806603137]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.912293, -16.260542, -13.262081)
+script = ExtResource("8_n0ava")
+preset = "fireflies"
+style = "stylized"
+color = Color(0.5019608, 1, 0.9411765, 1)
+
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=2004312355]
+transform = Transform3D(-0.3826834, 0.14107743, -0.9130447, 0, 0.9882724, 0.15270111, 0.92387956, 0.058436178, -0.37819543, -47.30263, 7.7906837, -19.593391)
+current = true
+script = ExtResource("9_4fbed")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1478471469 instance=ExtResource("10_54dyw")]
+layer = 10
+script = ExtResource("11_xdlie")
+title = "Planeta alienígena"
+subtitle = "stylized · céu alien · cristais e grama brilhante"
+prompt = "planeta alienígena com crateras, cristais brilhantes, grama roxa luminosa e um portal"

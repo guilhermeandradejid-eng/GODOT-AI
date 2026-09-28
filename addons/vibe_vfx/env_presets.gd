@@ -24,10 +24,10 @@ const PRESETS := {
 	},
 	"dawn": {
 		"description": "Amanhecer suave / soft dawn",
-		"sun_elevation": 11.0, "sun_azimuth": 65.0, "sun_color": "#ffd0ae", "sun_energy": 1.2,
+		"sun_elevation": 14.0, "sun_azimuth": 65.0, "sun_color": "#ffd0ae", "sun_energy": 1.25,
 		"sky_top": "#5470b0", "sky_horizon": "#ffc6a6", "ground": "#4a4450", "sun_size": 0.032, "sun_glow": 0.6,
 		"clouds": 0.3, "cloud_color": "#ffd8c8", "stars": 0.0, "moon": 0.0,
-		"ambient": 0.5, "fog_density": 0.0016, "fog_color": "#d6c4d4", "glow": 0.3, "exposure": 1.0,
+		"ambient": 0.5, "fog_density": 0.0008, "fog_color": "#d6c4d4", "glow": 0.3, "exposure": 0.95,
 	},
 	"night": {
 		"description": "Noite de lua cheia / moonlit night",

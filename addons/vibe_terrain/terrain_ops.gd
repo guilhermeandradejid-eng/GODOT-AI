@@ -563,6 +563,9 @@ static func auto_paint(data, rules: Dictionary, water_level: float = -INF) -> vo
 		concavity = _concavity(h, res, maxi(3, int(6.0 / float(data.cell_size))))
 	var base := int(r.base_layer)
 	var cell: float = data.cell_size
+	# Peaks (snow caps, lava...) only exist with real relief: on nearly flat
+	# ground the "highest 15%" would just be random bumps.
+	var peak_layer := int(r.peak_layer) if range_h.y - land_lo >= 8.0 else -1
 	for z in res:
 		for x in res:
 			var i := z * res + x
@@ -584,12 +587,12 @@ static func auto_paint(data, rules: Dictionary, water_level: float = -INF) -> vo
 			if int(r.beach_layer) >= 0 and water_level > -INF:
 				var band := float(r.beach_band)
 				_blend(w, int(r.beach_layer), 1.0 - smoothstep(water_level + band * 0.55, water_level + band, hi + nv * band * 0.35))
-			if int(r.peak_layer) >= 0:
+			if peak_layer >= 0:
 				var tp := smoothstep(peak_h - span * 0.04, peak_h + span * 0.04, hi + nv * span * 0.035)
 				tp *= 1.0 - smoothstep(float(r.peak_max_slope) - 6.0, float(r.peak_max_slope) + 6.0, slope)
 				if r.peak_concave:
 					tp *= smoothstep(0.15, 0.8, concavity[i])
-				_blend(w, int(r.peak_layer), tp)
+				_blend(w, peak_layer, tp)
 			if int(r.cliff_layer) >= 0:
 				_blend(w, int(r.cliff_layer), smoothstep(float(r.cliff_slope) - 6.0, float(r.cliff_slope) + 6.0, slope + nv * 8.0))
 			var j := i * 4

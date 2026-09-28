@@ -26,10 +26,6 @@
   "vfx": [
     {
       "preset": "snowfall"
-    },
-    {
-      "preset": "mist",
-      "at": "valley"
     }
   ],
   "camera": {
@@ -45,7 +41,7 @@
         "properties": {
           "title": "Montanhas nevadas",
           "subtitle": "realistic · amanhecer · cordilheira com erosão",
-          "prompt": "cordilheira nevada ao amanhecer com neve caindo e névoa nos vales"
+          "prompt": "cordilheira nevada ao amanhecer com neve caindo"
         }
       }
     }
@@ -53,6 +49,6 @@
   "meta": {
     "title": "Montanhas nevadas",
     "subtitle": "realistic · amanhecer · cordilheira com erosão",
-    "prompt": "cordilheira nevada ao amanhecer com neve caindo e névoa nos vales"
+    "prompt": "cordilheira nevada ao amanhecer com neve caindo"
   }
 }
