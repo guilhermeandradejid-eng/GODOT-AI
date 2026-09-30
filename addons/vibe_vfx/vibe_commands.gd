@@ -80,7 +80,8 @@ func register(reg) -> void:
 	reg.add("env.set", {
 		"description": "Sets the atmosphere: sky, sun/moon, fog, glow and post-processing. Presets: " + ", ".join(Env.PRESETS.keys()) + ". Any value can be overridden.",
 		"args": {
-			"preset": {"type": "string", "default": "day", "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...)."},
+			"preset": {"type": "string", "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...). Default: keep the current one (and its overrides)."},
+			"quality": {"type": "string", "enum": Env.QUALITIES, "description": "Rendering quality: low (sky+fog), medium (+SSAO, soft shadows), high (+SSIL, volumetric fog light shafts; default), ultra (+SDFGI global illumination)."},
 			"style": {"type": "string", "enum": STYLES, "description": "Art style for post-processing (default: scene style)."},
 			"sun_elevation": {"type": "number", "description": "Sun height in degrees (0 = horizon)."},
 			"sun_azimuth": {"type": "number", "description": "Sun direction in degrees."},
@@ -88,13 +89,21 @@ func register(reg) -> void:
 			"sun_energy": {"type": "number", "description": "Sun/moon intensity."},
 			"sky_top": {"type": "color", "description": "Sky color at the zenith."},
 			"sky_horizon": {"type": "color", "description": "Sky color at the horizon."},
+			"sky_mid": {"type": "color", "description": "Optional middle color of the sky gradient (e.g. peach between an orange horizon and a blue top)."},
 			"clouds": {"type": "number", "description": "Cloud coverage 0..1."},
-			"cloud_color": {"type": "color", "description": "Cloud color."},
+			"cloud_color": {"type": "color", "description": "Lit cloud color."},
+			"cloud_shade": {"type": "color", "description": "Cloud underside (shadow) color."},
+			"cloud_scale": {"type": "number", "description": "Cloud size multiplier (<1 = bigger clouds)."},
+			"cirrus": {"type": "number", "description": "High thin streak clouds 0..1."},
 			"stars": {"type": "number", "description": "Star brightness 0..1."},
 			"fog_density": {"type": "number", "description": "Fog density (0 = off, 0.02 = thick)."},
 			"fog_color": {"type": "color", "description": "Fog color."},
+			"fog_height": {"type": "number", "description": "Height fog: world height below which mist thickens."},
+			"fog_height_density": {"type": "number", "description": "Height fog strength (0 = off, 0.05 = valley mist)."},
+			"volumetric": {"type": "number", "description": "Volumetric fog density for light shafts (0 = off, 0.002 = subtle, 0.01 = thick)."},
 			"glow": {"type": "number", "description": "Bloom amount."},
 			"exposure": {"type": "number", "description": "Camera exposure."},
+			"tonemap": {"type": "string", "enum": ["linear", "filmic", "aces", "agx"], "description": "Tonemapper (default per style: realistic = aces, stylized/lowpoly = filmic, toon/cel = linear)."},
 			"ambient": {"type": "number", "description": "Ambient light energy."},
 		},
 		"handler": _env_set,
@@ -257,15 +266,6 @@ func _env_set(args: Dictionary, ctx) -> Variant:
 	var missing = ctx.require_root()
 	if missing != null:
 		return missing
-	var key := Env.resolve(str(args.preset))
-	if key == "":
-		return Util.err("unknown atmosphere '%s' (available: %s)" % [args.preset, ", ".join(Env.PRESETS.keys())])
-	var style := str(args.get("style", _scene_style(ctx)))
-	var overrides := {}
-	for k in args:
-		if not (k in ["preset", "style"]):
-			overrides[k] = args[k]
-	var settings := Env.resolve_settings(key, overrides)
 	var env_node: WorldEnvironment = ctx.root.find_child("VibeEnvironment", false, false) as WorldEnvironment
 	if env_node == null:
 		# Only one WorldEnvironment may exist: reuse a foreign one if present.
@@ -273,6 +273,20 @@ func _env_set(args: Dictionary, ctx) -> Variant:
 			if n is WorldEnvironment:
 				env_node = n
 				break
+	var current := str(env_node.get_meta("vibe_preset", "")) if env_node != null else ""
+	var preset_arg := str(args.get("preset", ""))
+	var key := Env.resolve(preset_arg) if preset_arg != "" else (current if current != "" else "day")
+	if key == "":
+		return Util.err("unknown atmosphere '%s' (available: %s)" % [args.preset, ", ".join(Env.PRESETS.keys())])
+	var style := str(args.get("style", _scene_style(ctx)))
+	# Same preset: earlier overrides (sun angle, fog...) are kept and updated.
+	var overrides: Dictionary = {}
+	if env_node != null and key == current:
+		overrides = (env_node.get_meta("vibe_env_overrides", {}) as Dictionary).duplicate()
+	for k in args:
+		if not (k in ["preset", "style"]):
+			overrides[k] = args[k]
+	var settings := Env.resolve_settings(key, overrides)
 	if env_node == null:
 		env_node = WorldEnvironment.new()
 		env_node.name = "VibeEnvironment"
@@ -284,11 +298,20 @@ func _env_set(args: Dictionary, ctx) -> Variant:
 		sun.name = "VibeSun"
 		ctx.add_node(sun)
 	var before_env: Environment = env_node.environment.duplicate(true) if env_node.environment != null else null
-	var before_sun := {"rotation_degrees": sun.rotation_degrees, "light_color": sun.light_color, "light_energy": sun.light_energy}
+	var before_sun := {}
+	for p in Env.SUN_PROPS:
+		before_sun[p] = sun.get(p)
 	Env.apply(env_node, sun, settings, style)
+	env_node.set_meta("vibe_env_overrides", overrides)
 	if ctx.is_editor():
 		ctx.record_method(env_node, &"set_environment", [env_node.environment.duplicate(true)], &"set_environment", [before_env])
 		for p in before_sun:
 			ctx.record_method(sun, &"set", [p, sun.get(p)], &"set", [p, before_sun[p]])
 	ctx.dirty = true
-	return {"preset": key, "style": style, "sun": {"elevation": settings.sun_elevation, "azimuth": settings.sun_azimuth}, "fog_density": settings.get("fog_density", 0.0)}
+	var e: Environment = env_node.environment
+	var tonemaps := {Environment.TONE_MAPPER_LINEAR: "linear", Environment.TONE_MAPPER_REINHARDT: "reinhardt", Environment.TONE_MAPPER_FILMIC: "filmic", Environment.TONE_MAPPER_ACES: "aces", 4: "agx"}
+	return {"preset": key, "style": style, "quality": env_node.get_meta("vibe_quality", "high"), "overrides": overrides,
+		"sun": {"elevation": settings.sun_elevation, "azimuth": settings.sun_azimuth}, "fog_density": settings.get("fog_density", 0.0),
+		"effects": {"tonemap": tonemaps.get(int(e.tonemap_mode), str(e.tonemap_mode)), "ssao": e.ssao_enabled, "ssil": e.ssil_enabled,
+			"volumetric_fog": e.volumetric_fog_enabled, "sdfgi": e.sdfgi_enabled, "glow": e.glow_enabled,
+			"soft_shadows": sun.light_angular_distance > 0.0}}

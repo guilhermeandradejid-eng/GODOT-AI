@@ -30,6 +30,7 @@ const WATER_SHADERS := {
 	"lowpoly": preload("res://addons/vibe_terrain/shaders/water_lowpoly.gdshader"),
 }
 const STYLES := ["realistic", "stylized", "toon", "cel", "lowpoly"]
+const WATER_NORMAL_PATH := "res://addons/vibe_terrain/textures/water_normal.png"
 
 const GROUP := &"vibe_terrain"
 const LOD_STEPS := [2, 4, 8]
@@ -166,6 +167,8 @@ const LOD_KEY_PER_METER := 0.0012
 
 var _material: ShaderMaterial
 var _water_material: ShaderMaterial
+var _lake_material: ShaderMaterial
+var _river_material: ShaderMaterial
 var _height_tex: ImageTexture
 var _splat_tex: ImageTexture
 var _chunk_root: Node3D
@@ -1025,19 +1028,33 @@ func _update_water_material() -> void:
 			# Brighter, more saturated water for non-realistic styles.
 			deep = Color.from_hsv(deep.h, minf(deep.s * 1.1, 1.0), clampf(deep.v * 1.9, 0.0, 1.0), 0.95)
 			shallow = Color.from_hsv(shallow.h, minf(shallow.s * 1.1, 1.0), clampf(shallow.v * 1.3, 0.0, 1.0), 0.8)
-			_water_material.set_shader_parameter("softness", 0.005 if style == "cel" else (0.1 if style == "stylized" else 0.02))
-			_water_material.set_shader_parameter("color_bands", 2.0 if style == "cel" else (6.0 if style == "stylized" else 3.0))
 		"lowpoly":
 			deep = Color.from_hsv(deep.h, minf(deep.s * 0.95, 1.0), clampf(deep.v * 2.4, 0.0, 1.0), 0.96)
 			shallow = Color.from_hsv(shallow.h, shallow.s, clampf(shallow.v * 1.35, 0.0, 1.0), 0.9)
-	_water_material.set_shader_parameter("deep_color", deep)
-	_water_material.set_shader_parameter("shallow_color", shallow)
-	if data != null:
-		_ensure_textures()
-		_water_material.set_shader_parameter("heightmap", _height_tex)
-		_water_material.set_shader_parameter("cell_size", data.cell_size)
-		_water_material.set_shader_parameter("terrain_half_size", get_size() * 0.5)
-		_water_material.set_shader_parameter("has_terrain", true)
+	var normal_tex: Texture2D = load(WATER_NORMAL_PATH) if style == "realistic" and ResourceLoader.exists(WATER_NORMAL_PATH) else null
+	for mat in [_water_material, _lake_material, _river_material]:
+		if mat == null:
+			continue
+		mat.set_shader_parameter("deep_color", deep)
+		mat.set_shader_parameter("shallow_color", shallow)
+		if style in ["toon", "cel", "stylized"]:
+			mat.set_shader_parameter("softness", 0.005 if style == "cel" else (0.1 if style == "stylized" else 0.02))
+			mat.set_shader_parameter("color_bands", 2.0 if style == "cel" else (6.0 if style == "stylized" else 3.0))
+		if normal_tex != null:
+			mat.set_shader_parameter("normal_tex", normal_tex)
+		if data != null:
+			_ensure_textures()
+			mat.set_shader_parameter("heightmap", _height_tex)
+			mat.set_shader_parameter("cell_size", data.cell_size)
+			mat.set_shader_parameter("terrain_half_size", get_size() * 0.5)
+			mat.set_shader_parameter("has_terrain", true)
+	if _lake_material != null:
+		_lake_material.set_shader_parameter("swell", 0.0)
+		_lake_material.set_shader_parameter("wave_height", 0.05)
+	if _river_material != null:
+		_river_material.set_shader_parameter("flow_speed", 0.35)
+		_river_material.set_shader_parameter("wave_height", 0.03)
+		_river_material.set_shader_parameter("swell", 0.0)
 
 
 func _build_water() -> void:
@@ -1051,46 +1068,126 @@ func _build_water() -> void:
 	_clear_children(_water_root)
 	if not water_enabled and rivers.is_empty() and lakes.is_empty():
 		return
-	if _water_material == null:
-		_water_material = ShaderMaterial.new()
-	_water_material.shader = WATER_SHADERS.get(style, WATER_SHADERS.realistic)
+	var shader: Shader = WATER_SHADERS.get(style, WATER_SHADERS.realistic)
+	for key in ["_water_material", "_lake_material", "_river_material"]:
+		if get(key) == null:
+			set(key, ShaderMaterial.new())
+		(get(key) as ShaderMaterial).shader = shader
 	_update_water_material()
 	if water_enabled:
 		var sea := MeshInstance3D.new()
-		var plane := PlaneMesh.new()
 		if style == "lowpoly":
 			# Subdivided so the faceted waves are visible, and big enough to reach the horizon.
+			var plane := PlaneMesh.new()
 			plane.size = Vector2.ONE * maxf(get_size() * 8.0, 2048.0)
 			plane.subdivide_width = 255
 			plane.subdivide_depth = 255
+			plane.center_offset = Vector3(0, water_level, 0)
+			sea.mesh = plane
 		else:
-			plane.size = Vector2.ONE * maxf(get_size() * 16.0, 8192.0)
-			plane.subdivide_width = 128
-			plane.subdivide_depth = 128
-		plane.center_offset = Vector3(0, water_level, 0)
-		sea.mesh = plane
+			sea.mesh = _sea_mesh(water_level)
 		sea.material_override = _water_material
 		sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_water_root.add_child(sea, false, Node.INTERNAL_MODE_BACK)
 	for lake in lakes:
 		var mi := MeshInstance3D.new()
 		mi.mesh = _disc_mesh(lake.center, float(lake.radius) * 1.35, float(lake.level))
-		mi.material_override = _water_material
+		mi.material_override = _lake_material
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_water_root.add_child(mi, false, Node.INTERNAL_MODE_BACK)
-	if not rivers.is_empty():
-		var river_mat := _water_material.duplicate() as ShaderMaterial
-		river_mat.set_shader_parameter("flow_speed", 0.35)
-		river_mat.set_shader_parameter("wave_height", 0.03)
-		for river in rivers:
-			var mesh := _ribbon_mesh(river.points, river.levels, float(river.width))
-			if mesh == null:
-				continue
-			var mi := MeshInstance3D.new()
-			mi.mesh = mesh
-			mi.material_override = river_mat
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			_water_root.add_child(mi, false, Node.INTERNAL_MODE_BACK)
+	for river in rivers:
+		var mesh := _ribbon_mesh(river.points, river.levels, float(river.width))
+		if mesh == null:
+			continue
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = _river_material
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_water_root.add_child(mi, false, Node.INTERNAL_MODE_BACK)
+
+
+## Sea surface: a fine grid over the terrain (so the swell and the shoreline
+## are smooth) and square rings that get coarser out to the horizon. UV.x holds
+## the local vertex spacing (the shader drops waves the grid cannot draw).
+func _sea_mesh(level: float) -> ArrayMesh:
+	var half := get_size() * 0.5
+	var inner := half * 1.3 + 24.0
+	var n := 200
+	var s0 := inner * 2.0 / float(n)
+	var far := maxf(get_size() * 16.0, 8192.0) * 0.5
+	var verts := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	for gz in n + 1:
+		for gx in n + 1:
+			verts.append(Vector3(-inner + gx * s0, level, -inner + gz * s0))
+			uvs.append(Vector2(s0, 0.0))
+	for gz in n:
+		for gx in n:
+			var a := gz * (n + 1) + gx
+			idx.append_array([a, a + 1, a + n + 2, a, a + n + 2, a + n + 1])
+	# Border loop of the grid, in the same order as the rings below.
+	var loop_len := n * 4
+	var prev := PackedInt32Array()
+	for i in loop_len:
+		var side := floori(float(i) / float(n))
+		var k := i % n
+		var gx := 0
+		var gz := 0
+		match side:
+			0:
+				gx = k
+				gz = 0
+			1:
+				gx = n
+				gz = k
+			2:
+				gx = n - k
+				gz = n
+			_:
+				gx = 0
+				gz = n - k
+		prev.append(gz * (n + 1) + gx)
+	var e := inner
+	while e < far:
+		var e2 := minf(e * 1.2, far) if e * 1.2 < far * 0.98 else far
+		var spacing := maxf(e2 - e, e2 * 2.0 / float(n))
+		var start := verts.size()
+		for i in loop_len:
+			var side := floori(float(i) / float(n))
+			var t := float(i % n) / float(n) * 2.0 - 1.0
+			var p := Vector2.ZERO
+			match side:
+				0:
+					p = Vector2(t * e2, -e2)
+				1:
+					p = Vector2(e2, t * e2)
+				2:
+					p = Vector2(-t * e2, e2)
+				_:
+					p = Vector2(-e2, -t * e2)
+			verts.append(Vector3(p.x, level, p.y))
+			uvs.append(Vector2(spacing, 0.0))
+		for i in loop_len:
+			var j := (i + 1) % loop_len
+			# Clockwise seen from above (Godot front faces), like the horizon ring.
+			idx.append_array([start + i, start + j, prev[j], start + i, prev[j], prev[i]])
+		for i in loop_len:
+			prev[i] = start + i
+		e = e2
+	var normals := PackedVector3Array()
+	normals.resize(verts.size())
+	normals.fill(Vector3.UP)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.custom_aabb = AABB(Vector3(-far, level - 4.0, -far), Vector3(far * 2.0, 8.0, far * 2.0))
+	return mesh
 
 
 ## Lake surface: a square grid clipped to the circle (even triangles, so the

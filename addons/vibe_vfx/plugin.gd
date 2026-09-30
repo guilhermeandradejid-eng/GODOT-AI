@@ -183,12 +183,17 @@ func _set_env(preset_name: String) -> void:
 	var probe_env := WorldEnvironment.new()
 	probe_env.environment = new_env
 	var probe_sun := DirectionalLight3D.new()
-	Env.apply(probe_env, probe_sun, Env.resolve_settings(preset_name, {}), style)
+	var overrides: Dictionary = env_node.get_meta("vibe_env_overrides", {}) if str(env_node.get_meta("vibe_preset", "")) == Env.resolve(preset_name) else {}
+	Env.apply(probe_env, probe_sun, Env.resolve_settings(preset_name, overrides), style)
 	ur.add_do_property(env_node, &"environment", new_env)
 	ur.add_undo_property(env_node, &"environment", env_node.environment)
-	for p in ["rotation_degrees", "light_color", "light_energy", "shadow_enabled", "directional_shadow_max_distance", "shadow_blur"]:
+	for p in Env.SUN_PROPS:
 		ur.add_do_property(sun, p, probe_sun.get(p))
 		ur.add_undo_property(sun, p, sun.get(p))
+	probe_env.set_meta("vibe_env_overrides", overrides)
+	for m in ["vibe_preset", "vibe_style", "vibe_quality", "vibe_env_overrides"]:
+		ur.add_do_method(env_node, &"set_meta", m, probe_env.get_meta(m))
+		ur.add_undo_method(env_node, &"set_meta", m, env_node.get_meta(m, null))
 	ur.commit_action()
 	probe_env.free()
 	probe_sun.free()

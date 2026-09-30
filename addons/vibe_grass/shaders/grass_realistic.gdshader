@@ -11,7 +11,8 @@ void fragment() {
 	col *= mix(0.55, 1.0, smoothstep(0.0, 0.6, v_hf));
 	ALBEDO = col;
 	ROUGHNESS = mix(0.95, 0.5, v_hf);
-	SPECULAR = 0.3;
+	// Low ambient specular: sky reflections at grazing angles washed meadows out.
+	SPECULAR = 0.06;
 	EMISSION = color_tip * emission_strength * v_hf * v_hf;
 }
 

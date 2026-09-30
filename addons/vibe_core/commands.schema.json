@@ -164,8 +164,17 @@
       "args": {
         "preset": {
           "type": "string",
-          "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...).",
-          "default": "day"
+          "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...). Default: keep the current one (and its overrides)."
+        },
+        "quality": {
+          "type": "string",
+          "description": "Rendering quality: low (sky+fog), medium (+SSAO, soft shadows), high (+SSIL, volumetric fog light shafts; default), ultra (+SDFGI global illumination).",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "ultra"
+          ]
         },
         "style": {
           "type": "string",
@@ -202,13 +211,29 @@
           "type": "color",
           "description": "Sky color at the horizon."
         },
+        "sky_mid": {
+          "type": "color",
+          "description": "Optional middle color of the sky gradient (e.g. peach between an orange horizon and a blue top)."
+        },
         "clouds": {
           "type": "number",
           "description": "Cloud coverage 0..1."
         },
         "cloud_color": {
           "type": "color",
-          "description": "Cloud color."
+          "description": "Lit cloud color."
+        },
+        "cloud_shade": {
+          "type": "color",
+          "description": "Cloud underside (shadow) color."
+        },
+        "cloud_scale": {
+          "type": "number",
+          "description": "Cloud size multiplier (<1 = bigger clouds)."
+        },
+        "cirrus": {
+          "type": "number",
+          "description": "High thin streak clouds 0..1."
         },
         "stars": {
           "type": "number",
@@ -222,6 +247,18 @@
           "type": "color",
           "description": "Fog color."
         },
+        "fog_height": {
+          "type": "number",
+          "description": "Height fog: world height below which mist thickens."
+        },
+        "fog_height_density": {
+          "type": "number",
+          "description": "Height fog strength (0 = off, 0.05 = valley mist)."
+        },
+        "volumetric": {
+          "type": "number",
+          "description": "Volumetric fog density for light shafts (0 = off, 0.002 = subtle, 0.01 = thick)."
+        },
         "glow": {
           "type": "number",
           "description": "Bloom amount."
@@ -229,6 +266,16 @@
         "exposure": {
           "type": "number",
           "description": "Camera exposure."
+        },
+        "tonemap": {
+          "type": "string",
+          "description": "Tonemapper (default per style: realistic = aces, stylized/lowpoly = filmic, toon/cel = linear).",
+          "enum": [
+            "linear",
+            "filmic",
+            "aces",
+            "agx"
+          ]
         },
         "ambient": {
           "type": "number",
@@ -240,8 +287,17 @@
         "properties": {
           "preset": {
             "type": "string",
-            "default": "day",
-            "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...)."
+            "description": "Atmosphere preset (PT/EN aliases: noite, pôr do sol...). Default: keep the current one (and its overrides)."
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "ultra"
+            ],
+            "description": "Rendering quality: low (sky+fog), medium (+SSAO, soft shadows), high (+SSIL, volumetric fog light shafts; default), ultra (+SDFGI global illumination)."
           },
           "style": {
             "type": "string",
@@ -278,13 +334,29 @@
             "type": "string",
             "description": "Sky color at the horizon. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
           },
+          "sky_mid": {
+            "type": "string",
+            "description": "Optional middle color of the sky gradient (e.g. peach between an orange horizon and a blue top). (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
           "clouds": {
             "type": "number",
             "description": "Cloud coverage 0..1."
           },
           "cloud_color": {
             "type": "string",
-            "description": "Cloud color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+            "description": "Lit cloud color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "cloud_shade": {
+            "type": "string",
+            "description": "Cloud underside (shadow) color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
+          },
+          "cloud_scale": {
+            "type": "number",
+            "description": "Cloud size multiplier (<1 = bigger clouds)."
+          },
+          "cirrus": {
+            "type": "number",
+            "description": "High thin streak clouds 0..1."
           },
           "stars": {
             "type": "number",
@@ -298,6 +370,18 @@
             "type": "string",
             "description": "Fog color. (hex '#rrggbb' or a color name such as 'red'/'vermelho')"
           },
+          "fog_height": {
+            "type": "number",
+            "description": "Height fog: world height below which mist thickens."
+          },
+          "fog_height_density": {
+            "type": "number",
+            "description": "Height fog strength (0 = off, 0.05 = valley mist)."
+          },
+          "volumetric": {
+            "type": "number",
+            "description": "Volumetric fog density for light shafts (0 = off, 0.002 = subtle, 0.01 = thick)."
+          },
           "glow": {
             "type": "number",
             "description": "Bloom amount."
@@ -305,6 +389,16 @@
           "exposure": {
             "type": "number",
             "description": "Camera exposure."
+          },
+          "tonemap": {
+            "type": "string",
+            "enum": [
+              "linear",
+              "filmic",
+              "aces",
+              "agx"
+            ],
+            "description": "Tonemapper (default per style: realistic = aces, stylized/lowpoly = filmic, toon/cel = linear)."
           },
           "ambient": {
             "type": "number",

@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_disabled, world_vertex_coords;
+render_mode blend_mix, depth_draw_opaque, cull_disabled, world_vertex_coords, alpha_to_coverage;
 
 // Foliage cards (and low poly canopies) of vibe_scatter. Lighting per style:
 // mode 0 = realistic (wrap diffuse + translucency), 1 = stylized (soft),
@@ -38,10 +38,17 @@ void vertex() {
 void fragment() {
 	float shade = 1.0;
 	float a = 1.0;
+	vec2 tex_size = vec2(textureSize(leaf_tex, 0));
 	if (use_texture) {
 		vec4 tex = texture(leaf_tex, UV);
 		shade = tex.r;
 		a = tex.a;
+		// Mipmaps average the alpha down, so distant canopies would thin out:
+		// scale it back up with the mip level (Ben Golus, "Anti-aliased Alpha Test").
+		vec2 dx = dFdx(UV * tex_size);
+		vec2 dy = dFdy(UV * tex_size);
+		float mip = max(0.0, 0.5 * log2(max(dot(dx, dx), dot(dy, dy))));
+		a *= 1.0 + mip * 0.22;
 	}
 	float k = fract(v_rand * 7.13 + UV2.x * 0.37);
 	vec3 base = mix(leaf_color.rgb, leaf_color2.rgb, smoothstep(0.15, 0.85, k) * variation);
@@ -52,8 +59,13 @@ void fragment() {
 	ALBEDO = col;
 	ALPHA = a;
 	ALPHA_SCISSOR_THRESHOLD = alpha_cut;
-	ROUGHNESS = 0.8;
-	SPECULAR = 0.25;
+	// Soft, anti-aliased leaf edges with MSAA (alpha to coverage).
+	ALPHA_ANTIALIASING_EDGE = use_texture ? 0.3 : 0.0;
+	ALPHA_TEXTURE_COORDINATE = UV * tex_size;
+	// No ambient (sky) specular: at grazing angles its Fresnel term turned
+	// whole leaf cards pale grey. light() adds a small sun sheen instead.
+	ROUGHNESS = 0.9;
+	SPECULAR = 0.0;
 	EMISSION = col * emission;
 }
 
@@ -70,12 +82,13 @@ void light() {
 	} else {
 		lit = clamp((ndl + 0.45) / 1.45, 0.0, 1.0) * ATTENUATION;
 	}
-	vec3 shade = mix(shadow_tint * (mode == 0 ? 0.25 : 0.42) * floor_k, vec3(1.0), lit);
+	vec3 shade = mix(shadow_tint * (mode == 0 ? 0.32 : 0.42) * floor_k, vec3(1.0), lit);
 	// Light through the leaves when the sun is behind them.
 	float back = pow(clamp(dot(VIEW, -LIGHT), 0.0, 1.0), 4.0) * translucency * ATTENUATION;
 	DIFFUSE_LIGHT += (shade + back * translucency_color.rgb) * LIGHT_COLOR / PI;
 	if (mode == 0) {
 		float h = max(dot(normalize(LIGHT + VIEW), NORMAL), 0.0);
-		SPECULAR_LIGHT += pow(h, 24.0) * 0.08 * ATTENUATION * LIGHT_COLOR;
+		// Faint, leaf-tinted sheen (a white one lit whole cards up).
+		SPECULAR_LIGHT += pow(h, 20.0) * 0.02 * ATTENUATION * LIGHT_COLOR * (0.3 + ALBEDO * 2.0);
 	}
 }

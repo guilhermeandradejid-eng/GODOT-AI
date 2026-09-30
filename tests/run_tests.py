@@ -115,6 +115,35 @@ def test_commands(client: VibeClient) -> None:
     check(data_dir.exists() and any(data_dir.glob("*.res")), "generated data saved next to the scene", data_dir)
 
 
+def test_environment(client: VibeClient) -> None:
+    print("[environment]")
+    cmds = [
+        {"cmd": "scene.new", "args": {"path": "res://tests/tmp/test_env.tscn", "overwrite": True}},
+        {"cmd": "env.set", "args": {"preset": "pôr do sol", "sun_elevation": 6}},
+        {"cmd": "env.set", "args": {"fog_density": 0.004}},
+        {"cmd": "style.set", "args": {"style": "toon"}},
+        {"cmd": "style.set", "args": {"style": "realistic"}},
+        {"cmd": "env.set", "args": {"quality": "ultra"}},
+        {"cmd": "env.set", "args": {"preset": "day", "quality": "low", "tonemap": "filmic"}},
+    ]
+    res = run_batch(client, cmds)
+    ok = all(r.get("ok") for r in res) and len(res) == len(cmds)
+    check(ok, "env.set / style.set sequence", [r.get("error") for r in res if not r.get("ok")])
+    if not ok:
+        return
+    r0, r1, r4, r5 = res[1]["result"], res[2]["result"], res[5]["result"], res[6]["result"]
+    check(r0["preset"] == "sunset" and abs(r0["sun"]["elevation"] - 6) < 1e-3, "env.set resolves PT names and overrides", r0)
+    check(r1["preset"] == "sunset" and abs(r1["sun"]["elevation"] - 6) < 1e-3 and abs(r1["fog_density"] - 0.004) < 1e-6,
+          "env.set without preset keeps the preset and earlier overrides", r1)
+    check(r4["preset"] == "sunset" and r4["overrides"].get("sun_elevation") == 6, "style.set keeps the atmosphere overrides", r4)
+    fx = r4["effects"]
+    check(fx["ssao"] and fx["ssil"] and fx["volumetric_fog"] and fx["sdfgi"] and fx["soft_shadows"] and fx["tonemap"] == "aces",
+          "quality=ultra enables SSAO, SSIL, volumetric fog, SDFGI (realistic = ACES)", fx)
+    fx = r5["effects"]
+    check(not fx["ssao"] and not fx["ssil"] and not fx["volumetric_fog"] and not fx["sdfgi"] and fx["tonemap"] == "filmic",
+          "quality=low turns the heavy effects off; tonemap override", fx)
+
+
 def test_world_build(client: VibeClient) -> None:
     print("[world.build]")
     recipe = {
@@ -397,6 +426,7 @@ def main() -> int:
     if not a.skip_import:
         test_import(godot)
     test_commands(client)
+    test_environment(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_env.tscn", mode="headless", timeout=900))
     test_world_build(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_world.tscn", mode="headless", timeout=900))
     test_prompts(client)
     test_scatter(client)

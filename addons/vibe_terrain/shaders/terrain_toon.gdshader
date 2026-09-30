@@ -39,6 +39,8 @@ void fragment() {
 		+ c2.rgb * layer2_emission * hb.z + c3.rgb * layer3_emission * hb.w;
 	float grass = 0.0;
 	albedo = apply_grass(albedo, length(v_world - CAMERA_POSITION_WORLD), v_splat_uv, 1.0, 0.5, grass);
+	// Deep creases get one crisp darker step.
+	albedo *= mix(1.0, 0.84, step(0.45, v_cavity) * cavity_strength);
 	ALBEDO = brush_overlay(albedo * 1.1, emission);
 	ROUGHNESS = 1.0;
 	EMISSION = emission;

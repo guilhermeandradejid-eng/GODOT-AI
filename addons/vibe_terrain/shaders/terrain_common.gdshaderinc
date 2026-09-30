@@ -22,6 +22,8 @@ uniform float far_start = 35.0;
 uniform float far_end = 260.0;
 // Low poly: random horizontal offset of the grid vertices (breaks the grid look).
 uniform float vertex_jitter = 0.0;
+// Darkens creases and valleys, lightens crests (curvature of the heightmap).
+uniform float cavity_strength : hint_range(0.0, 2.0) = 1.0;
 
 uniform vec3 layer0_color_a : source_color = vec3(0.2, 0.32, 0.12);
 uniform vec3 layer0_color_b : source_color = vec3(0.35, 0.48, 0.18);
@@ -106,6 +108,8 @@ varying flat float v_flat_rand;
 varying flat vec2 v_flat_uv;
 // 1 on steep slopes of the horizon hills (painted with the cliff layer).
 varying float v_ring_rock;
+// Heightmap curvature: > 0 in creases/valleys, < 0 on ridges (about -1..1).
+varying float v_cavity;
 
 float t_hash13(vec3 p) {
 	p = fract(p * 0.1031);
@@ -314,6 +318,21 @@ void vertex() {
 		VERTEX.xz += j * vertex_jitter;
 	}
 	v_ring_rock = ring ? 1.0 - smoothstep(0.72, 0.88, n.y) : 0.0;
+	// Curvature at two scales (~2 and ~7 cells): how far the surroundings rise
+	// above this vertex, per meter.
+	v_cavity = 0.0;
+	if (!ring) {
+		ivec2 m = size - 1;
+		float a1 = texelFetch(heightmap, clamp(c + ivec2(2, 0), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(2, 0), ivec2(0), m), 0).r
+			+ texelFetch(heightmap, clamp(c + ivec2(0, 2), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(0, 2), ivec2(0), m), 0).r;
+		float a2 = texelFetch(heightmap, clamp(c + ivec2(7, 0), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(7, 0), ivec2(0), m), 0).r
+			+ texelFetch(heightmap, clamp(c + ivec2(0, 7), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(0, 7), ivec2(0), m), 0).r
+			+ texelFetch(heightmap, clamp(c + ivec2(5, 5), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(5, 5), ivec2(0), m), 0).r
+			+ texelFetch(heightmap, clamp(c + ivec2(5, -5), ivec2(0), m), 0).r + texelFetch(heightmap, clamp(c - ivec2(5, -5), ivec2(0), m), 0).r;
+		float k1 = (a1 * 0.25 - h) / (2.0 * cell_size);
+		float k2 = (a2 * 0.125 - h) / (7.0 * cell_size);
+		v_cavity = clamp(k1 * 2.2 + k2 * 3.0, -1.0, 1.0);
+	}
 	NORMAL = n;
 	TANGENT = normalize(cross(n, vec3(0.0, 0.0, 1.0)));
 	BINORMAL = normalize(cross(n, TANGENT));
@@ -324,6 +343,13 @@ void vertex() {
 	v_flat_splat = mix(textureLod(splatmap, v_splat_uv, 0.0), vec4(0.0, 0.0, 1.0, 0.0), v_ring_rock);
 	v_flat_rand = t_hash12(ring ? floor(VERTEX.xz) : vec2(c));
 	v_flat_uv = v_splat_uv;
+}
+
+// Albedo multiplier from the curvature: creases darker, crests a bit lighter.
+float cavity_shade() {
+	float crease = smoothstep(0.0, 0.8, v_cavity);
+	float crest = smoothstep(0.0, -0.8, v_cavity);
+	return 1.0 - crease * 0.38 * cavity_strength + crest * 0.12 * cavity_strength;
 }
 
 vec3 brush_overlay(vec3 albedo, inout vec3 emission) {

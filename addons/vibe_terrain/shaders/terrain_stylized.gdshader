@@ -25,6 +25,9 @@ void fragment() {
 	albedo = apply_grass(albedo, dist, v_splat_uv, 0.0, dot(vec4(c0.a, c1.a, c2.a, c3.a), hb), grass);
 	float m = t_fbm(v_local * 0.01);
 	albedo = mix(albedo * vec3(0.92, 0.95, 1.06), albedo * vec3(1.08, 1.04, 0.92), m);
+	// Painterly crease shading: valleys lean to a cool shade.
+	float cav = cavity_shade();
+	albedo = mix(albedo * shadow_tint, albedo, clamp(cav, 0.0, 1.0)) * (1.0 + max(cav - 1.0, 0.0));
 	ALBEDO = brush_overlay(albedo, emission);
 	ROUGHNESS = 1.0;
 	EMISSION = emission;

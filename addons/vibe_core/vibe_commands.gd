@@ -970,7 +970,8 @@ func _style_set(args: Dictionary, ctx) -> Variant:
 				changed.append(ctx.node_path(n))
 	var env: Node = ctx.root.find_child("VibeEnvironment", false, false)
 	if env != null and registry.has_command("env.set"):
-		await registry.execute("env.set", {"preset": str(env.get_meta("vibe_preset", "day")), "style": style}, ctx)
+		# Keeps the current preset and its overrides (env.set without a preset).
+		await registry.execute("env.set", {"style": style}, ctx)
 		changed.append("VibeEnvironment")
 	ctx.dirty = true
 	return {"style": style, "changed": changed}

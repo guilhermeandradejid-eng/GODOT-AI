@@ -653,7 +653,11 @@ func ground_tint_colors() -> Array:
 	if style in ["toon", "cel", "lowpoly"]:
 		var flat := color_base.lerp(color_tip, 0.5)
 		return [Color(flat, 1.0), Color(flat, 1.0)]
-	var avg := color_base.lerp(color_tip, 0.6).lerp(dry_color, dry_amount * 0.45)
+	# Seen from afar a meadow reads darker and less saturated than the blade
+	# tips (the blades shade each other).
+	var avg := color_base.lerp(color_tip, 0.48).lerp(dry_color, dry_amount * 0.45)
+	var lum := avg.get_luminance()
+	avg = avg.lerp(Color(lum, lum, lum), 0.18)
 	if flower_chance > 0.0 and not flower_colors.is_empty():
 		var fc := Color(0, 0, 0)
 		for c in flower_colors:

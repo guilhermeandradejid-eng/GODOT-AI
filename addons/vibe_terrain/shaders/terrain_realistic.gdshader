@@ -78,7 +78,9 @@ void fragment() {
 	albedo *= mix(1.0 - macro_variation, 1.0 + macro_variation * 0.5, m1);
 	albedo *= mix(vec3(0.94, 0.96, 1.0), vec3(1.04, 1.02, 0.96), m2);
 
-	AO = mix(0.55, 1.0, clamp(height * 1.3, 0.0, 1.0));
+	float cav = cavity_shade();
+	albedo *= cav;
+	AO = mix(0.55, 1.0, clamp(height * 1.3, 0.0, 1.0)) * clamp(cav + 0.15, 0.0, 1.0);
 	AO_LIGHT_AFFECT = 0.25;
 	ALBEDO = brush_overlay(albedo, emission);
 	NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);

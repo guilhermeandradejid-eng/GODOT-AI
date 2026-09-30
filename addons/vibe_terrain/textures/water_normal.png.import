@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://847e08uqkkxw"
-path="res://.godot/imported/frond.png-81ee638206ccf06a130312735e1f1d78.ctex"
+uid="uid://by6c8bohbk8v0"
+path="res://.godot/imported/water_normal.png-a18e3807d3efbc4b5bb15d07608d5815.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/vibe_scatter/textures/frond.png"
-dest_files=["res://.godot/imported/frond.png-81ee638206ccf06a130312735e1f1d78.ctex"]
+source_file="res://addons/vibe_terrain/textures/water_normal.png"
+dest_files=["res://.godot/imported/water_normal.png-a18e3807d3efbc4b5bb15d07608d5815.ctex"]
 
 [params]
 

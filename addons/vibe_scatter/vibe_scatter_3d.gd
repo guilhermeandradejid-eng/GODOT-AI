@@ -494,6 +494,9 @@ func _build_nodes(t: Node, p: Dictionary, placements: Dictionary) -> void:
 					var mm := MultiMesh.new()
 					mm.transform_format = MultiMesh.TRANSFORM_3D
 					mm.use_custom_data = true
+					# Instance colors (white) too: the Compatibility renderer draws
+					# custom-data-only MultiMeshes black.
+					mm.use_colors = true
 					mm.mesh = mesh
 					mm.instance_count = xforms.size()
 					var rng := RandomNumberGenerator.new()
@@ -501,6 +504,7 @@ func _build_nodes(t: Node, p: Dictionary, placements: Dictionary) -> void:
 					for i in xforms.size():
 						mm.set_instance_transform(i, xforms[i])
 						mm.set_instance_custom_data(i, Color(rng.randf(), rng.randf(), rng.randf(), 0.0))
+						mm.set_instance_color(i, Color.WHITE)
 					var mmi := MultiMeshInstance3D.new()
 					mmi.multimesh = mm
 					mmi.material_override = _material(kind, part, pal, lod == "far")
