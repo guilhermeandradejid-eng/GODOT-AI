@@ -5,6 +5,7 @@
     "vibe_core",
     "vibe_grass",
     "vibe_motion",
+    "vibe_scatter",
     "vibe_terrain",
     "vibe_vfx"
   ],
@@ -2027,6 +2028,454 @@
             "description": "How many actions to redo."
           }
         }
+      },
+      "examples": []
+    },
+    {
+      "name": "scatter.add",
+      "category": "scatter",
+      "description": "Scatters trees, bushes, rocks or props over the terrain: forest, autumn, pines, palms, jungle, birches, acacias, dead_trees, bushes, ferns, cacti, rocks, boulders, mushrooms, crystals, logs, alien_trees. PT/EN names work (floresta, pinheiros, palmeiras, rochas, cactos...). Placement follows slope/height/water rules, groves and clearings around effects/characters.",
+      "editor_only": false,
+      "args": {
+        "preset": {
+          "type": "string",
+          "description": "What to scatter.",
+          "required": true
+        },
+        "density": {
+          "type": "number",
+          "description": "Density multiplier (0.2 sparse, 1 normal, 2 dense).",
+          "default": 1.0
+        },
+        "name": {
+          "type": "string",
+          "description": "Node name (default from the preset)."
+        },
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node (default first)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style (default: scene style).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "palette": {
+          "type": "string",
+          "description": "Colors: temperate, tropical, snowy, desert, canyon, volcanic, autumn, alien, lunar, swamp, savanna (default: the terrain's)."
+        },
+        "rules": {
+          "type": "object",
+          "description": "Placement overrides: max_slope, min_slope, min_above_water, max_above_water, min_height_frac, max_height_frac, cluster (0..1), cluster_scale, water_margin, clearing.",
+          "default": {}
+        },
+        "colors": {
+          "type": "object",
+          "description": "Color overrides: {\"leaves\": [\"#c33\", \"#e83\"], \"bark\": \"#543\", \"rock\": \"#888\", \"top\": \"#fff\", \"top_amount\": 0.6, \"snow\": 0.5}.",
+          "default": {}
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Variation seed.",
+          "default": 1
+        },
+        "view_distance": {
+          "type": "number",
+          "description": "Draw distance in meters."
+        },
+        "collision": {
+          "type": "boolean",
+          "description": "Trees and rocks block characters.",
+          "default": true
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace a node with the same name.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "preset": {
+            "type": "string",
+            "description": "What to scatter."
+          },
+          "density": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Density multiplier (0.2 sparse, 1 normal, 2 dense)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Node name (default from the preset)."
+          },
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node (default first)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style (default: scene style)."
+          },
+          "palette": {
+            "type": "string",
+            "description": "Colors: temperate, tropical, snowy, desert, canyon, volcanic, autumn, alien, lunar, swamp, savanna (default: the terrain's)."
+          },
+          "rules": {
+            "type": "object",
+            "default": {},
+            "description": "Placement overrides: max_slope, min_slope, min_above_water, max_above_water, min_height_frac, max_height_frac, cluster (0..1), cluster_scale, water_margin, clearing."
+          },
+          "colors": {
+            "type": "object",
+            "default": {},
+            "description": "Color overrides: {\"leaves\": [\"#c33\", \"#e83\"], \"bark\": \"#543\", \"rock\": \"#888\", \"top\": \"#fff\", \"top_amount\": 0.6, \"snow\": 0.5}."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 1,
+            "description": "Variation seed."
+          },
+          "view_distance": {
+            "type": "number",
+            "description": "Draw distance in meters."
+          },
+          "collision": {
+            "type": "boolean",
+            "default": true,
+            "description": "Trees and rocks block characters."
+          },
+          "replace": {
+            "type": "boolean",
+            "default": true,
+            "description": "Replace a node with the same name."
+          }
+        },
+        "required": [
+          "preset"
+        ]
+      },
+      "examples": [
+        {
+          "preset": "floresta",
+          "density": 0.8
+        },
+        {
+          "preset": "pinheiros",
+          "rules": {
+            "max_height_frac": 0.6
+          }
+        },
+        {
+          "preset": "rochas",
+          "density": 1.5
+        }
+      ]
+    },
+    {
+      "name": "scatter.auto",
+      "category": "scatter",
+      "description": "Adds the natural vegetation of the terrain's palette (temperate: forest+bushes+rocks+logs, tropical: palms+jungle, snowy: pines+rocks, desert: cacti+rocks, autumn: orange forest+mushrooms, alien: crystals...).",
+      "editor_only": false,
+      "args": {
+        "density": {
+          "type": "number",
+          "description": "Global density multiplier.",
+          "default": 1.0
+        },
+        "terrain": {
+          "type": "string",
+          "description": "Terrain node (default first)."
+        },
+        "palette": {
+          "type": "string",
+          "description": "Override the palette."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style (default: scene style).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "density": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Global density multiplier."
+          },
+          "terrain": {
+            "type": "string",
+            "description": "Terrain node (default first)."
+          },
+          "palette": {
+            "type": "string",
+            "description": "Override the palette."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style (default: scene style)."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "scatter.clear",
+      "category": "scatter",
+      "description": "Removes a scatter layer (name) or every one (all=true).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Scatter node name."
+        },
+        "all": {
+          "type": "boolean",
+          "description": "Remove all.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Scatter node name."
+          },
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Remove all."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "scatter.list",
+      "category": "scatter",
+      "description": "Lists scatter presets, palettes and the scatter layers in the scene.",
+      "editor_only": false,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "scatter.paint",
+      "category": "scatter",
+      "description": "Paints where a scatter layer grows: erase trees around a point (a clearing, a village, a path) or bring them back.",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Scatter node name.",
+          "required": true
+        },
+        "position": {
+          "type": "position",
+          "description": "Center ([x, z], anchor...).",
+          "required": true
+        },
+        "radius": {
+          "type": "number",
+          "description": "Brush radius (m).",
+          "default": 15.0
+        },
+        "density": {
+          "type": "number",
+          "description": "Target density 0..1.",
+          "default": 1.0
+        },
+        "erase": {
+          "type": "boolean",
+          "description": "Shortcut for density 0.",
+          "default": false
+        },
+        "strength": {
+          "type": "number",
+          "description": "Brush strength 0..1.",
+          "default": 1.0
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Scatter node name."
+          },
+          "position": {
+            "description": "Center ([x, z], anchor...). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "radius": {
+            "type": "number",
+            "default": 15.0,
+            "description": "Brush radius (m)."
+          },
+          "density": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Target density 0..1."
+          },
+          "erase": {
+            "type": "boolean",
+            "default": false,
+            "description": "Shortcut for density 0."
+          },
+          "strength": {
+            "type": "number",
+            "default": 1.0,
+            "description": "Brush strength 0..1."
+          }
+        },
+        "required": [
+          "name",
+          "position"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "scatter.set",
+      "category": "scatter",
+      "description": "Changes a scatter layer (preset, density, style, palette, rules, colors, seed, view distance, wind).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Scatter node name.",
+          "required": true
+        },
+        "preset": {
+          "type": "string",
+          "description": "New preset."
+        },
+        "density": {
+          "type": "number",
+          "description": "Density multiplier."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style.",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "palette": {
+          "type": "string",
+          "description": "Color palette."
+        },
+        "rules": {
+          "type": "object",
+          "description": "Placement rules (merged)."
+        },
+        "colors": {
+          "type": "object",
+          "description": "Color overrides (merged)."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Variation seed."
+        },
+        "view_distance": {
+          "type": "number",
+          "description": "Draw distance (m)."
+        },
+        "wind_strength": {
+          "type": "number",
+          "description": "Wind (0..3)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Scatter node name."
+          },
+          "preset": {
+            "type": "string",
+            "description": "New preset."
+          },
+          "density": {
+            "type": "number",
+            "description": "Density multiplier."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style."
+          },
+          "palette": {
+            "type": "string",
+            "description": "Color palette."
+          },
+          "rules": {
+            "type": "object",
+            "description": "Placement rules (merged)."
+          },
+          "colors": {
+            "type": "object",
+            "description": "Color overrides (merged)."
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Variation seed."
+          },
+          "view_distance": {
+            "type": "number",
+            "description": "Draw distance (m)."
+          },
+          "wind_strength": {
+            "type": "number",
+            "description": "Wind (0..3)."
+          }
+        },
+        "required": [
+          "name"
+        ]
       },
       "examples": []
     },

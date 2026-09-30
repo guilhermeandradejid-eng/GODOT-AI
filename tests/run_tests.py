@@ -124,6 +124,7 @@ def test_world_build(client: VibeClient) -> None:
         "grass": [{"preset": "lush", "density": 0.8}, {"preset": "flowers", "name": "Flores", "density": 0.3}],
         "vfx": [{"preset": "campfire", "at": "beach"}, {"preset": "fireflies", "count": 2}],
         "camera": {"type": "fly", "view": "hero"},
+        "scatter": [{"preset": "palms", "density": 0.8}, "rocks"],
         "characters": [{"outfit": "knight", "at": "flat", "motion": "acena e depois dança"}, {"outfit": "zombie", "count": 2, "motion": "anda como um zumbi"}],
         "commands": [{"cmd": "node.add", "args": {"type": "Label3D", "name": "Placa", "position": [0, 6, 0], "properties": {"text": "oi"}}}],
     }
@@ -133,6 +134,7 @@ def test_world_build(client: VibeClient) -> None:
     check(bool(r.get("ok")), "world.build builds a full recipe", [s for s in steps if not s.get("ok")] or r.get("error"))
     check(len(steps) >= 12, "world.build ran every step", len(steps))
     check(sum(1 for s in steps if s.get("cmd") == "motion.character") == 3, "recipe characters", [s for s in steps if s.get("cmd") == "motion.character"])
+    check(sum(1 for s in steps if s.get("cmd") == "scatter.add" and s.get("ok")) == 2, "recipe scatter", [s for s in steps if s.get("cmd", "").startswith("scatter")])
 
 
 def test_prompts(client: VibeClient) -> None:
@@ -146,6 +148,9 @@ def test_prompts(client: VibeClient) -> None:
          {"terrain.preset": "canyon", "environment": "sunset", "style": "lowpoly", "features": ["river"]}),
         ("vulcão em erupção numa tempestade", {"terrain.preset": "volcano", "environment": "stormy"}),
         ("campo de trigo com flores ao amanhecer, cel shading", {"environment": "dawn", "style": "cel", "grass": ["wheat", "flowers"]}),
+        ("floresta de pinheiros nevada com rochas", {"terrain.palette": "snowy", "scatter": ["pines", "rocks"]}),
+        ("colinas verdes no outono", {"terrain.palette": "autumn", "scatter": ["auto"]}),
+        ("deserto árido sem árvores", {"terrain.preset": "dunes", "scatter": []}),
     ]
     cmds = [{"cmd": "vibe", "args": {"prompt": p, "apply": False}} for p, _ in cases]
     res = run_batch(client, cmds)
@@ -160,14 +165,40 @@ def test_prompts(client: VibeClient) -> None:
             "vfx": [v.get("preset") for v in rec.get("vfx", [])],
             "grass": [g.get("preset") for g in rec.get("grass", [])],
             "features": [f.get("type") for f in terrain.get("features", [])],
+            "scatter": [x if isinstance(x, str) else x.get("preset") for x in (rec.get("scatter") if isinstance(rec.get("scatter"), list) else ([rec["scatter"]] if rec.get("scatter") else []))],
         }
         ok = True
         for k, v in exp.items():
-            if isinstance(v, list):
+            if isinstance(v, list) and not v:
+                ok &= got[k] == []
+            elif isinstance(v, list):
                 ok &= all(x in got[k] for x in v)
             else:
                 ok &= got[k] == v
         check(ok and bool(r.get("ok")), f"vibe \"{prompt}\"", {k: got[k] for k in exp})
+
+
+def test_scatter(client: VibeClient) -> None:
+    print("[scatter]")
+    res = run_batch(client, [
+        {"cmd": "scene.open", "args": {"path": SCENE}},
+        {"cmd": "scatter.add", "args": {"preset": "floresta", "name": "Floresta", "density": 1.5}},
+        {"cmd": "scatter.paint", "args": {"name": "Floresta", "position": "center", "radius": 20, "erase": True}},
+        {"cmd": "scatter.set", "args": {"name": "Floresta", "density": 0.5, "style": "toon"}},
+        {"cmd": "scatter.auto", "args": {"density": 0.5}},
+        {"cmd": "scatter.list", "args": {}},
+        {"cmd": "scatter.clear", "args": {"name": "Floresta"}},
+    ])
+    check(len(res) == 7 and all(r.get("ok") for r in res), "scatter commands", [r.get("error") for r in res if not r.get("ok")])
+    if len(res) == 7:
+        n0 = res[1].get("result", {}).get("instances", 0)
+        n1 = res[2].get("result", {}).get("instances", 0)
+        n2 = res[3].get("result", {}).get("instances", 0)
+        check(n0 > 20, "scatter.add places trees", n0)
+        check(n1 < n0, "scatter.paint erase removes trees", (n0, n1))
+        check(0 < n2 < n1, "scatter.set density thins the forest", (n1, n2))
+        check(len(res[4].get("result", {}).get("layers", [])) >= 3, "scatter.auto adds the palette's vegetation", res[4].get("result"))
+        check(len(res[5].get("result", {}).get("presets", {})) >= 15, "scatter.list presets", len(res[5].get("result", {}).get("presets", {})))
 
 
 def test_motion(godot: str, client: VibeClient) -> None:
@@ -368,6 +399,7 @@ def main() -> int:
     test_commands(client)
     test_world_build(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_world.tscn", mode="headless", timeout=900))
     test_prompts(client)
+    test_scatter(client)
     test_motion(godot, client)
     test_kimodo(lambda scene: VibeClient(ROOT, godot=godot, scene=scene, mode="headless", timeout=900))
     test_schema(godot)

@@ -231,6 +231,11 @@ func parse(prompt: String) -> Dictionary:
 	if not grass.is_empty():
 		recipe["grass"] = grass
 
+	# --- Trees, bushes, rocks (vibe_scatter) --------------------------------
+	var scatter := _scatter(palette)
+	if not scatter.is_empty():
+		recipe["scatter"] = scatter[0] if scatter.size() == 1 and scatter[0] is String else scatter
+
 	# --- VFX ----------------------------------------------------------------
 	var vfx: Array = []
 	for key in VFX_WORDS:
@@ -335,6 +340,64 @@ func _characters() -> Array:
 	return out
 
 
+const SCATTER_WORDS := {
+	"pines": ["pinheiro", "pinheiros", "pinhal", "conifera", "coniferas", "abeto", "abetos", "pine", "pines", "fir", "firs", "conifer", "conifers"],
+	"palms": ["palmeira", "palmeiras", "coqueiro", "coqueiros", "palm", "palms", "coconut"],
+	"jungle": ["selva", "jungle", "rainforest"],
+	"birches": ["betula", "betulas", "birch", "birches"],
+	"acacias": ["acacia", "acacias"],
+	"dead_trees": ["arvores secas", "arvore seca", "arvores mortas", "galhos secos", "dead trees", "dead tree", "assombrada", "assombrado", "haunted", "spooky"],
+	"forest": ["floresta", "florestas", "arvores", "arvore", "bosque", "bosques", "mata", "forest", "forests", "trees", "tree", "woods", "woodland"],
+	"bushes": ["arbusto", "arbustos", "moita", "moitas", "bush", "bushes", "shrub", "shrubs"],
+	"ferns": ["samambaia", "samambaias", "fern", "ferns"],
+	"cacti": ["cacto", "cactos", "cactus", "cacti", "cactuses"],
+	"rocks": ["rocha", "rochas", "pedra", "pedras", "rochoso", "rochosa", "rock", "rocks", "rocky", "stone", "stones"],
+	"boulders": ["matacao", "matacoes", "pedregulho", "pedregulhos", "rochedo", "rochedos", "boulder", "boulders"],
+	"mushrooms": ["cogumelo", "cogumelos", "fungo", "fungos", "mushroom", "mushrooms"],
+	"crystals": ["cristal", "cristais", "crystal", "crystals"],
+	"logs": ["tronco caido", "troncos caidos", "troncos", "toras", "logs", "log"],
+}
+
+
+## Vegetation: named presets, or "auto" (the palette's natural vegetation)
+## unless the prompt says there is none ("sem árvores", "barren"...).
+func _scatter(palette: String) -> Array:
+	if _negated(["arvore", "arvores", "vegetacao", "floresta", "tree", "trees", "vegetation", "forest", "plantas", "plants"]) \
+			or _has_any(["arido", "arida", "arid", "barren", "esteril", "deserto de sal", "vazio", "vazia", "empty", "bare", "limpo", "limpa"]):
+		return []
+	var named: Array = []
+	for key in SCATTER_WORDS:
+		var words: Array = SCATTER_WORDS[key]
+		var hit := false
+		for w in words:
+			if (" " + w + " ") in _padded:
+				hit = true
+				break
+		if hit and not _negated(words):
+			if key == "forest" and not named.is_empty():
+				continue  # "floresta de pinheiros" = pines
+			var entry := {"preset": key}
+			var dense := _has_any(["densa", "denso", "dense", "fechada", "cerrada", "thick", "lush", "exuberante"])
+			var sparse := _has_any(["esparsa", "esparso", "sparse", "poucas", "poucos", "few", "rala", "ralo"])
+			if dense:
+				entry["density"] = 1.8
+			elif sparse:
+				entry["density"] = 0.4
+			named.append(entry)
+			notes.append("vegetação / scatter: %s" % key)
+	if named.is_empty():
+		notes.append("vegetação automática / auto scatter (%s)" % palette)
+		return ["auto"]
+	# Named trees still get some rocks around them.
+	var has_rocks := false
+	for e in named:
+		if e.preset in ["rocks", "boulders"]:
+			has_rocks = true
+	if not has_rocks:
+		named.append({"preset": "rocks", "density": 0.5})
+	return named
+
+
 func _has_vfx(list: Array, preset: String) -> bool:
 	for v in list:
 		if v.get("preset", "") == preset:
@@ -373,8 +436,13 @@ func _negated(words: Array) -> bool:
 	var idx := _find_word(words)
 	if idx <= 0:
 		return false
+	# "no" is "in the" in Portuguese ("no outono", "no deserto"): it only
+	# negates in English prompts.
+	var english := _has_any(["the", "a", "an", "with", "and", "of", "in", "at", "on", "near", "without", "some", "is", "are"])
 	for back in range(1, 3):
 		if idx - back >= 0 and _tokens[idx - back] in NEGATIONS:
+			if _tokens[idx - back] == "no" and not english:
+				continue
 			return true
 	return false
 

@@ -17,6 +17,7 @@ extends RefCounted
 ##     "auto_paint": true
 ##   },
 ##   "grass": [ {"preset": "meadow", "density": 0.8}, {"preset": "flowers", "density": 0.3} ],
+##   "scatter": "auto" | [ {"preset": "pines", "density": 0.8}, "rocks" ],   # trees, bushes, rocks (vibe_scatter)
 ##   "vfx": [ {"preset": "campfire", "at": "flat"}, {"preset": "fireflies", "count": 3},
 ##            {"preset": "fire", "at": [10, 5], "color": "blue", "scale": 2} ],
 ##   "camera": {"type": "fly", "view": "hero"},
@@ -173,6 +174,30 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 				fargs.merge(rules)
 			await _step(registry, ctx, "grass.fill", fargs)
 		gi += 1
+
+	# Vegetation and props: "auto" = the palette's natural vegetation.
+	var scatter = recipe.get("scatter", null)
+	if terrain_name != "" and scatter != null and not (scatter is bool and not scatter):
+		if scatter is String and Util.normalize_text(scatter) in ["auto", "true", "sim", "yes"]:
+			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name})
+		elif (scatter is bool and scatter) or scatter is Dictionary and scatter.has("auto"):
+			var dens := float(scatter.get("density", 1.0)) if scatter is Dictionary else 1.0
+			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name, "density": dens})
+		else:
+			if scatter is Dictionary or scatter is String:
+				scatter = [scatter]
+			var si := 0
+			for sc in scatter:
+				if sc is String:
+					sc = {"preset": sc}
+				if not (sc is Dictionary):
+					continue
+				var sargs := {"preset": str(sc.get("preset", "forest")), "terrain": terrain_name, "replace": true, "seed": 1 + si * 17}
+				for k in ["density", "name", "palette", "rules", "colors", "seed", "view_distance", "collision"]:
+					if sc.has(k):
+						sargs[k] = sc[k]
+				await _step(registry, ctx, "scatter.add", sargs)
+				si += 1
 
 	var vfx = recipe.get("vfx", [])
 	if vfx is Dictionary or vfx is String:
