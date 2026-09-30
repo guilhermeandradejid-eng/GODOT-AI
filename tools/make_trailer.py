@@ -56,16 +56,16 @@ REPO = "github.com/guilhermeandradejid-eng/GODOT-AI"
 # --- shots (tools/trailer_shot.gd) -------------------------------------------------------------
 
 SHOTS: dict[str, dict] = {
-    "intro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.4,
+    "intro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.4, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
               "camera": {"from_camera": "VibeCamera", "move": [8, 5, 16], "pan": 9}},
     "fogueira": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.3, "loop_animations": True, "anim_offset": 0.25,
-                 "camera": {"orbit": "Fogueira", "base": "camera", "radius": 6.8, "height": 2.1, "from": -25, "to": 25, "focus": 0.9, "fov": 50}},
+                 "camera": {"orbit": "Fogueira", "base": "camera", "radius": 4.6, "height": 2.3, "from": -30, "to": 8, "focus": 0.9, "fov": 52}},
     "galeria": {"scene": "res://demos/galeria_animacoes.tscn", "duration": 4.3, "loop_animations": True, "anim_offset": 0.3,
                 "camera": {"keys": [{"t": 0, "pos": [-10.5, 2.4, 6.4], "look": [-6.5, 1.6, 0], "fov": 48},
                                     {"t": 1, "pos": [10.5, 2.4, 6.4], "look": [6.5, 1.6, 0], "fov": 48}]}},
     "montanhas": {"scene": "res://demos/montanhas_nevadas.tscn", "duration": 4.3,
                   "camera": {"from_camera": "VibeCamera", "move": [-12, 8, 34], "pan": -12}},
-    "timelapse": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.3, "ease": False,
+    "timelapse": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.3, "ease": False, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
                   "camera": {"from_camera": "VibeCamera", "move": [0, 9, -12], "pan": 22},
                   "timelapse": [["day", 0.0], ["sunset", 0.5], ["night", 1.0]]},
     "vulcao": {"scene": "res://demos/vulcao.tscn", "duration": 4.3,
@@ -88,7 +88,7 @@ SHOTS: dict[str, dict] = {
                  "camera": {"orbit": "Naufrago", "base": "facing", "radius": 5.5, "height": 2.0, "from": -20, "to": 5, "focus": 1.1, "fov": 50}},
     "claude": {"scene": "res://demos/campo_noturno.tscn", "duration": 4.3, "loop_animations": True, "anim_offset": 0.2,
                "camera": {"orbit": "Fogueira", "base": "camera", "radius": 8.5, "height": 2.6, "from": 20, "to": -20, "focus": 0.8, "fov": 50}},
-    "outro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 6.3,
+    "outro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 6.3, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
               "camera": {"orbit": [0, 0, 0], "radius": 210, "height": 80, "from": -20, "to": 15, "focus": -10, "fov": 48}},
 }
 
@@ -184,17 +184,20 @@ def record_shots(godot: str, force: bool, names: list[str] | None = None) -> Non
         out = out_dir / f"{name}.avi"
         if out.exists() and not force:
             continue
+        part = out_dir / f"{name}.part.avi"  # renamed when complete (a killed run leaves no broken shot)
         s = dict(shot)
         s.setdefault("fps", FPS)
         s.setdefault("warmup", WARMUP)
         s.setdefault("render_scale", RENDER_SCALE)
-        cmd = [godot, "--path", str(ROOT), "--fixed-fps", str(FPS), "--write-movie", str(out),
+        cmd = [godot, "--path", str(ROOT), "--fixed-fps", str(FPS), "--write-movie", str(part),
                "--script", "res://tools/trailer_shot.gd", "--", json.dumps(s)]
         if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and shutil.which("xvfb-run"):
             cmd = ["xvfb-run", "-a", "-s", f"-screen 0 {W}x{H}x24"] + cmd
         t = time.time()
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
-        ok = out.exists() and out.stat().st_size > 0
+        ok = p.returncode == 0 and part.exists() and part.stat().st_size > 0
+        if ok:
+            part.replace(out)
         log(f"shot {name}: {'ok' if ok else 'FAILED'} in {time.time() - t:.0f}s")
         if not ok:
             log("\n".join(l for l in (p.stdout + p.stderr).splitlines() if "ERROR" in l)[-2000:])
