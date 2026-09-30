@@ -188,7 +188,7 @@ _data = {
 [node name="GaleriaAnimacoes" type="Node3D" unique_id=1342550385]
 metadata/vibe_style = "realistic"
 
-[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=496764625]
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=569729414]
 environment = SubResource("Environment_xxb1o")
 metadata/vibe_preset = "day"
 metadata/vibe_style = "realistic"
@@ -198,7 +198,7 @@ metadata/vibe_env_overrides = {
 "sun_elevation": 38.0
 }
 
-[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=531512321]
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=1595205603]
 transform = Transform3D(0.90630776, -0.2601898, 0.33302775, 0, 0.7880108, 0.6156615, -0.42261827, -0.5579788, 0.7141803, 0, 0, 0)
 light_color = Color(1, 0.94509804, 0.8627451, 1)
 light_energy = 1.35
@@ -212,7 +212,7 @@ directional_shadow_blend_splits = true
 directional_shadow_fade_start = 0.85
 directional_shadow_max_distance = 300.0
 
-[node name="Terrain" type="Node3D" parent="." unique_id=1090914313]
+[node name="Terrain" type="Node3D" parent="." unique_id=1067962043]
 script = ExtResource("3_ooykw")
 data = ExtResource("4_u3oxm")
 layer_0 = SubResource("Resource_tix53")
@@ -220,14 +220,14 @@ layer_1 = SubResource("Resource_55222")
 layer_2 = SubResource("Resource_6ygm2")
 layer_3 = SubResource("Resource_fje7y")
 
-[node name="Grass" type="Node3D" parent="Terrain" unique_id=1781723900]
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=1671088259]
 script = ExtResource("6_tix53")
 data = ExtResource("7_55222")
 color_base = Color(0.14901961, 0.27058825, 0.101960786, 1)
 color_tip = Color(0.5529412, 0.6901961, 0.30588236, 1)
 flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
 
-[node name="Flores" type="Node3D" parent="Terrain" unique_id=1762420417]
+[node name="Flores" type="Node3D" parent="Terrain" unique_id=1552393564]
 script = ExtResource("6_tix53")
 data = ExtResource("8_6ygm2")
 preset = "flowers"
@@ -243,14 +243,14 @@ dry_amount = 0.1
 flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
 wind_strength = 0.3
 
-[node name="Forest" type="Node3D" parent="Terrain" unique_id=1852855896]
+[node name="Forest" type="Node3D" parent="Terrain" unique_id=137775197]
 script = ExtResource("9_fje7y")
 density = 0.9
 rules = {
 "clearing": 22.0
 }
 
-[node name="Bushes" type="Node3D" parent="Terrain" unique_id=1832953207]
+[node name="Bushes" type="Node3D" parent="Terrain" unique_id=1798033513]
 script = ExtResource("9_fje7y")
 preset = "bushes"
 density = 0.6
@@ -259,7 +259,7 @@ rules = {
 "clearing": 14.0
 }
 
-[node name="Rocks" type="Node3D" parent="Terrain" unique_id=1093264018]
+[node name="Rocks" type="Node3D" parent="Terrain" unique_id=534824344]
 script = ExtResource("9_fje7y")
 preset = "rocks"
 density = 0.4
@@ -268,18 +268,18 @@ rules = {
 "clearing": 12.0
 }
 
-[node name="VibeCamera" type="Camera3D" parent="." unique_id=1730867557]
-transform = Transform3D(1, 0, 0, 0, 0.99675405, 0.08050705, 0, -0.08050705, 0.99675405, 0, 2.1, 13)
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=1163620464]
+transform = Transform3D(1, 0, 0, 0, 0.99643344, 0.0843823, 0, -0.0843823, 0.99643344, 0, 2.4738698, 11.5)
 current = true
 fov = 52.0
 script = ExtResource("10_vi56c")
 
-[node name="Acena" type="Node3D" parent="." unique_id=2096724461]
+[node name="Acena" type="Node3D" parent="." unique_id=57825568]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.75, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 animation = "acena_feliz_duas_vezes"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Acena" unique_id=165376247]
+[node name="Skeleton3D" type="Skeleton3D" parent="Acena" unique_id=1319673570]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -674,17 +674,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Acena" unique_id=1458395008]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Acena" unique_id=1024743519]
 libraries/ = SubResource("AnimationLibrary_vi56c")
-autoplay = &"acena_feliz_duas_vezes"
 
-[node name="Pula" type="Node3D" parent="." unique_id=1569802247]
+[node name="Pula" type="Node3D" parent="." unique_id=129560954]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.25, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "athlete"
 animation = "faz_polichinelos"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Pula" unique_id=1118050745]
+[node name="Skeleton3D" type="Skeleton3D" parent="Pula" unique_id=770468524]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -1079,17 +1078,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Pula" unique_id=1543317909]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Pula" unique_id=250559976]
 libraries/ = SubResource("AnimationLibrary_y24sv")
-autoplay = &"faz_polichinelos"
 
-[node name="Chuta" type="Node3D" parent="." unique_id=1954240007]
+[node name="Chuta" type="Node3D" parent="." unique_id=850134819]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.75, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "ninja"
 animation = "chute_alto"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Chuta" unique_id=2119565712]
+[node name="Skeleton3D" type="Skeleton3D" parent="Chuta" unique_id=1562521288]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -1484,17 +1482,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Chuta" unique_id=770444499]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Chuta" unique_id=340637637]
 libraries/ = SubResource("AnimationLibrary_cj1dn")
-autoplay = &"chute_alto"
 
-[node name="Feitico" type="Node3D" parent="." unique_id=1184628137]
+[node name="Feitico" type="Node3D" parent="." unique_id=607555731]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "wizard"
 animation = "lanca_feitico"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Feitico" unique_id=750699116]
+[node name="Skeleton3D" type="Skeleton3D" parent="Feitico" unique_id=1583509453]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -1889,17 +1886,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Feitico" unique_id=1113636153]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Feitico" unique_id=139437265]
 libraries/ = SubResource("AnimationLibrary_tgnfa")
-autoplay = &"lanca_feitico"
 
-[node name="Espada" type="Node3D" parent="." unique_id=991273176]
+[node name="Espada" type="Node3D" parent="." unique_id=110355860]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "knight"
 animation = "golpeia_espada"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Espada" unique_id=646766717]
+[node name="Skeleton3D" type="Skeleton3D" parent="Espada" unique_id=194393243]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -2294,17 +2290,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Espada" unique_id=1301300975]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Espada" unique_id=588913431]
 libraries/ = SubResource("AnimationLibrary_l8xr1")
-autoplay = &"golpeia_espada"
 
-[node name="Danca" type="Node3D" parent="." unique_id=2006060458]
+[node name="Danca" type="Node3D" parent="." unique_id=2121930264]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.75, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "robot"
 animation = "danca_como_robo"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Danca" unique_id=1507100835]
+[node name="Skeleton3D" type="Skeleton3D" parent="Danca" unique_id=1234175220]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -2699,17 +2694,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Danca" unique_id=1574020634]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Danca" unique_id=959978511]
 libraries/ = SubResource("AnimationLibrary_i82f4")
-autoplay = &"danca_como_robo"
 
-[node name="Medita" type="Node3D" parent="." unique_id=1077327966]
+[node name="Medita" type="Node3D" parent="." unique_id=559386717]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.25, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "adventurer"
 animation = "medita_em_posicao_lotus"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Medita" unique_id=667555679]
+[node name="Skeleton3D" type="Skeleton3D" parent="Medita" unique_id=1976641318]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -3104,17 +3098,16 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Medita" unique_id=926200079]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Medita" unique_id=716598629]
 libraries/ = SubResource("AnimationLibrary_2ra58")
-autoplay = &"medita_em_posicao_lotus"
 
-[node name="Reverencia" type="Node3D" parent="." unique_id=1235510434]
+[node name="Reverencia" type="Node3D" parent="." unique_id=561751260]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.75, 0.68906736, 0)
 script = ExtResource("11_y24sv")
 outfit = "king"
 animation = "faz_reverencia"
 
-[node name="Skeleton3D" type="Skeleton3D" parent="Reverencia" unique_id=627168998]
+[node name="Skeleton3D" type="Skeleton3D" parent="Reverencia" unique_id=1324891768]
 bones/0/name = "Root"
 bones/0/parent = -1
 bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -3509,11 +3502,10 @@ bones/55/rotation = Quaternion(0, 1, 0, 0)
 bones/55/scale = Vector3(1, 1, 1)
 metadata/vibe_height = 1.8
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="Reverencia" unique_id=1050439929]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Reverencia" unique_id=1170732102]
 libraries/ = SubResource("AnimationLibrary_gb1mi")
-autoplay = &"faz_reverencia"
 
-[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1244959973 instance=ExtResource("20_m38jp")]
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1284660701 instance=ExtResource("20_m38jp")]
 layer = 10
 script = ExtResource("21_86mvb")
 title = "Galeria de animações"

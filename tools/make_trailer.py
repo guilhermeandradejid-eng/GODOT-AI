@@ -43,7 +43,7 @@ CACHE = ROOT / ".vibe" / "trailer"
 OUT = ROOT / "docs" / "video" / "trailer.mp4"
 POSTER = ROOT / "docs" / "img" / "trailer_poster.webp"
 W, H, FPS = 1280, 720, 24
-WARMUP = 18                      # frames recorded before each move starts (trimmed)
+WARMUP = 24                      # frames recorded before each move starts (trimmed)
 RENDER_SCALE = 1.0               # < 1: 3D rendered smaller and upscaled with FSR (faster)
 BPM = 120.0
 BEAT = 60.0 / BPM
@@ -95,7 +95,7 @@ SHOTS: dict[str, dict] = {
 # --- stills (vibe CLI) ------------------------------------------------------------------------
 
 BUILD_SCENE = "res://.vibe/trailer/construcao.tscn"
-BUILD_CAM = {"position": [150, 62, 175], "look_at": [0, 2, -10], "width": W, "height": H, "fov": 52, "frames": 30}
+BUILD_CAM = {"position": [34, 16, 122], "look_at": [-6, 11, 8], "width": W, "height": H, "fov": 56, "frames": 60}
 BUILD_PROMPT = 'vibe "ilha tropical ao pôr do sol com palmeiras, fogueira e alguém dançando"'
 BUILD_STAGES = [
     # (log line shown in the terminal, commands, still name)

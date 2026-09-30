@@ -3,8 +3,8 @@
     {
       "name": "ilha_tropical",
       "title": "Ilha tropical",
-      "subtitle": "realistic · pôr do sol · ilha + mar",
-      "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores",
+      "subtitle": "realistic · pôr do sol · palmeiras, mar e fogueira",
+      "prompt": "ilha tropical ao pôr do sol com palmeiras, fogueira na praia, vagalumes e alguém dançando",
       "style": "realistic",
       "scene": "res://demos/ilha_tropical.tscn",
       "recipe": "recipes/ilha_tropical.json",
@@ -33,22 +33,23 @@
     {
       "name": "montanhas_nevadas",
       "title": "Montanhas nevadas",
-      "subtitle": "realistic · amanhecer · cordilheira com erosão",
-      "prompt": "cordilheira nevada ao amanhecer com neve caindo",
+      "subtitle": "realistic · amanhecer · pinheiros e cordilheira com erosão",
+      "prompt": "cordilheira nevada ao amanhecer com pinheiros, neve caindo e uma alpinista acenando",
       "style": "realistic",
       "scene": "res://demos/montanhas_nevadas.tscn",
       "recipe": "recipes/montanhas_nevadas.json",
       "images": [
         "docs/img/montanhas_nevadas_hero.webp",
-        "docs/img/montanhas_nevadas_aerial.webp"
+        "docs/img/montanhas_nevadas_aerial.webp",
+        "docs/img/montanhas_nevadas_alpinista.webp"
       ],
       "thumb": "res://demos/thumbs/montanhas_nevadas.webp"
     },
     {
       "name": "deserto_canion",
       "title": "Cânion no deserto",
-      "subtitle": "stylized · entardecer · rio esculpido",
-      "prompt": "cânion vermelho no entardecer com um rio, capim seco, poeira e uma fogueira",
+      "subtitle": "stylized · entardecer · rio esculpido e cactos",
+      "prompt": "cânion vermelho no entardecer com um rio, cactos, capim seco, poeira e uma fogueira",
       "style": "stylized",
       "scene": "res://demos/deserto_canion.tscn",
       "recipe": "recipes/deserto_canion.json",
@@ -77,8 +78,8 @@
     {
       "name": "campo_noturno",
       "title": "Campo noturno",
-      "subtitle": "toon · noite · lago, vagalumes e portal",
-      "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo",
+      "subtitle": "toon · noite · lago, fogueira, mago e portal",
+      "prompt": "campo de colinas à noite com um lago, floresta, fogueira, vagalumes, amigos acampando e um mago abrindo um portal roxo",
       "style": "toon",
       "scene": "res://demos/campo_noturno.tscn",
       "recipe": "recipes/campo_noturno.json",
@@ -92,16 +93,17 @@
     },
     {
       "name": "vale_cel",
-      "title": "Vale anime",
-      "subtitle": "cel shading · dia · rio, trigo e folhas",
-      "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando",
+      "title": "Vale cel-shading",
+      "subtitle": "cel · dia · rio, trigo, bosque e ninja",
+      "prompt": "vale verde com rio, campo de trigo, bosque de bétulas, folhas voando e um ninja treinando, estilo anime",
       "style": "cel",
       "scene": "res://demos/vale_cel.tscn",
       "recipe": "recipes/vale_cel.json",
       "images": [
         "docs/img/vale_cel_hero.webp",
         "docs/img/vale_cel_aerial.webp",
-        "docs/img/vale_cel_chao.webp"
+        "docs/img/vale_cel_chao.webp",
+        "docs/img/vale_cel_ninja.webp"
       ],
       "thumb": "res://demos/thumbs/vale_cel.webp"
     },

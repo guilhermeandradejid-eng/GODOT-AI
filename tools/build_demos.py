@@ -37,7 +37,6 @@ SHOTS: dict[str, list[dict]] = {
     "vulcao": [{"shot": "pluma", "target": "Pluma"}],
     "campo_noturno": [{"shot": "portal", "target": "Portal"}, {"shot": "fogueira", "target": "Fogueira"}],
     "vale_cel": [{"shot": "chao", "view": "ground"}, {"shot": "ninja", "target": "Ninja"}],
-    "arquipelago_lowpoly": [{"shot": "naufrago", "target": "Naufrago"}],
     "planeta_alien": [{"shot": "portal", "target": "Portal"}],
     "vfx_showcase": [{"shot": "fogueira", "target": "FX_campfire"}, {"shot": "portal", "target": "FX_portal"},
                      {"shot": "campo_de_forca", "target": "FX_force_field"}, {"shot": "aura", "target": "FX_magic_aura"}],

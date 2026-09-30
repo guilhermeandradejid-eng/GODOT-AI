@@ -146,8 +146,13 @@ const LOD_KEY_PER_METER := 0.0012
 @export_group("Water")
 @export var water_enabled := false:
 	set(value):
+		var changed := value != water_enabled
 		water_enabled = value
-		_queue_water()
+		# The distant-hills ring is only built without a sea: rebuild the mesh.
+		if changed and horizon_enabled:
+			_queue_rebuild()
+		else:
+			_queue_water()
 @export var water_level := 0.0:
 	set(value):
 		water_level = value
