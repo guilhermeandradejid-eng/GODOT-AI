@@ -55,6 +55,10 @@ REPO = "github.com/guilhermeandradejid-eng/GODOT-AI"
 
 # --- shots (tools/trailer_shot.gd) -------------------------------------------------------------
 
+FX_HIDE = ["DemoHUD"] + ["Label_" + n for n in ("fire", "campfire", "torch", "embers", "sparks", "smoke", "steam", "volcano_plume",
+                                                 "magic_aura", "portal", "heal", "force_field", "fountain", "waterfall", "bubbles",
+                                                 "fireflies", "lightning", "explosion", "shockwave", "confetti")]
+
 SHOTS: dict[str, dict] = {
     "intro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.4, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
               "camera": {"from_camera": "VibeCamera", "move": [8, 5, 16], "pan": 9}},
@@ -64,19 +68,19 @@ SHOTS: dict[str, dict] = {
                 "camera": {"keys": [{"t": 0, "pos": [-10.5, 2.4, 6.4], "look": [-6.5, 1.6, 0], "fov": 48},
                                     {"t": 1, "pos": [10.5, 2.4, 6.4], "look": [6.5, 1.6, 0], "fov": 48}]}},
     "montanhas": {"scene": "res://demos/montanhas_nevadas.tscn", "duration": 4.3,
-                  "camera": {"from_camera": "VibeCamera", "move": [-12, 8, 34], "pan": -12}},
+                  "camera": {"orbit": [0, 0, 0], "radius": 360, "height": 175, "from": -25, "to": 5, "focus": 25, "fov": 50}},
     "timelapse": {"scene": "res://demos/ilha_tropical.tscn", "duration": 4.3, "ease": False, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
                   "camera": {"from_camera": "VibeCamera", "move": [0, 9, -12], "pan": 22},
                   "timelapse": [["day", 0.0], ["sunset", 0.5], ["night", 1.0]]},
     "vulcao": {"scene": "res://demos/vulcao.tscn", "duration": 4.3,
-               "camera": {"from_camera": "VibeCamera", "move": [10, 3, 26], "pan": 8}},
-    "fx_portal": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1,
+               "camera": {"orbit": "Pluma", "base": "camera", "radius": 185, "height": -32, "from": -16, "to": 12, "focus": 6, "fov": 44}},
+    "fx_portal": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1, "hide": FX_HIDE,
                   "camera": {"orbit": "FX_portal", "base": "camera", "radius": 7.5, "height": 2.4, "from": -12, "to": 8, "focus": 1.6}},
-    "fx_field": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1,
+    "fx_field": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1, "hide": FX_HIDE,
                  "camera": {"orbit": "FX_force_field", "base": "camera", "radius": 9, "height": 3.0, "from": 10, "to": -10, "focus": 1.8}},
-    "fx_explosion": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1, "play": ["FX_explosion"],
+    "fx_explosion": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1, "play": ["FX_explosion"], "hide": FX_HIDE,
                      "camera": {"orbit": "FX_explosion", "base": "camera", "radius": 11, "height": 3.5, "from": -8, "to": 8, "focus": 2.5}},
-    "fx_fire": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1,
+    "fx_fire": {"scene": "res://demos/vfx_showcase.tscn", "duration": 1.1, "hide": FX_HIDE,
                 "camera": {"orbit": "FX_campfire", "base": "camera", "radius": 5, "height": 1.8, "from": 10, "to": -10, "focus": 0.8}},
     "noturno": {"scene": "res://demos/campo_noturno.tscn", "duration": 2.2, "loop_animations": True, "anim_offset": 0.5,
                 "camera": {"orbit": "Mago", "base": "facing", "radius": 6.0, "height": 2.2, "from": 128, "to": 152, "focus": 1.3, "fov": 50}},
@@ -84,8 +88,8 @@ SHOTS: dict[str, dict] = {
               "camera": {"orbit": "Ninja", "base": "facing", "radius": 4.6, "height": 1.6, "from": -30, "to": -5, "focus": 1.0, "fov": 50}},
     "alien": {"scene": "res://demos/planeta_alien.tscn", "duration": 2.2, "loop_animations": True, "anim_offset": 0.4,
               "camera": {"orbit": "Astronauta", "base": "facing", "radius": 6.5, "height": 2.4, "from": 132, "to": 152, "focus": 1.3, "fov": 50}},
-    "naufrago": {"scene": "res://demos/arquipelago_lowpoly.tscn", "duration": 2.2, "loop_animations": True, "anim_offset": 0.1,
-                 "camera": {"orbit": "Naufrago", "base": "facing", "radius": 5.5, "height": 2.0, "from": -20, "to": 5, "focus": 1.1, "fov": 50}},
+    "arquipelago": {"scene": "res://demos/arquipelago_lowpoly.tscn", "duration": 2.2,
+                    "camera": {"from_camera": "VibeCamera", "move": [5, 1.5, 14], "pan": 6}},
     "claude": {"scene": "res://demos/campo_noturno.tscn", "duration": 4.3, "loop_animations": True, "anim_offset": 0.2,
                "camera": {"orbit": "Fogueira", "base": "camera", "radius": 8.5, "height": 2.6, "from": 20, "to": -20, "focus": 0.8, "fov": 50}},
     "outro": {"scene": "res://demos/ilha_tropical.tscn", "duration": 6.3, "hide": ["DemoHUD", "Fireflies", "Fireflies2"],
@@ -145,7 +149,7 @@ TIMELINE = [
     (42.0, 44.0, "clip", {"shot": "noturno"}),
     (44.0, 46.0, "clip", {"shot": "ninja"}),
     (46.0, 48.0, "clip", {"shot": "alien"}),
-    (48.0, 50.0, "clip", {"shot": "naufrago"}),
+    (48.0, 50.0, "clip", {"shot": "arquipelago"}),
     (50.0, 54.0, "clip", {"shot": "claude"}),
     (54.0, 60.0, "clip", {"shot": "outro"}),
 ]
@@ -157,9 +161,9 @@ CAPTIONS = [
     (24.0, 28.0, "CÉU & ÁGUA", "Nuvens iluminadas · ondas Gerstner · dia e noite", "env.set preset=sunset quality=ultra"),
     (28.0, 32.0, "25 EFEITOS VFX", "Lava, raios, fumaça, magia, clima", "vfx.spawn preset=volcano_plume position=peak"),
     (32.0, 36.0, "VFX", "Portal · campo de força · explosão · fogueira", "vfx.spawn preset=portal color=purple"),
-    (42.0, 44.0, "VEGETAÇÃO", "17 tipos: florestas, palmeiras, cactos, cristais", "scatter.auto"),
+    (42.0, 44.0, "12 PERSONAGENS", "Mago, astronauta, ninja, robô, cavaleiro...", 'motion.character outfit=wizard text="lança um feitiço"'),
     (44.0, 46.0, "CEL SHADING", "Anime em 2 tons, com contorno", "style.set style=cel"),
-    (46.0, 48.0, "12 PERSONAGENS", "Astronauta, mago, ninja, robô, cavaleiro...", "motion.character outfit=astronaut"),
+    (46.0, 48.0, "VEGETAÇÃO", "17 tipos: florestas, palmeiras, cactos, cristais", "scatter.add preset=alien_trees"),
     (48.0, 50.0, "LOW POLY", "Facetado, cores por triângulo", "style.set style=lowpoly"),
     (50.0, 54.0, "FEITO PARA O CLAUDE CODE", "MCP · 68 comandos · ponte ao vivo com o editor", "/animacao o mago abre um portal e todos comemoram"),
 ]
@@ -791,7 +795,7 @@ def edit(music: Path) -> None:
     clips = Clips()
     n = int(LENGTH * FPS)
     writer = imageio_ffmpeg.write_frames(str(OUT), (W, H), fps=FPS, codec="libx264", pix_fmt_out="yuv420p", quality=None,
-                                         output_params=["-crf", "19", "-preset", "slow", "-movflags", "+faststart", "-b:a", "192k"],
+                                         output_params=["-crf", "27", "-preset", "slow", "-movflags", "+faststart", "-b:a", "192k"],
                                          audio_path=str(music), audio_codec="aac", macro_block_size=8)
     writer.send(None)
     t0 = time.time()
