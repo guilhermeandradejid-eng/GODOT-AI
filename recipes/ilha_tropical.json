@@ -20,6 +20,24 @@
       "density": 0.3
     }
   ],
+  "scatter": [
+    {
+      "preset": "palms",
+      "density": 1.3
+    },
+    {
+      "preset": "jungle",
+      "density": 0.35
+    },
+    {
+      "preset": "bushes",
+      "density": 0.5
+    },
+    {
+      "preset": "rocks",
+      "density": 0.5
+    }
+  ],
   "vfx": [
     {
       "preset": "campfire",
@@ -32,11 +50,50 @@
       "at": "flat"
     }
   ],
+  "characters": [
+    {
+      "outfit": "adventurer",
+      "name": "Aventureira",
+      "at": "near:Fogueira",
+      "radius": 2.6,
+      "facing": "Fogueira",
+      "motion": "senta no chão e olha em volta",
+      "pose": 0.55
+    },
+    {
+      "outfit": "casual",
+      "name": "Dancarino",
+      "at": "near:Fogueira",
+      "radius": 3.2,
+      "seed": 3,
+      "facing": "Fogueira",
+      "motion": "dança animado",
+      "pose": 0.45
+    }
+  ],
   "camera": {
     "type": "fly",
     "view": "hero"
   },
   "commands": [
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Grass",
+        "position": "near:Fogueira",
+        "radius": 5.5,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Flores",
+        "position": "near:Fogueira",
+        "radius": 5.5,
+        "erase": true
+      }
+    },
     {
       "cmd": "node.add",
       "args": {
@@ -44,15 +101,15 @@
         "name": "DemoHUD",
         "properties": {
           "title": "Ilha tropical",
-          "subtitle": "realistic · pôr do sol · ilha + mar",
-          "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores"
+          "subtitle": "realistic · pôr do sol · palmeiras, mar e fogueira",
+          "prompt": "ilha tropical ao pôr do sol com palmeiras, fogueira na praia, vagalumes e alguém dançando"
         }
       }
     }
   ],
   "meta": {
     "title": "Ilha tropical",
-    "subtitle": "realistic · pôr do sol · ilha + mar",
-    "prompt": "ilha tropical ao pôr do sol com fogueira na praia, vagalumes e flores"
+    "subtitle": "realistic · pôr do sol · palmeiras, mar e fogueira",
+    "prompt": "ilha tropical ao pôr do sol com palmeiras, fogueira na praia, vagalumes e alguém dançando"
   }
 }

@@ -16,6 +16,11 @@ run/main_scene="res://demos/demo_hub.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/vibe_core/plugin.cfg", "res://addons/vibe_terrain/plugin.cfg", "res://addons/vibe_grass/plugin.cfg", "res://addons/vibe_vfx/plugin.cfg", "res://addons/vibe_motion/plugin.cfg", "res://addons/vibe_scatter/plugin.cfg")

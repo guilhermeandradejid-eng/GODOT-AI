@@ -175,30 +175,6 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 			await _step(registry, ctx, "grass.fill", fargs)
 		gi += 1
 
-	# Vegetation and props: "auto" = the palette's natural vegetation.
-	var scatter = recipe.get("scatter", null)
-	if terrain_name != "" and scatter != null and not (scatter is bool and not scatter):
-		if scatter is String and Util.normalize_text(scatter) in ["auto", "true", "sim", "yes"]:
-			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name})
-		elif (scatter is bool and scatter) or scatter is Dictionary and scatter.has("auto"):
-			var dens := float(scatter.get("density", 1.0)) if scatter is Dictionary else 1.0
-			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name, "density": dens})
-		else:
-			if scatter is Dictionary or scatter is String:
-				scatter = [scatter]
-			var si := 0
-			for sc in scatter:
-				if sc is String:
-					sc = {"preset": sc}
-				if not (sc is Dictionary):
-					continue
-				var sargs := {"preset": str(sc.get("preset", "forest")), "terrain": terrain_name, "replace": true, "seed": 1 + si * 17}
-				for k in ["density", "name", "palette", "rules", "colors", "seed", "view_distance", "collision"]:
-					if sc.has(k):
-						sargs[k] = sc[k]
-				await _step(registry, ctx, "scatter.add", sargs)
-				si += 1
-
 	var vfx = recipe.get("vfx", [])
 	if vfx is Dictionary or vfx is String:
 		vfx = [vfx]
@@ -240,7 +216,7 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 				"seed": ci * 7 + i + int(c.get("seed", 0)), "replace": true}
 			var base_name := str(c.get("name", Util.pascal_case(str(cargs.outfit))))
 			cargs["name"] = base_name if count == 1 else "%s%d" % [base_name, i + 1]
-			for k in ["style", "colors", "height", "facing"]:
+			for k in ["style", "colors", "height", "facing", "radius"]:
 				if c.has(k):
 					cargs[k] = c[k]
 			var motion := str(c.get("motion", c.get("animation", c.get("text", ""))))
@@ -248,6 +224,31 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 				cargs["text"] = motion
 			await _step(registry, ctx, "motion.character", cargs)
 		ci += 1
+
+	# Vegetation and props: "auto" = the palette's natural vegetation. Built
+	# after the effects and characters so it leaves clearings around them.
+	var scatter = recipe.get("scatter", null)
+	if terrain_name != "" and scatter != null and not (scatter is bool and not scatter):
+		if scatter is String and Util.normalize_text(scatter) in ["auto", "true", "sim", "yes"]:
+			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name})
+		elif (scatter is bool and scatter) or scatter is Dictionary and scatter.has("auto"):
+			var dens := float(scatter.get("density", 1.0)) if scatter is Dictionary else 1.0
+			await _step(registry, ctx, "scatter.auto", {"terrain": terrain_name, "density": dens})
+		else:
+			if scatter is Dictionary or scatter is String:
+				scatter = [scatter]
+			var si := 0
+			for sc in scatter:
+				if sc is String:
+					sc = {"preset": sc}
+				if not (sc is Dictionary):
+					continue
+				var sargs := {"preset": str(sc.get("preset", "forest")), "terrain": terrain_name, "replace": true, "seed": 1 + si * 17}
+				for k in ["density", "name", "palette", "rules", "colors", "seed", "view_distance", "collision"]:
+					if sc.has(k):
+						sargs[k] = sc[k]
+				await _step(registry, ctx, "scatter.add", sargs)
+				si += 1
 
 	if style != "":
 		await _step(registry, ctx, "style.set", {"style": style})

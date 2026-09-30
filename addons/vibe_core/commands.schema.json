@@ -1713,13 +1713,16 @@
         },
         "animation": {
           "type": "string",
-          "description": "Animation name.",
-          "required": true
+          "description": "Animation name (default: the one the character already plays)."
         },
         "time": {
           "type": "number",
           "description": ">= 0 freezes the pose at this second (for screenshots).",
           "default": -1.0
+        },
+        "fraction": {
+          "type": "number",
+          "description": "Freeze at this fraction (0..1) of the animation instead of a time in seconds."
         },
         "root_motion": {
           "type": "string",
@@ -1740,12 +1743,16 @@
           },
           "animation": {
             "type": "string",
-            "description": "Animation name."
+            "description": "Animation name (default: the one the character already plays)."
           },
           "time": {
             "type": "number",
             "default": -1.0,
             "description": ">= 0 freezes the pose at this second (for screenshots)."
+          },
+          "fraction": {
+            "type": "number",
+            "description": "Freeze at this fraction (0..1) of the animation instead of a time in seconds."
           },
           "root_motion": {
             "type": "string",
@@ -1756,10 +1763,7 @@
             ],
             "description": "Root motion mode."
           }
-        },
-        "required": [
-          "animation"
-        ]
+        }
       },
       "examples": []
     },

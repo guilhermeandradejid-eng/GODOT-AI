@@ -65,8 +65,9 @@ func register(reg) -> void:
 		"description": "Plays (or freezes at a time) an animation of a character.",
 		"args": {
 			"character": {"type": "string", "description": "Character name (default first)."},
-			"animation": {"type": "string", "required": true, "description": "Animation name."},
+			"animation": {"type": "string", "description": "Animation name (default: the one the character already plays)."},
 			"time": {"type": "number", "default": -1.0, "description": ">= 0 freezes the pose at this second (for screenshots)."},
+			"fraction": {"type": "number", "description": "Freeze at this fraction (0..1) of the animation instead of a time in seconds."},
 			"root_motion": {"type": "string", "enum": ["animate", "extract", "in_place"], "description": "Root motion mode."},
 		},
 		"handler": _play,
@@ -410,16 +411,25 @@ func _play(args: Dictionary, ctx) -> Variant:
 	if ch == null:
 		return Util.err("no VibeCharacter3D in the scene (motion.character adds one)")
 	var names: PackedStringArray = ch.get_animation_names()
-	if not names.has(args.animation):
-		var a := _load_animation(args.animation, ctx)
+	var anim_name := str(args.get("animation", ""))
+	if anim_name == "":
+		anim_name = str(ch.animation)
+		if anim_name == "":
+			return Util.err("character '%s' has no animation yet (motion.generate text=...)" % ch.name)
+	if not names.has(anim_name):
+		var a := _load_animation(anim_name, ctx)
 		if a == null:
-			return Util.err("animation '%s' not found. Available: %s" % [args.animation, ", ".join(names)])
-		ch.add_animation(a, args.animation)
+			return Util.err("animation '%s' not found. Available: %s" % [anim_name, ", ".join(names)])
+		ch.add_animation(a, anim_name)
 	if args.has("root_motion"):
 		ctx.set_property(ch, &"root_motion", args.root_motion)
-	ctx.set_property(ch, &"preview_time", float(args.time))
-	ctx.set_property(ch, &"animation", args.animation)
-	return {"character": str(ch.name), "animation": args.animation, "time": args.time}
+	var t := float(args.time)
+	if args.has("fraction"):
+		var anim: Animation = ch.get_animation(anim_name)
+		t = clampf(float(args.fraction), 0.0, 1.0) * (anim.length if anim != null else 1.0)
+	ctx.set_property(ch, &"preview_time", t)
+	ctx.set_property(ch, &"animation", anim_name)
+	return {"character": str(ch.name), "animation": anim_name, "time": t}
 
 
 func _list(_args: Dictionary, ctx) -> Variant:

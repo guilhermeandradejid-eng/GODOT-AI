@@ -37,9 +37,48 @@
       "density": 0.3
     }
   ],
+  "scatter": [
+    {
+      "preset": "forest",
+      "density": 0.6,
+      "rules": {
+        "min_slope": 6
+      }
+    },
+    {
+      "preset": "birches",
+      "density": 0.35
+    },
+    {
+      "preset": "bushes",
+      "density": 0.5
+    },
+    {
+      "preset": "rocks",
+      "density": 0.3
+    }
+  ],
   "vfx": [
     {
       "preset": "leaves"
+    }
+  ],
+  "characters": [
+    {
+      "outfit": "ninja",
+      "name": "Ninja",
+      "at": "flat",
+      "facing": "camera",
+      "motion": "faz uma pose de luta, dá um chute e depois uma reverência",
+      "pose": 0.45
+    },
+    {
+      "outfit": "athlete",
+      "name": "Atleta",
+      "at": "flat",
+      "seed": 4,
+      "motion": "corre em círculo",
+      "pose": 0.4
     }
   ],
   "camera": {
@@ -53,16 +92,16 @@
         "type": "res://demos/demo_hud.tscn",
         "name": "DemoHUD",
         "properties": {
-          "title": "Vale anime",
-          "subtitle": "cel shading · dia · rio, trigo e folhas",
-          "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando"
+          "title": "Vale cel-shading",
+          "subtitle": "cel · dia · rio, trigo, bosque e ninja",
+          "prompt": "vale verde com rio, campo de trigo, bosque de bétulas, folhas voando e um ninja treinando, estilo anime"
         }
       }
     }
   ],
   "meta": {
-    "title": "Vale anime",
-    "subtitle": "cel shading · dia · rio, trigo e folhas",
-    "prompt": "vale verde estilo anime com um rio, plantação de trigo, flores e folhas voando"
+    "title": "Vale cel-shading",
+    "subtitle": "cel · dia · rio, trigo, bosque e ninja",
+    "prompt": "vale verde com rio, campo de trigo, bosque de bétulas, folhas voando e um ninja treinando, estilo anime"
   }
 }

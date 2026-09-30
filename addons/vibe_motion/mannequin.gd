@@ -530,6 +530,12 @@ static func _hat(acc: MeshAcc, o: Dictionary, rings: int, radial: int) -> void:
 			acc.lathe(Vector3(0, 1.772, -0.005), Vector3(0, 1.0, -0.2), Vector3.FORWARD, prof, radial, col, "Head")
 		"helmet", "capacete":
 			acc.ellipsoid(Vector3(0, 1.73, -0.005), Vector3(0.108, 0.1, 0.118), rings, radial, col, "Head", {"min_y": 1.718})
+		"cowboy", "chapeu", "sombrero":
+			acc.ellipsoid(Vector3(0, 1.768, -0.005), Vector3(0.2, 0.014, 0.21), rings, radial, col, "Head")
+			acc.ellipsoid(Vector3(0, 1.77, -0.005), Vector3(0.1, 0.09, 0.112), rings, radial, col, "Head", {"min_y": 1.77})
+		"beanie", "gorro", "touca":
+			acc.ellipsoid(Vector3(0, 1.728, -0.008), Vector3(0.108, 0.108, 0.117), rings, radial, col, "Head", {"min_y": 1.705})
+			acc.ellipsoid(Vector3(0, 1.845, -0.01), Vector3(0.03, 0.03, 0.03), rings, radial, col, "Head")
 		"crown", "coroa":
 			var ring := [Vector3(0, 0.08, 0.08), Vector3(0, 0.094, 0.094), Vector3(0.05, 0.094, 0.094), Vector3(0.05, 0.08, 0.08), Vector3(0, 0.08, 0.08)]
 			acc.lathe(Vector3(0, 1.765, -0.005), Vector3.UP, Vector3.FORWARD, ring, radial, col, "Head")

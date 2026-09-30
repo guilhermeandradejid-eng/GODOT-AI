@@ -6,7 +6,7 @@
     python3 tools/install.py /path/to/my_game --force    # overwrite existing copies (update)
 
 What it does:
-  * copies addons/vibe_core, vibe_terrain, vibe_grass and vibe_vfx
+  * copies addons/vibe_core, vibe_terrain, vibe_grass, vibe_vfx, vibe_scatter and vibe_motion
   * copies tools/vibe.py, vibe_client.py and vibe_mcp.py
   * enables the four plugins in project.godot
   * Claude Code: adds the "godot-vibe" MCP server to .mcp.json, the slash commands
@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent
-ADDONS = ["vibe_core", "vibe_terrain", "vibe_grass", "vibe_vfx"]
+ADDONS = ["vibe_core", "vibe_terrain", "vibe_grass", "vibe_vfx", "vibe_scatter", "vibe_motion"]
 TOOLS = ["vibe.py", "vibe_client.py", "vibe_mcp.py"]
 MARK_START = "<!-- vibe-suite:start -->"
 MARK_END = "<!-- vibe-suite:end -->"
@@ -83,7 +83,7 @@ def setup_claude(target: Path, force: bool) -> list[str]:
 
     guide = (SRC / "CLAUDE.md").read_text(encoding="utf-8")
     body = guide[guide.index("## Como executar comandos"):] if "## Como executar comandos" in guide else guide
-    block = f"{MARK_START}\n# Godot Vibe Suite (terreno, grama, VFX pelo terminal)\n\n{body.strip()}\n{MARK_END}\n"
+    block = f"{MARK_START}\n# Godot Vibe Suite (terreno, grama, vegetação, VFX e animações pelo terminal)\n\n{body.strip()}\n{MARK_END}\n"
     claude_md = target / "CLAUDE.md"
     text = claude_md.read_text(encoding="utf-8") if claude_md.exists() else ""
     if MARK_START in text and MARK_END in text:

@@ -77,11 +77,11 @@ const PRESETS := {
 	},
 	"stormy": {
 		"description": "Tempestade / storm",
-		"sun_elevation": 35.0, "sun_azimuth": 10.0, "sun_color": "#aab4c4", "sun_energy": 0.35,
+		"sun_elevation": 35.0, "sun_azimuth": 10.0, "sun_color": "#aab4c4", "sun_energy": 0.5,
 		"sky_top": "#1d242e", "sky_horizon": "#4a5563", "ground": "#22262c", "sun_size": 0.0, "sun_glow": 0.0,
 		"clouds": 1.0, "cloud_color": "#4a5462", "cloud_shade": "#1a1f26", "cirrus": 0.0, "haze": 0.5,
 		"stars": 0.0, "moon": 0.0,
-		"ambient": 0.45, "fog_density": 0.0045, "fog_color": "#3e4753", "glow": 0.3, "exposure": 1.1,
+		"ambient": 0.65, "fog_density": 0.0045, "fog_color": "#46505e", "glow": 0.3, "exposure": 1.45,
 		"volumetric": 0.002, "grade": ["#e6ecf4", "#eef0f2"],
 	},
 	"alien": {

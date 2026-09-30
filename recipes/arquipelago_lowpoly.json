@@ -20,11 +20,38 @@
       "density": 0.25
     }
   ],
+  "scatter": [
+    {
+      "preset": "palms",
+      "density": 1.2
+    },
+    {
+      "preset": "bushes",
+      "density": 0.5
+    },
+    {
+      "preset": "rocks",
+      "density": 0.6
+    }
+  ],
   "vfx": [
     {
       "preset": "campfire",
       "at": "beach",
       "count": 2
+    }
+  ],
+  "characters": [
+    {
+      "outfit": "casual",
+      "name": "Naufrago",
+      "at": "beach",
+      "facing": "camera",
+      "colors": {
+        "shirt": "#f5d76e"
+      },
+      "motion": "acena com as duas mãos e pula de alegria",
+      "pose": 0.28
     }
   ],
   "camera": {

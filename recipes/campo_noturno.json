@@ -32,6 +32,27 @@
       "density": 0.35
     }
   ],
+  "scatter": [
+    {
+      "preset": "forest",
+      "density": 0.7,
+      "rules": {
+        "clearing": 18
+      }
+    },
+    {
+      "preset": "bushes",
+      "density": 0.5
+    },
+    {
+      "preset": "mushrooms",
+      "density": 0.6
+    },
+    {
+      "preset": "rocks",
+      "density": 0.4
+    }
+  ],
   "vfx": [
     {
       "preset": "campfire",
@@ -50,11 +71,77 @@
       "color": "purple"
     }
   ],
+  "characters": [
+    {
+      "outfit": "wizard",
+      "name": "Mago",
+      "at": "near:Portal",
+      "radius": 3.5,
+      "facing": "Portal",
+      "motion": "lança um feitiço",
+      "pose": 0.66
+    },
+    {
+      "outfit": "casual",
+      "name": "Campista",
+      "at": "near:Fogueira",
+      "radius": 2.4,
+      "facing": "Fogueira",
+      "motion": "senta no chão",
+      "pose": 0.6
+    },
+    {
+      "outfit": "adventurer",
+      "name": "Amiga",
+      "at": "near:Fogueira",
+      "radius": 2.4,
+      "seed": 5,
+      "facing": "Fogueira",
+      "motion": "bate palmas e comemora",
+      "pose": 0.75
+    }
+  ],
   "camera": {
     "type": "fly",
     "view": "hero"
   },
   "commands": [
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Grass",
+        "position": "near:Fogueira",
+        "radius": 4.5,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Flores",
+        "position": "near:Fogueira",
+        "radius": 4.5,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Grass",
+        "position": "near:Portal",
+        "radius": 4.5,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Flores",
+        "position": "near:Portal",
+        "radius": 4.5,
+        "erase": true
+      }
+    },
     {
       "cmd": "node.add",
       "args": {
@@ -62,15 +149,15 @@
         "name": "DemoHUD",
         "properties": {
           "title": "Campo noturno",
-          "subtitle": "toon · noite · lago, vagalumes e portal",
-          "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo"
+          "subtitle": "toon · noite · lago, fogueira, mago e portal",
+          "prompt": "campo de colinas à noite com um lago, floresta, fogueira, vagalumes, amigos acampando e um mago abrindo um portal roxo"
         }
       }
     }
   ],
   "meta": {
     "title": "Campo noturno",
-    "subtitle": "toon · noite · lago, vagalumes e portal",
-    "prompt": "campo de colinas à noite com um lago, flores, fogueira, vagalumes e um portal roxo"
+    "subtitle": "toon · noite · lago, fogueira, mago e portal",
+    "prompt": "campo de colinas à noite com um lago, floresta, fogueira, vagalumes, amigos acampando e um mago abrindo um portal roxo"
   }
 }

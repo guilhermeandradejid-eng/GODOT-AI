@@ -1,0 +1,247 @@
+{
+  "scene": "res://demos/galeria_animacoes.tscn",
+  "style": "realistic",
+  "environment": {
+    "preset": "day",
+    "sun_elevation": 38,
+    "sun_azimuth": 25
+  },
+  "terrain": {
+    "preset": "plains",
+    "size": 128,
+    "seed": 12,
+    "palette": "temperate",
+    "height_multiplier": 0.35,
+    "features": [
+      {
+        "type": "flatten",
+        "at": "center",
+        "radius": 16
+      }
+    ]
+  },
+  "grass": [
+    {
+      "preset": "meadow",
+      "density": 0.8
+    },
+    {
+      "preset": "flowers",
+      "name": "Flores",
+      "density": 0.2
+    }
+  ],
+  "scatter": [
+    {
+      "preset": "forest",
+      "density": 0.9,
+      "rules": {
+        "clearing": 22
+      }
+    },
+    {
+      "preset": "bushes",
+      "density": 0.6,
+      "rules": {
+        "clearing": 14
+      }
+    },
+    {
+      "preset": "rocks",
+      "density": 0.4,
+      "rules": {
+        "clearing": 12
+      }
+    }
+  ],
+  "characters": [
+    {
+      "outfit": "casual",
+      "name": "Acena",
+      "at": [
+        -8.75,
+        0
+      ],
+      "facing": [
+        -8.75,
+        20
+      ],
+      "motion": "acena feliz duas vezes",
+      "pose": 0.45
+    },
+    {
+      "outfit": "athlete",
+      "name": "Pula",
+      "at": [
+        -6.25,
+        0
+      ],
+      "facing": [
+        -6.25,
+        20
+      ],
+      "motion": "faz polichinelos",
+      "pose": 0.5
+    },
+    {
+      "outfit": "ninja",
+      "name": "Chuta",
+      "at": [
+        -3.75,
+        0
+      ],
+      "facing": [
+        -3.75,
+        20
+      ],
+      "motion": "dá um chute alto",
+      "pose": 0.43
+    },
+    {
+      "outfit": "wizard",
+      "name": "Feitico",
+      "at": [
+        -1.25,
+        0
+      ],
+      "facing": [
+        -1.25,
+        20
+      ],
+      "motion": "lança um feitiço",
+      "pose": 0.66
+    },
+    {
+      "outfit": "knight",
+      "name": "Espada",
+      "at": [
+        1.25,
+        0
+      ],
+      "facing": [
+        1.25,
+        20
+      ],
+      "motion": "golpeia com a espada",
+      "pose": 0.62
+    },
+    {
+      "outfit": "robot",
+      "name": "Danca",
+      "at": [
+        3.75,
+        0
+      ],
+      "facing": [
+        3.75,
+        20
+      ],
+      "motion": "dança como um robô",
+      "pose": 0.45
+    },
+    {
+      "outfit": "adventurer",
+      "name": "Medita",
+      "at": [
+        6.25,
+        0
+      ],
+      "facing": [
+        6.25,
+        20
+      ],
+      "motion": "medita em posição de lótus",
+      "pose": 0.8
+    },
+    {
+      "outfit": "king",
+      "name": "Reverencia",
+      "at": [
+        8.75,
+        0
+      ],
+      "facing": [
+        8.75,
+        20
+      ],
+      "motion": "faz uma reverência",
+      "pose": 0.45
+    }
+  ],
+  "camera": {
+    "type": "fly",
+    "position": [
+      0,
+      11.5
+    ],
+    "look_at": [
+      0,
+      1.5,
+      0
+    ]
+  },
+  "commands": [
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Grass",
+        "position": [
+          0,
+          0
+        ],
+        "radius": 12,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "grass.paint",
+      "args": {
+        "grass": "Flores",
+        "position": [
+          0,
+          0
+        ],
+        "radius": 12,
+        "erase": true
+      }
+    },
+    {
+      "cmd": "terrain.paint",
+      "args": {
+        "layer": 1,
+        "position": [
+          0,
+          0
+        ],
+        "radius": 10.5,
+        "strength": 0.8
+      }
+    },
+    {
+      "cmd": "node.set",
+      "args": {
+        "path": "VibeCamera",
+        "properties": {
+          "fov": 52
+        }
+      }
+    },
+    {
+      "cmd": "node.add",
+      "args": {
+        "type": "res://demos/demo_hud.tscn",
+        "name": "DemoHUD",
+        "properties": {
+          "title": "Galeria de animações",
+          "subtitle": "realistic · dia · 8 animações geradas por texto",
+          "prompt": "acena feliz · polichinelos · chute alto · feitiço · golpe de espada · dança robô · medita · reverência"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "title": "Galeria de animações",
+    "subtitle": "realistic · dia · 8 animações geradas por texto",
+    "prompt": "acena feliz · polichinelos · chute alto · feitiço · golpe de espada · dança robô · medita · reverência"
+  }
+}

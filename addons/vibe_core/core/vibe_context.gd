@@ -262,6 +262,14 @@ func resolve_position(value: Variant, y_offset: float = 0.0, seed_value: int = 0
 	if value is Array and value.size() == 1:
 		value = value[0]
 	if value is String:
+		var raw := (value as String).strip_edges()
+		# "near:Fogueira" / "node:Portal": the position of a node of the scene.
+		for prefix in ["near:", "node:"]:
+			if raw.begins_with(prefix):
+				var target := find_node(raw.substr(prefix.length()))
+				if target is Node3D:
+					return (target as Node3D).global_position + Vector3.UP * y_offset
+				return Util.err("node not found for position '%s'" % raw)
 		var anchor: String = Util.normalize_text(value).strip_edges()
 		if anchor.begins_with("["):
 			var parsed = JSON.parse_string(anchor)
@@ -270,6 +278,10 @@ func resolve_position(value: Variant, y_offset: float = 0.0, seed_value: int = 0
 		if terrain != null and terrain.has_method("find_anchor"):
 			var p = terrain.find_anchor(anchor, seed_value)
 			if p == null:
+				# Not an anchor: maybe the name of a node (a campfire, a character...).
+				var named := find_node(raw)
+				if named is Node3D:
+					return (named as Node3D).global_position + Vector3.UP * y_offset
 				return Util.err("unknown position anchor '%s'" % value)
 			return p + Vector3.UP * y_offset
 		match anchor:

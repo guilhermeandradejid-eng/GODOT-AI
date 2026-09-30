@@ -14,6 +14,20 @@
       "density": 0.7
     }
   ],
+  "scatter": [
+    {
+      "preset": "crystals",
+      "density": 1.0
+    },
+    {
+      "preset": "alien_trees",
+      "density": 0.7
+    },
+    {
+      "preset": "rocks",
+      "density": 0.4
+    }
+  ],
   "vfx": [
     {
       "preset": "portal",
@@ -36,6 +50,17 @@
       "count": 3,
       "at": "flat",
       "color": "#80fff0"
+    }
+  ],
+  "characters": [
+    {
+      "outfit": "astronaut",
+      "name": "Astronauta",
+      "at": "near:Portal",
+      "radius": 5.0,
+      "facing": "Portal",
+      "motion": "anda devagar, aponta para o portal e depois acena",
+      "pose": 0.55
     }
   ],
   "camera": {

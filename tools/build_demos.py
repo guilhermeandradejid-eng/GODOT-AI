@@ -25,21 +25,27 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from vibe_client import VibeClient, VibeError  # noqa: E402
 
-ORDER = ["ilha_tropical", "montanhas_nevadas", "deserto_canion", "vulcao", "campo_noturno",
+ORDER = ["ilha_tropical", "galeria_animacoes", "montanhas_nevadas", "deserto_canion", "vulcao", "campo_noturno",
          "vale_cel", "arquipelago_lowpoly", "planeta_alien", "vfx_showcase"]
 
 # Extra screenshots per demo (besides "hero" and "aerial").
 SHOTS: dict[str, list[dict]] = {
     "ilha_tropical": [{"shot": "fogueira", "target": "Fogueira"}],
+    "galeria_animacoes": [{"shot": "feitico", "target": "Feitico"}, {"shot": "aerial_bosque", "view": "aerial"}],
+    "montanhas_nevadas": [{"shot": "alpinista", "target": "Alpinista"}],
     "deserto_canion": [{"shot": "fogueira", "target": "Fogueira"}],
     "vulcao": [{"shot": "pluma", "target": "Pluma"}],
     "campo_noturno": [{"shot": "portal", "target": "Portal"}, {"shot": "fogueira", "target": "Fogueira"}],
-    "vale_cel": [{"shot": "chao", "view": "ground"}],
+    "vale_cel": [{"shot": "chao", "view": "ground"}, {"shot": "ninja", "target": "Ninja"}],
+    "arquipelago_lowpoly": [{"shot": "naufrago", "target": "Naufrago"}],
     "planeta_alien": [{"shot": "portal", "target": "Portal"}],
     "vfx_showcase": [{"shot": "fogueira", "target": "FX_campfire"}, {"shot": "portal", "target": "FX_portal"},
                      {"shot": "campo_de_forca", "target": "FX_force_field"}, {"shot": "aura", "target": "FX_magic_aura"}],
 }
-MAIN_VIEW = {"vfx_showcase": "camera"}
+MAIN_VIEW = {"vfx_showcase": "camera", "galeria_animacoes": "camera"}
+# Characters are frozen at this fraction of their animation for the pictures
+# (a recipe character can set its own "pose").
+POSE_FRACTION = 0.45
 SIZE = (1280, 720)
 # The VFX showcase also gets a labeled close-up of every effect, combined into
 # docs/img/vfx_biblioteca.webp.
@@ -80,6 +86,10 @@ def shoot(name: str, recipe: dict) -> list[tuple[str, Path]]:
                 shot.update({"play": v["name"], "frames": {"lightning": 4, "shockwave": 4}.get(v["preset"], 8)})
             fx_shots.append(shot)
     cmds, out = [], []
+    # Freeze every character in a telling pose (not saved: save=False below).
+    for c in recipe.get("characters", []):
+        if isinstance(c, dict) and int(c.get("count", 1)) == 1 and c.get("name"):
+            cmds.append({"cmd": "motion.play", "args": {"character": c["name"], "fraction": float(c.get("pose", POSE_FRACTION))}})
     for s in shots + fx_shots:
         if fx_shots and s is fx_shots[0]:
             # Close-ups carry their own labels in the grid image: hide the 3D ones.

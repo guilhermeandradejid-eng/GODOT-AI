@@ -23,9 +23,40 @@
       }
     }
   ],
+  "scatter": [
+    {
+      "preset": "pines",
+      "density": 1.1,
+      "rules": {
+        "max_height_frac": 0.55
+      }
+    },
+    {
+      "preset": "rocks",
+      "density": 0.7
+    },
+    {
+      "preset": "boulders",
+      "density": 0.5
+    }
+  ],
   "vfx": [
     {
       "preset": "snowfall"
+    }
+  ],
+  "characters": [
+    {
+      "outfit": "adventurer",
+      "name": "Alpinista",
+      "at": "flat",
+      "colors": {
+        "shirt": "#c0392b",
+        "hat": "beanie"
+      },
+      "facing": "camera",
+      "motion": "olha em volta e acena",
+      "pose": 0.78
     }
   ],
   "camera": {
@@ -40,15 +71,15 @@
         "name": "DemoHUD",
         "properties": {
           "title": "Montanhas nevadas",
-          "subtitle": "realistic · amanhecer · cordilheira com erosão",
-          "prompt": "cordilheira nevada ao amanhecer com neve caindo"
+          "subtitle": "realistic · amanhecer · pinheiros e cordilheira com erosão",
+          "prompt": "cordilheira nevada ao amanhecer com pinheiros, neve caindo e uma alpinista acenando"
         }
       }
     }
   ],
   "meta": {
     "title": "Montanhas nevadas",
-    "subtitle": "realistic · amanhecer · cordilheira com erosão",
-    "prompt": "cordilheira nevada ao amanhecer com neve caindo"
+    "subtitle": "realistic · amanhecer · pinheiros e cordilheira com erosão",
+    "prompt": "cordilheira nevada ao amanhecer com pinheiros, neve caindo e uma alpinista acenando"
   }
 }

@@ -250,9 +250,24 @@ def test_motion(godot: str, client: VibeClient) -> None:
         {"cmd": "motion.list", "args": {}},
         {"cmd": "motion.describe", "args": {"text": "a sad person runs in a circle then jumps twice"}},
         {"cmd": "motion.character", "args": {"name": "Sem", "text": "blablabla"}},
+        {"cmd": "motion.play", "args": {"character": "Heroi", "fraction": 0.5}},
+        {"cmd": "motion.character", "args": {"name": "Perto", "outfit": "adventurer", "colors": {"hat": "cowboy"}, "position": "near:Heroi", "radius": 3.0}},
+        {"cmd": "node.get", "args": {"path": "Perto", "properties": ["position"]}},
+        {"cmd": "node.get", "args": {"path": "Heroi", "properties": ["position"]}},
     ])
-    check(len(res) == 7 and all(r.get("ok") for r in res), "motion commands", [r.get("error") for r in res if not r.get("ok")])
-    if len(res) == 7:
+    check(len(res) == 11 and all(r.get("ok") for r in res), "motion commands", [r.get("error") for r in res if not r.get("ok")])
+    if len(res) == 11:
+        play = res[7].get("result", {})
+        check(play.get("animation") == "test_anda_acena" and float(play.get("time", 0)) > 0.5,
+              "motion.play fraction= freezes mid-animation (current animation by default)", play)
+        def xz(r):
+            v = r.get("result", {}).get("properties", {}).get("position") or r.get("result", {}).get("position")
+            if isinstance(v, str):
+                v = [float(x) for x in v.strip("()").split(",")]
+            return v
+        a, b = xz(res[9]), xz(res[10])
+        dist = ((a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5 if a and b else -1
+        check(abs(dist - 3.0) < 0.3, "position near:<node> places the character in a ring around it", (a, b))
         gen = res[2].get("result", {})
         check([sg.get("clip") for sg in gen.get("segments", [])] == ["walk", "wave", "sit"], "motion.generate segments", gen.get("segments"))
         check((ROOT / "animations" / "test_anda_acena.res").exists(), "animation saved to res://animations")

@@ -192,7 +192,10 @@ func _apply_animation() -> void:
 		if Engine.is_editor_hint() and player.is_playing():
 			player.stop()
 		return
-	player.autoplay = animation
+	# Autoplay only matters for the saved scene (at runtime play() below starts
+	# it; setting it in a running game only prints a warning).
+	if Engine.is_editor_hint() or not player.is_inside_tree():
+		player.autoplay = animation
 	if Engine.is_editor_hint():
 		if preview_time >= 0.0:
 			player.stop()
@@ -230,6 +233,12 @@ func add_animation(anim: Animation, anim_name: String) -> void:
 func get_animation_names() -> PackedStringArray:
 	var player := get_animation_player()
 	return player.get_animation_list() if player != null else PackedStringArray()
+
+
+## The animation called anim_name, or null.
+func get_animation(anim_name: String) -> Animation:
+	var player := get_animation_player()
+	return player.get_animation(anim_name) if player != null and player.has_animation(anim_name) else null
 
 
 ## Generates an animation from a description (runtime or editor) and adds it

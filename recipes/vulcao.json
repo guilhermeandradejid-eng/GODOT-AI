@@ -30,6 +30,20 @@
       "count": 2
     }
   ],
+  "scatter": [
+    {
+      "preset": "rocks",
+      "density": 1.0
+    },
+    {
+      "preset": "boulders",
+      "density": 0.8
+    },
+    {
+      "preset": "dead_trees",
+      "density": 0.6
+    }
+  ],
   "camera": {
     "type": "fly",
     "view": "hero"
