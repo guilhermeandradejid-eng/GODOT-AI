@@ -20,6 +20,8 @@ extends RefCounted
 ##   "vfx": [ {"preset": "campfire", "at": "flat"}, {"preset": "fireflies", "count": 3},
 ##            {"preset": "fire", "at": [10, 5], "color": "blue", "scale": 2} ],
 ##   "camera": {"type": "fly", "view": "hero"},
+##   "characters": [ {"outfit": "knight", "at": "flat", "motion": "acena e depois dança"},
+##                   {"outfit": "zombie", "count": 3, "motion": "anda como um zumbi"} ],   # needs vibe_motion
 ##   "style": "toon",                             # realistic | stylized | toon | cel | lowpoly
 ##   "commands": [ {"cmd": "node.add", "args": {...}} ]   # any extra commands, run last
 ## }
@@ -197,6 +199,30 @@ func build(recipe: Dictionary, ctx, registry) -> Dictionary:
 		cam = {"type": cam}
 	if cam is Dictionary:
 		await _step(registry, ctx, "camera.add", cam)
+
+	var chars = recipe.get("characters", [])
+	if chars is Dictionary or chars is String:
+		chars = [chars]
+	var ci := 0
+	for c in chars:
+		if c is String:
+			c = {"outfit": c}
+		if not (c is Dictionary):
+			continue
+		var count := clampi(int(c.get("count", 1)), 1, 20)
+		for i in count:
+			var cargs := {"outfit": str(c.get("outfit", "casual")), "position": c.get("at", c.get("position", "flat")),
+				"seed": ci * 7 + i + int(c.get("seed", 0)), "replace": true}
+			var base_name := str(c.get("name", Util.pascal_case(str(cargs.outfit))))
+			cargs["name"] = base_name if count == 1 else "%s%d" % [base_name, i + 1]
+			for k in ["style", "colors", "height", "facing"]:
+				if c.has(k):
+					cargs[k] = c[k]
+			var motion := str(c.get("motion", c.get("animation", c.get("text", ""))))
+			if motion != "":
+				cargs["text"] = motion
+			await _step(registry, ctx, "motion.character", cargs)
+		ci += 1
 
 	if style != "":
 		await _step(registry, ctx, "style.set", {"style": style})

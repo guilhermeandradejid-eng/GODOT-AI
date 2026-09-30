@@ -18,7 +18,7 @@ config/icon="res://icon.svg"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/vibe_core/plugin.cfg", "res://addons/vibe_terrain/plugin.cfg", "res://addons/vibe_grass/plugin.cfg", "res://addons/vibe_vfx/plugin.cfg")
+enabled=PackedStringArray("res://addons/vibe_core/plugin.cfg", "res://addons/vibe_terrain/plugin.cfg", "res://addons/vibe_grass/plugin.cfg", "res://addons/vibe_vfx/plugin.cfg", "res://addons/vibe_motion/plugin.cfg")
 
 [rendering]
 

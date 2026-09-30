@@ -124,13 +124,15 @@ def test_world_build(client: VibeClient) -> None:
         "grass": [{"preset": "lush", "density": 0.8}, {"preset": "flowers", "name": "Flores", "density": 0.3}],
         "vfx": [{"preset": "campfire", "at": "beach"}, {"preset": "fireflies", "count": 2}],
         "camera": {"type": "fly", "view": "hero"},
+        "characters": [{"outfit": "knight", "at": "flat", "motion": "acena e depois dança"}, {"outfit": "zombie", "count": 2, "motion": "anda como um zumbi"}],
         "commands": [{"cmd": "node.add", "args": {"type": "Label3D", "name": "Placa", "position": [0, 6, 0], "properties": {"text": "oi"}}}],
     }
     res = run_batch(client, [{"cmd": "world.build", "args": {"recipe": recipe}}])
     r = res[0] if res else {}
     steps = r.get("result", {}).get("steps", [])
     check(bool(r.get("ok")), "world.build builds a full recipe", [s for s in steps if not s.get("ok")] or r.get("error"))
-    check(len(steps) >= 10, "world.build ran every step", len(steps))
+    check(len(steps) >= 12, "world.build ran every step", len(steps))
+    check(sum(1 for s in steps if s.get("cmd") == "motion.character") == 3, "recipe characters", [s for s in steps if s.get("cmd") == "motion.character"])
 
 
 def test_prompts(client: VibeClient) -> None:
@@ -166,6 +168,77 @@ def test_prompts(client: VibeClient) -> None:
             else:
                 ok &= got[k] == v
         check(ok and bool(r.get("ok")), f"vibe \"{prompt}\"", {k: got[k] for k in exp})
+
+
+def test_motion(godot: str, client: VibeClient) -> None:
+    print("[motion]")
+    proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "--script", "res://tests/motion_unit.gd"],
+                          capture_output=True, text=True, timeout=600)
+    data = None
+    for line in proc.stdout.splitlines():
+        if line.startswith(MARKER):
+            data = json.loads(line[len(MARKER):])
+    check(data is not None, "motion unit script ran", (proc.stderr or proc.stdout)[-400:])
+    for name, ok, detail in (data or {}).get("checks", []):
+        check(ok, "motion: " + name, detail)
+    scene = "res://tests/tmp/test_motion.tscn"
+    res = run_batch(client, [
+        {"cmd": "scene.new", "args": {"path": scene, "overwrite": True}},
+        {"cmd": "motion.character", "args": {"name": "Heroi", "outfit": "mago", "style": "toon", "position": [0, 0, 0]}},
+        {"cmd": "motion.generate", "args": {"text": "anda, acena duas vezes e depois senta", "character": "Heroi", "name": "test_anda_acena"}},
+        {"cmd": "motion.play", "args": {"character": "Heroi", "animation": "test_anda_acena", "time": 1.0}},
+        {"cmd": "motion.list", "args": {}},
+        {"cmd": "motion.describe", "args": {"text": "a sad person runs in a circle then jumps twice"}},
+        {"cmd": "motion.character", "args": {"name": "Sem", "text": "blablabla"}},
+    ])
+    check(len(res) == 7 and all(r.get("ok") for r in res), "motion commands", [r.get("error") for r in res if not r.get("ok")])
+    if len(res) == 7:
+        gen = res[2].get("result", {})
+        check([sg.get("clip") for sg in gen.get("segments", [])] == ["walk", "wave", "sit"], "motion.generate segments", gen.get("segments"))
+        check((ROOT / "animations" / "test_anda_acena.res").exists(), "animation saved to res://animations")
+        lst = res[4].get("result", {})
+        check(len(lst.get("actions", {})) >= 45 and any(c.get("name") == "Heroi" for c in lst.get("characters", [])), "motion.list", list(lst.keys()))
+        desc = res[5].get("result", {})
+        check([sg.get("clip") for sg in desc.get("segments", [])] == ["run", "jump"], "motion.describe", desc.get("segments"))
+        check(res[6].get("warnings") is not None, "unknown action falls back to idle with a warning", res[6])
+    tscn = (ROOT / "tests" / "tmp" / "test_motion.tscn").read_text(encoding="utf-8") if (ROOT / "tests" / "tmp" / "test_motion.tscn").exists() else ""
+    check("test_anda_acena.res" in tscn and "Skeleton3D" in tscn, "scene references the animation file", tscn[:200])
+    for p in (ROOT / "animations").glob("test_*.res"):
+        p.unlink()
+
+
+def test_kimodo(client_factory) -> None:
+    print("[kimodo]")
+    sys.path.insert(0, str(ROOT / "tests"))
+    import kimodo_mock  # noqa: E402
+    import socket
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    srv = kimodo_mock.serve(port)
+    old = os.environ.get("KIMODO_URL")
+    os.environ["KIMODO_URL"] = f"http://127.0.0.1:{port}"
+    try:
+        client = client_factory("res://tests/tmp/test_kimodo.tscn")
+        res = run_batch(client, [
+            {"cmd": "scene.new", "args": {"path": "res://tests/tmp/test_kimodo.tscn", "overwrite": True}},
+            {"cmd": "motion.backend", "args": {"test": True}},
+            {"cmd": "motion.generate", "args": {"text": "anda e levanta o braço esquerdo", "backend": "kimodo", "name": "test_kimodo"}},
+        ])
+        check(len(res) == 3 and all(r.get("ok") for r in res), "kimodo commands", [r.get("error") for r in res if not r.get("ok")])
+        if len(res) == 3:
+            check(res[1].get("result", {}).get("kimodo", {}).get("reachable") is True, "motion.backend reaches the server", res[1].get("result"))
+            gen = res[2].get("result", {})
+            check(gen.get("backend") == "kimodo", "motion.generate used kimodo", gen.get("backend"))
+            check(float(gen.get("duration", 0)) >= 1.9, "kimodo motion has the requested length", gen.get("duration"))
+    finally:
+        srv.shutdown()
+        if old is None:
+            os.environ.pop("KIMODO_URL", None)
+        else:
+            os.environ["KIMODO_URL"] = old
+        for p in (ROOT / "animations").glob("test_*.res"):
+            p.unlink()
 
 
 def test_schema(godot: str) -> None:
@@ -288,17 +361,27 @@ def main() -> int:
     for p in (ROOT / "tests" / "tmp").glob("test_*"):
         shutil.rmtree(p) if p.is_dir() else p.unlink()
     client = VibeClient(ROOT, godot=godot, scene=SCENE, mode="headless", timeout=900)
+    anim_dir = ROOT / "animations"
+    anims_before = set(anim_dir.glob("*")) if anim_dir.exists() else set()
     if not a.skip_import:
         test_import(godot)
     test_commands(client)
     test_world_build(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_world.tscn", mode="headless", timeout=900))
     test_prompts(client)
+    test_motion(godot, client)
+    test_kimodo(lambda scene: VibeClient(ROOT, godot=godot, scene=scene, mode="headless", timeout=900))
     test_schema(godot)
     test_mcp()
     if a.render:
         test_render(client)
     if a.editor:
         test_editor(godot)
+    # Animations generated by the tests (recipes, fallbacks) are not project content.
+    if anim_dir.exists():
+        for p in set(anim_dir.glob("*")) - anims_before:
+            p.unlink()
+        if not any(anim_dir.iterdir()):
+            anim_dir.rmdir()
     print(f"\n{PASSES} passed, {len(FAILS)} failed")
     for f in FAILS:
         print("  -", f)

@@ -963,7 +963,7 @@ func _style_set(args: Dictionary, ctx) -> Variant:
 	if ctx.is_editor():
 		ctx.record_method(ctx.root, &"set_meta", [&"vibe_style", style], &"set_meta", [&"vibe_style", old_style])
 	var changed: Array = []
-	for g in [Util.TERRAIN_GROUP, Util.GRASS_GROUP, Util.VFX_GROUP]:
+	for g in [Util.TERRAIN_GROUP, Util.GRASS_GROUP, Util.VFX_GROUP, Util.CHARACTER_GROUP, Util.SCATTER_GROUP]:
 		for n in ctx.nodes_in_group(g):
 			if "style" in n:
 				ctx.set_property(n, &"style", style)
@@ -982,7 +982,7 @@ func _world_clear(_args: Dictionary, ctx) -> Variant:
 		return missing
 	var removed: Array = []
 	var targets: Array = []
-	for g in [Util.TERRAIN_GROUP, Util.GRASS_GROUP, Util.VFX_GROUP]:
+	for g in [Util.TERRAIN_GROUP, Util.GRASS_GROUP, Util.VFX_GROUP, Util.CHARACTER_GROUP, Util.SCATTER_GROUP]:
 		for n in ctx.nodes_in_group(g):
 			if not targets.has(n):
 				targets.append(n)

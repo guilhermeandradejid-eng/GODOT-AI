@@ -25,6 +25,8 @@ var dock = null
 func _enter_tree() -> void:
 	_ensure_settings()
 	registry = Registry.new()
+	# Other Vibe plugins (docks) run commands through this registry.
+	Engine.set_meta(&"vibe_core_plugin", self)
 	var modules: Array = registry.discover_modules()
 	bridge = Bridge.new()
 	bridge.registry = registry
@@ -45,12 +47,23 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	if Engine.has_meta(&"vibe_core_plugin") and Engine.get_meta(&"vibe_core_plugin") == self:
+		Engine.remove_meta(&"vibe_core_plugin")
 	if bridge != null:
 		bridge.stop()
 	if dock != null:
 		remove_control_from_docks(dock)
 		dock.queue_free()
 		dock = null
+	if bridge != null:
+		bridge.registry = null
+		bridge.context_factory = Callable()
+		bridge.status_provider = Callable()
+		bridge = null
+	if registry != null:
+		# Breaks handler <-> module cycles so nothing leaks when the editor quits.
+		registry.shutdown()
+		registry = null
 
 
 func _process(_delta: float) -> void:

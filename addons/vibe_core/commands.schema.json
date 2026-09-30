@@ -4,6 +4,7 @@
   "modules": [
     "vibe_core",
     "vibe_grass",
+    "vibe_motion",
     "vibe_terrain",
     "vibe_vfx"
   ],
@@ -1063,6 +1064,765 @@
           "command": "terrain.sculpt"
         }
       ]
+    },
+    {
+      "name": "motion.apply",
+      "category": "motion",
+      "description": "Retargets a humanoid animation onto another rigged model in the scene (Godot humanoid BoneMap, Mixamo, Unreal, CMU or SMPL bone names), adding an AnimationPlayer if needed.",
+      "editor_only": false,
+      "args": {
+        "animation": {
+          "type": "string",
+          "description": "res:// path or name of a character animation.",
+          "required": true
+        },
+        "target": {
+          "type": "string",
+          "description": "Node that contains the model's Skeleton3D.",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Animation name on the target (default: same)."
+        },
+        "in_place": {
+          "type": "boolean",
+          "description": "Drop horizontal root motion.",
+          "default": false
+        },
+        "play": {
+          "type": "boolean",
+          "description": "Set as autoplay.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "animation": {
+            "type": "string",
+            "description": "res:// path or name of a character animation."
+          },
+          "target": {
+            "type": "string",
+            "description": "Node that contains the model's Skeleton3D."
+          },
+          "name": {
+            "type": "string",
+            "description": "Animation name on the target (default: same)."
+          },
+          "in_place": {
+            "type": "boolean",
+            "default": false,
+            "description": "Drop horizontal root motion."
+          },
+          "play": {
+            "type": "boolean",
+            "default": true,
+            "description": "Set as autoplay."
+          }
+        },
+        "required": [
+          "animation",
+          "target"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.backend",
+      "category": "motion",
+      "description": "Text-to-motion backends: the built-in procedural synthesizer and the optional Kimodo (kimodo.cpp) server. Pass url/model to configure it, test=true to check it.",
+      "editor_only": false,
+      "args": {
+        "url": {
+          "type": "string",
+          "description": "kimodo.cpp server URL (saved in project settings), e.g. http://127.0.0.1:8090."
+        },
+        "model": {
+          "type": "string",
+          "description": "Default Kimodo model (soma-rp-v1.1, soma-seed-v1.1, smplx-rp-v1)."
+        },
+        "test": {
+          "type": "boolean",
+          "description": "Contact the server.",
+          "default": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "kimodo.cpp server URL (saved in project settings), e.g. http://127.0.0.1:8090."
+          },
+          "model": {
+            "type": "string",
+            "description": "Default Kimodo model (soma-rp-v1.1, soma-seed-v1.1, smplx-rp-v1)."
+          },
+          "test": {
+            "type": "boolean",
+            "default": true,
+            "description": "Contact the server."
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.character",
+      "category": "motion",
+      "description": "Adds a humanoid character (VibeCharacter3D) with a procedural body. Outfits: casual, mannequin, adventurer, athlete, ninja, robot, soldier, knight, wizard, zombie, astronaut, king. Optionally generates an animation right away (text).",
+      "editor_only": false,
+      "args": {
+        "name": {
+          "type": "string",
+          "description": "Node name.",
+          "default": "Personagem"
+        },
+        "outfit": {
+          "type": "string",
+          "description": "Outfit preset (PT/EN: aventureiro, robô, mago, ninja, cavaleiro, zumbi, astronauta, rei, atleta, soldado, manequim).",
+          "default": "casual"
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style (default: scene style).",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "colors": {
+          "type": "object",
+          "description": "Overrides: {\"shirt\": \"red\", \"pants\": \"#222\", \"hair_style\": \"long\", \"hat\": \"cap\"}.",
+          "default": {}
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in meters (animations scale with it).",
+          "default": 1.8
+        },
+        "position": {
+          "type": "position",
+          "description": "Where it stands ([x, z] snaps to the terrain), or 'near:<node>' to stand in a ring around a node (e.g. near:Campfire).",
+          "default": "center"
+        },
+        "radius": {
+          "type": "number",
+          "description": "Ring radius for near:<node>.",
+          "default": 2.4
+        },
+        "facing": {
+          "type": "any",
+          "description": "Yaw in degrees, a position to look at, or 'camera'."
+        },
+        "text": {
+          "type": "string",
+          "description": "Also generate and play this animation."
+        },
+        "replace": {
+          "type": "boolean",
+          "description": "Replace a node with the same name.",
+          "default": true
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent node (default scene root)."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Seed for anchor positions.",
+          "default": 0
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "default": "Personagem",
+            "description": "Node name."
+          },
+          "outfit": {
+            "type": "string",
+            "default": "casual",
+            "description": "Outfit preset (PT/EN: aventureiro, robô, mago, ninja, cavaleiro, zumbi, astronauta, rei, atleta, soldado, manequim)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style (default: scene style)."
+          },
+          "colors": {
+            "type": "object",
+            "default": {},
+            "description": "Overrides: {\"shirt\": \"red\", \"pants\": \"#222\", \"hair_style\": \"long\", \"hat\": \"cap\"}."
+          },
+          "height": {
+            "type": "number",
+            "default": 1.8,
+            "description": "Height in meters (animations scale with it)."
+          },
+          "position": {
+            "default": "center",
+            "description": "Where it stands ([x, z] snaps to the terrain), or 'near:<node>' to stand in a ring around a node (e.g. near:Campfire). ([x, z] on the terrain surface, [x, y, z], or an anchor: center, north, south, east, west, northeast, northwest, southeast, southwest, peak, valley, flat, beach, random)"
+          },
+          "radius": {
+            "type": "number",
+            "default": 2.4,
+            "description": "Ring radius for near:<node>."
+          },
+          "facing": {
+            "description": "Yaw in degrees, a position to look at, or 'camera'."
+          },
+          "text": {
+            "type": "string",
+            "description": "Also generate and play this animation."
+          },
+          "replace": {
+            "type": "boolean",
+            "default": true,
+            "description": "Replace a node with the same name."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent node (default scene root)."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0,
+            "description": "Seed for anchor positions."
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "Heroi",
+          "outfit": "aventureiro",
+          "position": "flat",
+          "text": "acena e depois dança"
+        }
+      ]
+    },
+    {
+      "name": "motion.describe",
+      "category": "motion",
+      "description": "Shows how a text is understood (segments, durations, English prompts) without generating anything.",
+      "editor_only": false,
+      "args": {
+        "text": {
+          "type": "string",
+          "description": "Motion description.",
+          "required": true
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Motion description."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.generate",
+      "category": "motion",
+      "description": "Text -> animation (PT/EN): 'anda devagar, acena duas vezes e senta', 'a person runs in a circle then jumps'. Understands ~50 actions (walk, run, jump, wave, dance, sit, lie, fight, magic, push-ups...), moods (feliz, triste, cansado, bravo, confiante, com medo), styles (robô, zumbi, bêbado, ninja, cartoon, elegante, idoso, mancando), counts, durations, speed and directions. Saves res://animations/<name>.res and adds it to the character (VibeCharacter3D). backend: procedural (built in) or kimodo (kimodo.cpp server).",
+      "editor_only": false,
+      "args": {
+        "text": {
+          "type": "string",
+          "description": "What the character does (Portuguese or English).",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Animation name (default: from the text)."
+        },
+        "character": {
+          "type": "string",
+          "description": "VibeCharacter3D to receive it (default: the only/first one; created if missing and create=true)."
+        },
+        "create": {
+          "type": "boolean",
+          "description": "Add a character when the scene has none.",
+          "default": true
+        },
+        "backend": {
+          "type": "string",
+          "description": "auto = kimodo when a server is configured (motion.backend url=...) and answers, else procedural.",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "procedural",
+            "kimodo"
+          ]
+        },
+        "play": {
+          "type": "boolean",
+          "description": "Make it the character's current animation.",
+          "default": true
+        },
+        "loop": {
+          "type": "string",
+          "description": "Loop (auto: single cyclic actions loop).",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "true",
+            "false"
+          ]
+        },
+        "in_place": {
+          "type": "boolean",
+          "description": "Remove root motion (walk cycles for game controllers).",
+          "default": false
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Variation seed.",
+          "default": 0
+        },
+        "fps": {
+          "type": "number",
+          "description": "Keyframe rate.",
+          "default": 30.0
+        },
+        "path": {
+          "type": "string",
+          "description": "Where to save (default res://animations/<name>.res)."
+        },
+        "model": {
+          "type": "string",
+          "description": "Kimodo model id (default soma-rp-v1.1)."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Kimodo only: English prompt used verbatim (skips translation)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "What the character does (Portuguese or English)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Animation name (default: from the text)."
+          },
+          "character": {
+            "type": "string",
+            "description": "VibeCharacter3D to receive it (default: the only/first one; created if missing and create=true)."
+          },
+          "create": {
+            "type": "boolean",
+            "default": true,
+            "description": "Add a character when the scene has none."
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "procedural",
+              "kimodo"
+            ],
+            "default": "auto",
+            "description": "auto = kimodo when a server is configured (motion.backend url=...) and answers, else procedural."
+          },
+          "play": {
+            "type": "boolean",
+            "default": true,
+            "description": "Make it the character's current animation."
+          },
+          "loop": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "true",
+              "false"
+            ],
+            "default": "auto",
+            "description": "Loop (auto: single cyclic actions loop)."
+          },
+          "in_place": {
+            "type": "boolean",
+            "default": false,
+            "description": "Remove root motion (walk cycles for game controllers)."
+          },
+          "seed": {
+            "type": "integer",
+            "default": 0,
+            "description": "Variation seed."
+          },
+          "fps": {
+            "type": "number",
+            "default": 30.0,
+            "description": "Keyframe rate."
+          },
+          "path": {
+            "type": "string",
+            "description": "Where to save (default res://animations/<name>.res)."
+          },
+          "model": {
+            "type": "string",
+            "description": "Kimodo model id (default soma-rp-v1.1)."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Kimodo only: English prompt used verbatim (skips translation)."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "examples": [
+        {
+          "text": "anda até a esquerda, acena duas vezes e depois senta triste"
+        },
+        {
+          "text": "dança feliz por 6 segundos",
+          "character": "Heroi"
+        }
+      ]
+    },
+    {
+      "name": "motion.import",
+      "category": "motion",
+      "description": "Imports motion capture (BVH, glTF/GLB, FBX on Godot 4.3+: Mixamo, CMU, Kimodo exports...) retargeted to the humanoid, saved as res://animations/<name>.res.",
+      "editor_only": false,
+      "args": {
+        "path": {
+          "type": "string",
+          "description": "File path (res:// or absolute).",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Animation name (default: file name)."
+        },
+        "clip": {
+          "type": "string",
+          "description": "Animation inside the file (default first)."
+        },
+        "character": {
+          "type": "string",
+          "description": "Add it to this character."
+        },
+        "facing": {
+          "type": "number",
+          "description": "Extra yaw (degrees) if the source faces the wrong way.",
+          "default": 0.0
+        },
+        "fps": {
+          "type": "number",
+          "description": "Sampling rate for glTF/FBX.",
+          "default": 30.0
+        },
+        "in_place": {
+          "type": "boolean",
+          "description": "Remove root motion.",
+          "default": false
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Loop the animation.",
+          "default": false
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File path (res:// or absolute)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Animation name (default: file name)."
+          },
+          "clip": {
+            "type": "string",
+            "description": "Animation inside the file (default first)."
+          },
+          "character": {
+            "type": "string",
+            "description": "Add it to this character."
+          },
+          "facing": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Extra yaw (degrees) if the source faces the wrong way."
+          },
+          "fps": {
+            "type": "number",
+            "default": 30.0,
+            "description": "Sampling rate for glTF/FBX."
+          },
+          "in_place": {
+            "type": "boolean",
+            "default": false,
+            "description": "Remove root motion."
+          },
+          "loop": {
+            "type": "boolean",
+            "default": false,
+            "description": "Loop the animation."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.list",
+      "category": "motion",
+      "description": "Lists the actions the text understands, moods, styles, outfits, saved animations and the characters in the scene.",
+      "editor_only": false,
+      "args": {},
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.play",
+      "category": "motion",
+      "description": "Plays (or freezes at a time) an animation of a character.",
+      "editor_only": false,
+      "args": {
+        "character": {
+          "type": "string",
+          "description": "Character name (default first)."
+        },
+        "animation": {
+          "type": "string",
+          "description": "Animation name.",
+          "required": true
+        },
+        "time": {
+          "type": "number",
+          "description": ">= 0 freezes the pose at this second (for screenshots).",
+          "default": -1.0
+        },
+        "root_motion": {
+          "type": "string",
+          "description": "Root motion mode.",
+          "enum": [
+            "animate",
+            "extract",
+            "in_place"
+          ]
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "character": {
+            "type": "string",
+            "description": "Character name (default first)."
+          },
+          "animation": {
+            "type": "string",
+            "description": "Animation name."
+          },
+          "time": {
+            "type": "number",
+            "default": -1.0,
+            "description": ">= 0 freezes the pose at this second (for screenshots)."
+          },
+          "root_motion": {
+            "type": "string",
+            "enum": [
+              "animate",
+              "extract",
+              "in_place"
+            ],
+            "description": "Root motion mode."
+          }
+        },
+        "required": [
+          "animation"
+        ]
+      },
+      "examples": []
+    },
+    {
+      "name": "motion.render",
+      "category": "motion",
+      "description": "Renders an animation preview PNG in a neutral studio: 'sheet' (N poses side by side), 'trail' (all poses along the path in one picture) or 'sequence' (numbered frames). Open the PNG to check the motion.",
+      "editor_only": false,
+      "args": {
+        "animation": {
+          "type": "string",
+          "description": "Animation name (of the character) or res:// path."
+        },
+        "text": {
+          "type": "string",
+          "description": "Or render a text directly (not saved)."
+        },
+        "character": {
+          "type": "string",
+          "description": "Use this character's outfit/style."
+        },
+        "outfit": {
+          "type": "string",
+          "description": "Outfit when no character is given (default mannequin)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Art style.",
+          "enum": [
+            "realistic",
+            "stylized",
+            "toon",
+            "cel",
+            "lowpoly"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "description": "Kind of preview.",
+          "default": "sheet",
+          "enum": [
+            "sheet",
+            "trail",
+            "sequence"
+          ]
+        },
+        "frames": {
+          "type": "integer",
+          "description": "Number of poses/frames.",
+          "default": 6
+        },
+        "view": {
+          "type": "string",
+          "description": "Camera direction.",
+          "default": "three_quarter",
+          "enum": [
+            "three_quarter",
+            "front",
+            "side",
+            "back",
+            "top"
+          ]
+        },
+        "columns": {
+          "type": "integer",
+          "description": "Sheet columns (0 = auto).",
+          "default": 0
+        },
+        "width": {
+          "type": "integer",
+          "description": "Width of each frame (px)."
+        },
+        "height": {
+          "type": "integer",
+          "description": "Height of each frame (px)."
+        },
+        "path": {
+          "type": "string",
+          "description": "Output PNG (default res://.vibe/screenshots/motion_<name>_<mode>.png)."
+        }
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "animation": {
+            "type": "string",
+            "description": "Animation name (of the character) or res:// path."
+          },
+          "text": {
+            "type": "string",
+            "description": "Or render a text directly (not saved)."
+          },
+          "character": {
+            "type": "string",
+            "description": "Use this character's outfit/style."
+          },
+          "outfit": {
+            "type": "string",
+            "description": "Outfit when no character is given (default mannequin)."
+          },
+          "style": {
+            "type": "string",
+            "enum": [
+              "realistic",
+              "stylized",
+              "toon",
+              "cel",
+              "lowpoly"
+            ],
+            "description": "Art style."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "sheet",
+              "trail",
+              "sequence"
+            ],
+            "default": "sheet",
+            "description": "Kind of preview."
+          },
+          "frames": {
+            "type": "integer",
+            "default": 6,
+            "description": "Number of poses/frames."
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "three_quarter",
+              "front",
+              "side",
+              "back",
+              "top"
+            ],
+            "default": "three_quarter",
+            "description": "Camera direction."
+          },
+          "columns": {
+            "type": "integer",
+            "default": 0,
+            "description": "Sheet columns (0 = auto)."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Width of each frame (px)."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Height of each frame (px)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Output PNG (default res://.vibe/screenshots/motion_<name>_<mode>.png)."
+          }
+        }
+      },
+      "examples": []
     },
     {
       "name": "node.add",

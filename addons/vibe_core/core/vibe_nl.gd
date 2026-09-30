@@ -109,6 +109,27 @@ const STYLE_WORDS := {
 	"realistic": ["realista", "realistic", "fotorealista", "photorealistic", "realismo", "realism", "pbr"],
 }
 
+## Characters (needs the vibe_motion plugin): noun -> outfit preset.
+const CHARACTER_WORDS := {
+	"knight": ["cavaleiro", "cavaleiros", "knight", "knights", "paladino", "paladinos", "paladin"],
+	"wizard": ["mago", "magos", "maga", "magas", "bruxo", "bruxos", "bruxa", "bruxas", "feiticeiro", "feiticeira", "wizard", "wizards", "mage", "mages", "witch", "sorcerer"],
+	"ninja": ["ninja", "ninjas", "samurai", "samurais"],
+	"robot": ["robo", "robos", "robot", "robots", "androide", "androides", "android", "ciborgue", "cyborg"],
+	"soldier": ["soldado", "soldados", "soldier", "soldiers", "militar", "militares", "guarda", "guardas", "guard", "guards"],
+	"zombie": ["zumbi", "zumbis", "zombie", "zombies"],
+	"astronaut": ["astronauta", "astronautas", "astronaut", "astronauts"],
+	"king": ["rei", "reis", "rainha", "rainhas", "king", "queen", "principe", "princesa", "prince", "princess"],
+	"athlete": ["atleta", "atletas", "athlete", "athletes", "corredor", "corredora", "corredores", "runner", "runners", "jogador", "jogadora"],
+	"adventurer": ["aventureiro", "aventureira", "aventureiros", "explorador", "exploradora", "exploradores", "heroi", "heroina", "herois",
+		"adventurer", "adventurers", "explorer", "explorers", "hero", "heroes", "heroine", "cacador", "cacadora", "hunter", "viajante", "traveler"],
+	"mannequin": ["manequim", "manequins", "boneco", "bonecos", "mannequin", "mannequins", "dummy"],
+	"casual": ["personagem", "personagens", "pessoa", "pessoas", "homem", "homens", "mulher", "mulheres", "menino", "meninos", "menina", "meninas",
+		"garoto", "garotos", "garota", "garotas", "crianca", "criancas", "aldeao", "aldeoes", "campones", "turista", "turistas", "dancarino",
+		"dancarina", "dancarinos", "character", "characters", "person", "people", "man", "men", "woman", "women", "boy", "boys", "girl", "girls",
+		"kid", "kids", "villager", "villagers", "dancer", "dancers", "tourist", "tourists"],
+}
+const CHARACTER_PRIORITY := ["zombie", "knight", "wizard", "ninja", "robot", "soldier", "astronaut", "king", "athlete", "adventurer", "mannequin", "casual"]
+
 var _text := ""
 var _padded := ""
 var _tokens: PackedStringArray = []
@@ -264,7 +285,54 @@ func parse(prompt: String) -> Dictionary:
 		recipe["style"] = style
 		notes.append("estilo / style: %s" % style)
 	recipe["camera"] = {"type": "fly", "view": "hero"}
+	var characters := _characters()
+	if not characters.is_empty():
+		recipe["characters"] = characters
 	return recipe
+
+
+## "com um cavaleiro acenando", "two zombies walking", "pessoas dançando
+## perto da fogueira": outfit, count and the action phrase (parsed later by
+## motion.character).
+func _characters() -> Array:
+	var out: Array = []
+	var used := {}
+	for key in CHARACTER_PRIORITY:
+		var words: Array = CHARACTER_WORDS[key]
+		for i in _tokens.size():
+			if used.has(i) or not words.has(_tokens[i]):
+				continue
+			used[i] = true
+			var count := _count_before(i)
+			if count == 0:
+				count = 3 if _tokens[i].ends_with("s") and not _tokens[i] in ["ninjas", "samurais"] or _tokens[i] in ["people", "men", "women", "kids", "gente"] else 1
+			# The action: the clause right after the noun.
+			var action: Array = []
+			for j in range(i + 1, mini(i + 9, _tokens.size())):
+				var w: String = _tokens[j]
+				if w in ["com", "with", "numa", "num", "sob", "under", "ao", "during", "durante"]:
+					break
+				action.append(w)
+			var entry := {"outfit": key, "at": "flat"}
+			if count > 1:
+				entry["count"] = count
+			var text := " ".join(action).strip_edges()
+			if text != "":
+				entry["motion"] = text + (" como um zumbi" if key == "zombie" and not text.contains("zumbi") and not text.contains("zombie") else "")
+			var where := _location_near(i)
+			if where != "":
+				entry["at"] = where
+			for fire in ["fogueira", "campfire", "bonfire", "fogo", "fire"]:
+				if action.has(fire) or (i > 0 and _tokens[i - 1] == fire):
+					entry["at"] = "near:campfire"
+			for portal in ["portal"]:
+				if action.has(portal):
+					entry["at"] = "near:portal"
+			out.append(entry)
+			notes.append("personagem / character: %s%s%s" % [key, " x%d" % count if count > 1 else "", (" (" + text + ")") if text != "" else ""])
+			if out.size() >= 4:
+				return out
+	return out
 
 
 func _has_vfx(list: Array, preset: String) -> bool:

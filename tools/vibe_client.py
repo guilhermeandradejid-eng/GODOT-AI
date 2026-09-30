@@ -27,7 +27,7 @@ CLI_SCRIPT = "res://addons/vibe_core/cli/vibe_cli.gd"
 STATE_FILE = ".vibe/state.json"
 BRIDGE_FILE = ".godot/vibe_bridge.json"
 # Commands that must render frames (need a display in headless mode).
-RENDER_COMMANDS = {"screenshot", "scene.screenshot", "editor.screenshot", "capture"}
+RENDER_COMMANDS = {"screenshot", "scene.screenshot", "editor.screenshot", "capture", "motion.render"}
 
 
 class VibeError(RuntimeError):

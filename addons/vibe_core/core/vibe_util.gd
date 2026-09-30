@@ -12,6 +12,8 @@ const ERROR_KEY := "_vibe_error"
 const TERRAIN_GROUP := &"vibe_terrain"
 const GRASS_GROUP := &"vibe_grass"
 const VFX_GROUP := &"vibe_vfx"
+const CHARACTER_GROUP := &"vibe_character"
+const SCATTER_GROUP := &"vibe_scatter"
 
 const PT_COLOR_NAMES := {
 	"vermelho": Color(0.9, 0.12, 0.1), "vermelha": Color(0.9, 0.12, 0.1),
