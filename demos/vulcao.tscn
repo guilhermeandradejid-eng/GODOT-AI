@@ -1,57 +1,97 @@
 [gd_scene format=3]
 
 [ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_a8j0a"]
-[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_0qv5a"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/cloud_noise.png" id="2_0qv5a"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_e4c3a"]
 [ext_resource type="Resource" path="res://demos/vulcao_data/terrain_terrain.res" id="4_vgjc1"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_lmf0u"]
+[ext_resource type="Script" path="res://addons/vibe_scatter/vibe_scatter_3d.gd" id="6_e4c3a"]
 [ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="6_v2h2u"]
 [ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="7_f44s7"]
 [ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="8_e2mi8"]
 [ext_resource type="Script" path="res://demos/demo_hud.gd" id="9_xxfmm"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1xxm1"]
+[sub_resource type="Gradient" id="Gradient_vgjc1"]
+offsets = PackedFloat32Array(0, 0.25, 0.5, 0.75, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.23787677, 0.24072947, 0.24451482, 1, 0.4732353, 0.47833332, 0.4847059, 1, 0.72416604, 0.7274563, 0.73091054, 1, 0.98333335, 0.9852941, 0.9872549, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_lmf0u"]
+gradient = SubResource("Gradient_vgjc1")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_v2h2u"]
 shader = ExtResource("1_a8j0a")
 shader_parameter/top_color = Color(0.11372549, 0.14117648, 0.18039216, 1)
 shader_parameter/horizon_color = Color(0.2901961, 0.33333334, 0.3882353, 1)
+shader_parameter/mid_color = Color(0.49411765, 0.6666667, 0.87058824, 1)
+shader_parameter/use_mid = 0.0
+shader_parameter/mid_height = 0.35
 shader_parameter/ground_color = Color(0.13333334, 0.14901961, 0.17254902, 1)
 shader_parameter/horizon_sharpness = null
+shader_parameter/haze = 0.5
 shader_parameter/sun_color = Color(0.6666667, 0.7058824, 0.76862746, 1)
 shader_parameter/sun_size = 0.0
 shader_parameter/sun_glow = 0.0
 shader_parameter/moon = 0.0
 shader_parameter/stars = 0.0
 shader_parameter/cloud_coverage = 1.0
-shader_parameter/cloud_color = Color(0.22745098, 0.25882354, 0.30588236, 1)
-shader_parameter/cloud_offset = null
+shader_parameter/cloud_color = Color(0.2901961, 0.32941177, 0.38431373, 1)
+shader_parameter/cloud_shade = Color(0.101960786, 0.12156863, 0.14901961, 1)
+shader_parameter/cloud_scale = 1.0
+shader_parameter/cloud_softness = null
+shader_parameter/cirrus = 0.0
+shader_parameter/cloud_offset = Vector2(0, 0)
 shader_parameter/bands = 0.0
 shader_parameter/toon = 0.0
 shader_parameter/energy = null
-shader_parameter/noise_tex = ExtResource("2_0qv5a")
+shader_parameter/cloud_tex = ExtResource("2_0qv5a")
 
-[sub_resource type="Sky" id="Sky_7cgnq"]
-sky_material = SubResource("ShaderMaterial_1xxm1")
+[sub_resource type="Sky" id="Sky_f44s7"]
+sky_material = SubResource("ShaderMaterial_v2h2u")
 
-[sub_resource type="Environment" id="Environment_rnqe6"]
+[sub_resource type="Environment" id="Environment_e2mi8"]
 background_mode = 2
-sky = SubResource("Sky_7cgnq")
+sky = SubResource("Sky_f44s7")
 ambient_light_source = 3
 ambient_light_energy = 0.45
 reflected_light_source = 2
-tonemap_mode = 2
+tonemap_mode = 3
 tonemap_exposure = 1.1
-tonemap_white = 6.0
+tonemap_white = 8.0
 ssao_enabled = true
+ssao_radius = 1.6
+ssao_intensity = 1.8
+ssao_power = 1.6
+ssao_detail = 0.6
+ssao_light_affect = 0.15
+ssil_enabled = true
+ssil_radius = 6.0
+ssil_intensity = 0.9
+sdfgi_use_occlusion = true
+sdfgi_cascades = 6
+sdfgi_min_cell_size = 0.4
+sdfgi_energy = 0.9
 glow_enabled = true
 glow_intensity = 0.64
 glow_bloom = 0.024
 fog_enabled = true
 fog_light_color = Color(0.24313726, 0.2784314, 0.3254902, 1)
+fog_sun_scatter = 0.05
 fog_density = 0.0045
 fog_aerial_perspective = 0.4
 fog_sky_affect = 0.25
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.002
+volumetric_fog_albedo = Color(0.54588234, 0.5670588, 0.5952941, 1)
+volumetric_fog_gi_inject = 0.5
+volumetric_fog_anisotropy = 0.6
+volumetric_fog_length = 160.0
+volumetric_fog_ambient_inject = 0.3
+volumetric_fog_sky_affect = 0.0
+adjustment_enabled = true
+adjustment_contrast = 1.03
+adjustment_color_correction = SubResource("GradientTexture1D_lmf0u")
 
-[sub_resource type="Resource" id="Resource_epifq"]
+[sub_resource type="Resource" id="Resource_xxfmm"]
 script = ExtResource("5_lmf0u")
 name = "Cinzas"
 color_a = Color(0.16862746, 0.16078432, 0.15294118, 1)
@@ -61,7 +101,7 @@ roughness = 0.95
 texture_set = "ash"
 uv_scale = 3.0
 
-[sub_resource type="Resource" id="Resource_allnl"]
+[sub_resource type="Resource" id="Resource_1xxm1"]
 script = ExtResource("5_lmf0u")
 name = "Basalto"
 color_a = Color(0.09019608, 0.08235294, 0.078431375, 1)
@@ -72,7 +112,7 @@ texture_set = "gravel"
 tint = Color(0.3529412, 0.32156864, 0.2901961, 1)
 uv_scale = 2.5
 
-[sub_resource type="Resource" id="Resource_u8cdu"]
+[sub_resource type="Resource" id="Resource_7cgnq"]
 script = ExtResource("5_lmf0u")
 name = "Rocha"
 color_a = Color(0.23137255, 0.18039216, 0.15294118, 1)
@@ -84,7 +124,7 @@ texture_set = "rock"
 tint = Color(0.41568628, 0.3529412, 0.32156864, 1)
 uv_scale = 6.0
 
-[sub_resource type="Resource" id="Resource_q8ofv"]
+[sub_resource type="Resource" id="Resource_rnqe6"]
 script = ExtResource("5_lmf0u")
 name = "Lava"
 color_a = Color(1, 0.2901961, 0, 1)
@@ -98,61 +138,85 @@ uv_scale = 5.0
 [node name="Vulcao" type="Node3D" unique_id=1587455196]
 metadata/vibe_style = "realistic"
 
-[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=1605714037]
-environment = SubResource("Environment_rnqe6")
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=878258873]
+environment = SubResource("Environment_e2mi8")
 metadata/vibe_preset = "stormy"
 metadata/vibe_style = "realistic"
+metadata/vibe_quality = "high"
+metadata/vibe_env_overrides = {}
 
-[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=881012590]
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=874914541]
 transform = Transform3D(0.9848077, -0.09960051, 0.14224426, 0, 0.81915206, 0.57357645, -0.17364818, -0.56486255, 0.80670726, 0, 0, 0)
 light_color = Color(0.6666667, 0.7058824, 0.76862746, 1)
 light_energy = 0.35
+light_volumetric_fog_energy = 1.2
+light_angular_distance = 0.6
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.2
 shadow_blur = 1.5
-directional_shadow_max_distance = 250.0
+directional_shadow_blend_splits = true
+directional_shadow_fade_start = 0.85
+directional_shadow_max_distance = 300.0
 
-[node name="Terrain" type="Node3D" parent="." unique_id=1211996316]
+[node name="Terrain" type="Node3D" parent="." unique_id=1904261580]
 script = ExtResource("3_e4c3a")
 data = ExtResource("4_vgjc1")
 palette = "volcanic"
-layer_0 = SubResource("Resource_epifq")
-layer_1 = SubResource("Resource_allnl")
-layer_2 = SubResource("Resource_u8cdu")
-layer_3 = SubResource("Resource_q8ofv")
+layer_0 = SubResource("Resource_xxfmm")
+layer_1 = SubResource("Resource_1xxm1")
+layer_2 = SubResource("Resource_7cgnq")
+layer_3 = SubResource("Resource_rnqe6")
 water_enabled = true
 
-[node name="Pluma" type="Node3D" parent="." unique_id=123998631]
+[node name="Rocks" type="Node3D" parent="Terrain" unique_id=247670589]
+script = ExtResource("6_e4c3a")
+preset = "rocks"
+
+[node name="Boulders" type="Node3D" parent="Terrain" unique_id=167167539]
+script = ExtResource("6_e4c3a")
+preset = "boulders"
+density = 0.8
+random_seed = 18
+
+[node name="DeadTrees" type="Node3D" parent="Terrain" unique_id=564794102]
+script = ExtResource("6_e4c3a")
+preset = "dead_trees"
+density = 0.6
+random_seed = 35
+
+[node name="Pluma" type="Node3D" parent="." unique_id=1094476432]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 84.0399, 12)
 script = ExtResource("6_v2h2u")
 preset = "volcano_plume"
 
-[node name="Embers" type="Node3D" parent="." unique_id=1729015026]
+[node name="Embers" type="Node3D" parent="." unique_id=88102779]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 84.0399, 12)
 script = ExtResource("6_v2h2u")
 preset = "embers"
 size = 2.0
 
-[node name="Lightning" type="Node3D" parent="." unique_id=938229153]
+[node name="Lightning" type="Node3D" parent="." unique_id=2093824515]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.047019, 48.226227, 38.27114)
 script = ExtResource("6_v2h2u")
 preset = "lightning"
 
-[node name="Smoke" type="Node3D" parent="." unique_id=63846965]
+[node name="Smoke" type="Node3D" parent="." unique_id=2138265615]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.047019, 48.226227, 38.27114)
 script = ExtResource("6_v2h2u")
 preset = "smoke"
 
-[node name="Smoke2" type="Node3D" parent="." unique_id=1124792102]
+[node name="Smoke2" type="Node3D" parent="." unique_id=946091617]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.822521, 72.986176, 9.116891)
 script = ExtResource("6_v2h2u")
 preset = "smoke"
 
-[node name="VibeCamera" type="Camera3D" parent="." unique_id=1981190463]
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=674054571]
 transform = Transform3D(0.38268343, 0.09657173, 0.9188184, 0, 0.9945219, -0.10452849, -0.9238795, 0.040001318, 0.38058704, 165.5592, 12.8, 68.576866)
 current = true
 script = ExtResource("7_f44s7")
 
-[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1655280708 instance=ExtResource("8_e2mi8")]
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=2075869491 instance=ExtResource("8_e2mi8")]
 layer = 10
 script = ExtResource("9_xxfmm")
 title = "Ilha vulcânica"

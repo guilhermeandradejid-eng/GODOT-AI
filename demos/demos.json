@@ -16,6 +16,21 @@
       "thumb": "res://demos/thumbs/ilha_tropical.webp"
     },
     {
+      "name": "galeria_animacoes",
+      "title": "Galeria de animações",
+      "subtitle": "realistic · dia · 8 animações geradas por texto",
+      "prompt": "acena feliz · polichinelos · chute alto · feitiço · golpe de espada · dança robô · medita · reverência",
+      "style": "realistic",
+      "scene": "res://demos/galeria_animacoes.tscn",
+      "recipe": "recipes/galeria_animacoes.json",
+      "images": [
+        "docs/img/galeria_animacoes_hero.webp",
+        "docs/img/galeria_animacoes_aerial.webp",
+        "docs/img/galeria_animacoes_feitico.webp"
+      ],
+      "thumb": "res://demos/thumbs/galeria_animacoes.webp"
+    },
+    {
       "name": "montanhas_nevadas",
       "title": "Montanhas nevadas",
       "subtitle": "realistic · amanhecer · cordilheira com erosão",

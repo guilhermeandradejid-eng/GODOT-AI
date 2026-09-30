@@ -44,6 +44,7 @@ OUT = ROOT / "docs" / "video" / "trailer.mp4"
 POSTER = ROOT / "docs" / "img" / "trailer_poster.webp"
 W, H, FPS = 1280, 720, 24
 WARMUP = 18                      # frames recorded before each move starts (trimmed)
+RENDER_SCALE = 1.0               # < 1: 3D rendered smaller and upscaled with FSR (faster)
 BPM = 120.0
 BEAT = 60.0 / BPM
 SR = 44100
@@ -186,6 +187,7 @@ def record_shots(godot: str, force: bool, names: list[str] | None = None) -> Non
         s = dict(shot)
         s.setdefault("fps", FPS)
         s.setdefault("warmup", WARMUP)
+        s.setdefault("render_scale", RENDER_SCALE)
         cmd = [godot, "--path", str(ROOT), "--fixed-fps", str(FPS), "--write-movie", str(out),
                "--script", "res://tools/trailer_shot.gd", "--", json.dumps(s)]
         if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and shutil.which("xvfb-run"):
@@ -809,7 +811,10 @@ def main() -> int:
     ap.add_argument("--only", choices=["shots", "stills", "edit"], help="run a single step")
     ap.add_argument("--force", choices=["shots", "stills"], help="re-render instead of reusing the cache")
     ap.add_argument("--shots", nargs="*", help="only these shots (with --only shots)")
+    ap.add_argument("--render-scale", type=float, default=1.0, help="3D resolution scale for the shots (0.5..1)")
     a = ap.parse_args()
+    global RENDER_SCALE
+    RENDER_SCALE = max(0.5, min(1.0, a.render_scale))
     CACHE.mkdir(parents=True, exist_ok=True)
     (CACHE / ".gdignore").touch()
     steps = [a.only] if a.only else ["shots", "stills", "edit"]

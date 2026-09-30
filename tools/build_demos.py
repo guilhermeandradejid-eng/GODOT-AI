@@ -31,7 +31,7 @@ ORDER = ["ilha_tropical", "galeria_animacoes", "montanhas_nevadas", "deserto_can
 # Extra screenshots per demo (besides "hero" and "aerial").
 SHOTS: dict[str, list[dict]] = {
     "ilha_tropical": [{"shot": "fogueira", "target": "Fogueira"}],
-    "galeria_animacoes": [{"shot": "feitico", "target": "Feitico"}, {"shot": "aerial_bosque", "view": "aerial"}],
+    "galeria_animacoes": [{"shot": "feitico", "target": "Feitico"}],
     "montanhas_nevadas": [{"shot": "alpinista", "target": "Alpinista"}],
     "deserto_canion": [{"shot": "fogueira", "target": "Fogueira"}],
     "vulcao": [{"shot": "pluma", "target": "Pluma"}],

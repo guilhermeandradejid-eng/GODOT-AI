@@ -1,23 +1,37 @@
 [gd_scene format=3]
 
 [ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_fpt37"]
-[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_wbhd8"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/cloud_noise.png" id="2_f3use"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_xe75o"]
 [ext_resource type="Resource" path="res://demos/montanhas_nevadas_data/terrain_terrain.res" id="4_f3use"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_ndxmr"]
 [ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_0q2ym"]
 [ext_resource type="Resource" path="res://demos/montanhas_nevadas_data/grass_grass.res" id="7_u8u7l"]
 [ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="8_3m1u3"]
+[ext_resource type="Script" path="res://addons/vibe_scatter/vibe_scatter_3d.gd" id="8_ndxmr"]
 [ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="9_0c3nr"]
 [ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="10_ac4qs"]
+[ext_resource type="Script" path="res://addons/vibe_motion/vibe_character_3d.gd" id="11_0q2ym"]
 [ext_resource type="Script" path="res://demos/demo_hud.gd" id="11_s8wfp"]
+[ext_resource type="Animation" path="res://animations/olha_em_volta_acena.res" id="12_u8u7l"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_6qd2d"]
+[sub_resource type="Gradient" id="Gradient_3m1u3"]
+offsets = PackedFloat32Array(0, 0.25, 0.5, 0.75, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.24207234, 0.23891883, 0.24931633, 1, 0.48916668, 0.47705883, 0.48406863, 1, 0.7486053, 0.72992605, 0.715025, 1, 1, 0.9872549, 0.9754902, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_0c3nr"]
+gradient = SubResource("Gradient_3m1u3")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ac4qs"]
 shader = ExtResource("1_fpt37")
-shader_parameter/top_color = Color(0.32941177, 0.4392157, 0.6901961, 1)
-shader_parameter/horizon_color = Color(1, 0.7764706, 0.6509804, 1)
-shader_parameter/ground_color = Color(0.2901961, 0.26666668, 0.3137255, 1)
+shader_parameter/top_color = Color(0.36078432, 0.50980395, 0.7607843, 1)
+shader_parameter/horizon_color = Color(1, 0.76862746, 0.6117647, 1)
+shader_parameter/mid_color = Color(0.93333334, 0.8392157, 0.8235294, 1)
+shader_parameter/use_mid = 1.0
+shader_parameter/mid_height = 0.3
+shader_parameter/ground_color = Color(0.29803923, 0.2901961, 0.34509805, 1)
 shader_parameter/horizon_sharpness = null
+shader_parameter/haze = 0.75
 shader_parameter/sun_color = Color(1, 0.8156863, 0.68235296, 1)
 shader_parameter/sun_size = 0.032
 shader_parameter/sun_glow = 0.6
@@ -25,35 +39,65 @@ shader_parameter/moon = 0.0
 shader_parameter/stars = 0.0
 shader_parameter/cloud_coverage = 0.3
 shader_parameter/cloud_color = Color(1, 0.84705883, 0.78431374, 1)
-shader_parameter/cloud_offset = null
+shader_parameter/cloud_shade = Color(0.5411765, 0.4862745, 0.6117647, 1)
+shader_parameter/cloud_scale = 1.0
+shader_parameter/cloud_softness = null
+shader_parameter/cirrus = 0.5
+shader_parameter/cloud_offset = Vector2(0, 0)
 shader_parameter/bands = 0.0
 shader_parameter/toon = 0.0
 shader_parameter/energy = null
-shader_parameter/noise_tex = ExtResource("2_wbhd8")
+shader_parameter/cloud_tex = ExtResource("2_f3use")
 
-[sub_resource type="Sky" id="Sky_2622q"]
-sky_material = SubResource("ShaderMaterial_6qd2d")
+[sub_resource type="Sky" id="Sky_s8wfp"]
+sky_material = SubResource("ShaderMaterial_ac4qs")
 
-[sub_resource type="Environment" id="Environment_v1ror"]
+[sub_resource type="Environment" id="Environment_6qd2d"]
 background_mode = 2
-sky = SubResource("Sky_2622q")
+sky = SubResource("Sky_s8wfp")
 ambient_light_source = 3
 ambient_light_energy = 0.5
 reflected_light_source = 2
-tonemap_mode = 2
+tonemap_mode = 3
 tonemap_exposure = 0.95
-tonemap_white = 6.0
+tonemap_white = 8.0
 ssao_enabled = true
+ssao_radius = 1.6
+ssao_intensity = 1.8
+ssao_power = 1.6
+ssao_detail = 0.6
+ssao_light_affect = 0.15
+ssil_enabled = true
+ssil_radius = 6.0
+ssil_intensity = 0.9
+sdfgi_use_occlusion = true
+sdfgi_cascades = 6
+sdfgi_min_cell_size = 0.4
+sdfgi_energy = 0.9
 glow_enabled = true
 glow_intensity = 0.64
 glow_bloom = 0.024
 fog_enabled = true
 fog_light_color = Color(0.8392157, 0.76862746, 0.83137256, 1)
+fog_sun_scatter = 0.18
 fog_density = 0.0008
 fog_aerial_perspective = 0.4
 fog_sky_affect = 0.25
+fog_height = 6.0
+fog_height_density = 0.04
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.003
+volumetric_fog_albedo = Color(0.9035294, 0.8611765, 0.89882356, 1)
+volumetric_fog_gi_inject = 0.5
+volumetric_fog_anisotropy = 0.6
+volumetric_fog_length = 160.0
+volumetric_fog_ambient_inject = 0.3
+volumetric_fog_sky_affect = 0.0
+adjustment_enabled = true
+adjustment_contrast = 1.03
+adjustment_color_correction = SubResource("GradientTexture1D_0c3nr")
 
-[sub_resource type="Resource" id="Resource_wcebx"]
+[sub_resource type="Resource" id="Resource_2622q"]
 script = ExtResource("5_ndxmr")
 name = "Neve"
 color_a = Color(0.9019608, 0.92941177, 0.9607843, 1)
@@ -63,7 +107,7 @@ roughness = 0.5
 texture_set = "snow"
 uv_scale = 5.0
 
-[sub_resource type="Resource" id="Resource_nl2c2"]
+[sub_resource type="Resource" id="Resource_v1ror"]
 script = ExtResource("5_ndxmr")
 name = "Cascalho"
 color_a = Color(0.43529412, 0.42745098, 0.41960785, 1)
@@ -73,7 +117,7 @@ texture_set = "gravel"
 tint = Color(0.78431374, 0.8156863, 0.8627451, 1)
 uv_scale = 2.5
 
-[sub_resource type="Resource" id="Resource_5eh4k"]
+[sub_resource type="Resource" id="Resource_wcebx"]
 script = ExtResource("5_ndxmr")
 name = "Rocha"
 color_a = Color(0.3019608, 0.2901961, 0.28235295, 1)
@@ -85,7 +129,7 @@ texture_set = "rock"
 tint = Color(0.5568628, 0.5803922, 0.6117647, 1)
 uv_scale = 6.0
 
-[sub_resource type="Resource" id="Resource_yj4pl"]
+[sub_resource type="Resource" id="Resource_nl2c2"]
 script = ExtResource("5_ndxmr")
 name = "Gelo"
 color_a = Color(0.6627451, 0.8039216, 0.9019608, 1)
@@ -95,32 +139,45 @@ roughness = 0.15
 texture_set = "ice"
 uv_scale = 5.0
 
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5eh4k"]
+_data = {
+&"olha_em_volta_acena": ExtResource("12_u8u7l")
+}
+
 [node name="MontanhasNevadas" type="Node3D" unique_id=1949008556]
 metadata/vibe_style = "realistic"
 
-[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=466322326]
-environment = SubResource("Environment_v1ror")
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=1691725645]
+environment = SubResource("Environment_6qd2d")
 metadata/vibe_preset = "dawn"
 metadata/vibe_style = "realistic"
+metadata/vibe_quality = "high"
+metadata/vibe_env_overrides = {}
 
-[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=379049003]
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=1538870824]
 transform = Transform3D(0.42261824, -0.21925572, 0.8793866, 0, 0.9702957, 0.2419219, -0.9063078, -0.10224061, 0.41006467, 0, 0, 0)
 light_color = Color(1, 0.8156863, 0.68235296, 1)
 light_energy = 1.25
+light_volumetric_fog_energy = 1.2
+light_angular_distance = 0.6
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.2
 shadow_blur = 1.5
-directional_shadow_max_distance = 250.0
+directional_shadow_blend_splits = true
+directional_shadow_fade_start = 0.85
+directional_shadow_max_distance = 300.0
 
-[node name="Terrain" type="Node3D" parent="." unique_id=953756440]
+[node name="Terrain" type="Node3D" parent="." unique_id=560437299]
 script = ExtResource("3_xe75o")
 data = ExtResource("4_f3use")
 palette = "snowy"
-layer_0 = SubResource("Resource_wcebx")
-layer_1 = SubResource("Resource_nl2c2")
-layer_2 = SubResource("Resource_5eh4k")
-layer_3 = SubResource("Resource_yj4pl")
+layer_0 = SubResource("Resource_2622q")
+layer_1 = SubResource("Resource_v1ror")
+layer_2 = SubResource("Resource_wcebx")
+layer_3 = SubResource("Resource_nl2c2")
 
-[node name="Grass" type="Node3D" parent="Terrain" unique_id=2016107955]
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=51663470]
 script = ExtResource("6_0q2ym")
 data = ExtResource("7_u8u7l")
 preset = "tundra"
@@ -137,20 +194,449 @@ sss_color = Color(0.78431374, 0.8156863, 0.627451, 1)
 flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
 wind_strength = 0.45
 
-[node name="Snowfall" type="Node3D" parent="." unique_id=923939704]
+[node name="Pines" type="Node3D" parent="Terrain" unique_id=356809944]
+script = ExtResource("8_ndxmr")
+preset = "pines"
+density = 1.1
+rules = {
+"max_height_frac": 0.55
+}
+
+[node name="Rocks" type="Node3D" parent="Terrain" unique_id=1498030181]
+script = ExtResource("8_ndxmr")
+preset = "rocks"
+density = 0.7
+random_seed = 18
+
+[node name="Boulders" type="Node3D" parent="Terrain" unique_id=458222973]
+script = ExtResource("8_ndxmr")
+preset = "boulders"
+density = 0.5
+random_seed = 35
+
+[node name="Snowfall" type="Node3D" parent="." unique_id=844882775]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 77.26403, 0)
 script = ExtResource("8_3m1u3")
 preset = "snowfall"
 follow_camera = true
 
-[node name="VibeCamera" type="Camera3D" parent="." unique_id=1277465089]
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=1338864151]
 transform = Transform3D(1, -9.253121e-18, 6.0529166e-17, 0, 0.9885162, 0.15111493, -6.123234e-17, -0.15111493, 0.9885162, 6.270192e-15, 74.925125, 102.4)
 current = true
 script = ExtResource("9_0c3nr")
 
-[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=328725254 instance=ExtResource("10_ac4qs")]
+[node name="Alpinista" type="Node3D" parent="." unique_id=133294587]
+transform = Transform3D(-0.99320596, 0, 0.116369545, 0, 1, 0, -0.116369545, 0, -0.99320596, -12.811375, 49.68102, 211.74411)
+script = ExtResource("11_0q2ym")
+outfit = "adventurer"
+colors = {
+"hat": "beanie",
+"shirt": "#c0392b"
+}
+animation = "olha_em_volta_acena"
+
+[node name="Skeleton3D" type="Skeleton3D" parent="Alpinista" unique_id=1818133495]
+bones/0/name = "Root"
+bones/0/parent = -1
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+bones/0/enabled = true
+bones/0/position = Vector3(0, 0, 0)
+bones/0/rotation = Quaternion(0, 0, 0, 1)
+bones/0/scale = Vector3(1, 1, 1)
+bones/1/name = "Hips"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.97, 0)
+bones/1/enabled = true
+bones/1/position = Vector3(0, 0.97, 0)
+bones/1/rotation = Quaternion(0, 0, 0, 1)
+bones/1/scale = Vector3(1, 1, 1)
+bones/2/name = "Spine"
+bones/2/parent = 1
+bones/2/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, 0)
+bones/2/enabled = true
+bones/2/position = Vector3(0, 0.100000024, 0)
+bones/2/rotation = Quaternion(0, 0, 0, 1)
+bones/2/scale = Vector3(1, 1, 1)
+bones/3/name = "Chest"
+bones/3/parent = 2
+bones/3/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.120000005, 0)
+bones/3/enabled = true
+bones/3/position = Vector3(0, 0.120000005, 0)
+bones/3/rotation = Quaternion(0, 0, 0, 1)
+bones/3/scale = Vector3(1, 1, 1)
+bones/4/name = "UpperChest"
+bones/4/parent = 3
+bones/4/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.119999886, 0)
+bones/4/enabled = true
+bones/4/position = Vector3(0, 0.119999886, 0)
+bones/4/rotation = Quaternion(0, 0, 0, 1)
+bones/4/scale = Vector3(1, 1, 1)
+bones/5/name = "Neck"
+bones/5/parent = 4
+bones/5/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16000009, 0)
+bones/5/enabled = true
+bones/5/position = Vector3(0, 0.16000009, 0)
+bones/5/rotation = Quaternion(0, 0, 0, 1)
+bones/5/scale = Vector3(1, 1, 1)
+bones/6/name = "Head"
+bones/6/parent = 5
+bones/6/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11500001, 0.01)
+bones/6/enabled = true
+bones/6/position = Vector3(0, 0.11500001, 0.01)
+bones/6/rotation = Quaternion(0, 0, 0, 1)
+bones/6/scale = Vector3(1, 1, 1)
+bones/7/name = "LeftEye"
+bones/7/parent = 6
+bones/7/rest = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.032, 0.099999905, 0.072000004)
+bones/7/enabled = true
+bones/7/position = Vector3(0.032, 0.099999905, 0.072000004)
+bones/7/rotation = Quaternion(0.70710677, 0, 0, 0.70710677)
+bones/7/scale = Vector3(1, 1, 1)
+bones/8/name = "RightEye"
+bones/8/parent = 6
+bones/8/rest = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -0.032, 0.099999905, 0.072000004)
+bones/8/enabled = true
+bones/8/position = Vector3(-0.032, 0.099999905, 0.072000004)
+bones/8/rotation = Quaternion(0.70710677, 0, 0, 0.70710677)
+bones/8/scale = Vector3(1, 1, 1)
+bones/9/name = "Jaw"
+bones/9/parent = 6
+bones/9/rest = Transform3D(-1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0.034999967, 0.025)
+bones/9/enabled = true
+bones/9/position = Vector3(0, 0.034999967, 0.025)
+bones/9/rotation = Quaternion(0, 0.70710677, 0.70710677, 0)
+bones/9/scale = Vector3(1, 1, 1)
+bones/10/name = "LeftShoulder"
+bones/10/parent = 4
+bones/10/rest = Transform3D(0, 1, 0, 0, 0, 1, 1, 0, 0, 0.03, 0.120000005, 0)
+bones/10/enabled = true
+bones/10/position = Vector3(0.03, 0.120000005, 0)
+bones/10/rotation = Quaternion(0.5, 0.5, 0.5, -0.5)
+bones/10/scale = Vector3(1, 1, 1)
+bones/11/name = "LeftUpperArm"
+bones/11/parent = 10
+bones/11/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.15, 0.004999995)
+bones/11/enabled = true
+bones/11/position = Vector3(0, 0.15, 0.004999995)
+bones/11/rotation = Quaternion(0, 1, 0, 0)
+bones/11/scale = Vector3(1, 1, 1)
+bones/12/name = "LeftLowerArm"
+bones/12/parent = 11
+bones/12/rest = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0.285, 0)
+bones/12/enabled = true
+bones/12/position = Vector3(0, 0.285, 0)
+bones/12/rotation = Quaternion(0, -0.70710677, 0, 0.70710677)
+bones/12/scale = Vector3(1, 1, 1)
+bones/13/name = "LeftHand"
+bones/13/parent = 12
+bones/13/rest = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.25500003, 0)
+bones/13/enabled = true
+bones/13/position = Vector3(0, 0.25500003, 0)
+bones/13/rotation = Quaternion(0, 0.70710677, 0, 0.70710677)
+bones/13/scale = Vector3(1, 1, 1)
+bones/14/name = "LeftThumbMetacarpal"
+bones/14/parent = 13
+bones/14/rest = Transform3D(0, -0.5773508, 0.81649613, 0, 0.81649613, 0.5773508, -1, 0, 0, -0.024, 0.022000015, 0.011999965)
+bones/14/enabled = true
+bones/14/position = Vector3(-0.024, 0.022000015, 0.011999965)
+bones/14/rotation = Quaternion(-0.21418673, 0.67388725, 0.21418673, 0.67388725)
+bones/14/scale = Vector3(1, 0.99999994, 0.99999994)
+bones/15/name = "LeftThumbProximal"
+bones/15/parent = 14
+bones/15/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, -0.006713271, 0.041457117, -0.0004903376)
+bones/15/enabled = true
+bones/15/position = Vector3(-0.006713271, 0.041457117, -0.0004903376)
+bones/15/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/15/scale = Vector3(1, 1, 1)
+bones/16/name = "LeftThumbDistal"
+bones/16/parent = 15
+bones/16/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, -0.005114913, 0.03158635, -0.00037366152)
+bones/16/enabled = true
+bones/16/position = Vector3(-0.005114913, 0.03158635, -0.00037366152)
+bones/16/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/16/scale = Vector3(1, 1, 1)
+bones/17/name = "LeftIndexProximal"
+bones/17/parent = 13
+bones/17/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.026, 0.088, 0.0019999743)
+bones/17/enabled = true
+bones/17/position = Vector3(-0.026, 0.088, 0.0019999743)
+bones/17/rotation = Quaternion(0, 0, 0, 1)
+bones/17/scale = Vector3(1, 1, 1)
+bones/18/name = "LeftIndexIntermediate"
+bones/18/parent = 17
+bones/18/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.042999983, 0)
+bones/18/enabled = true
+bones/18/position = Vector3(0, 0.042999983, 0)
+bones/18/rotation = Quaternion(0, 0, 0, 1)
+bones/18/scale = Vector3(1, 1, 1)
+bones/19/name = "LeftIndexDistal"
+bones/19/parent = 18
+bones/19/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026000023, 0)
+bones/19/enabled = true
+bones/19/position = Vector3(0, 0.026000023, 0)
+bones/19/rotation = Quaternion(0, 0, 0, 1)
+bones/19/scale = Vector3(1, 1, 1)
+bones/20/name = "LeftMiddleProximal"
+bones/20/parent = 13
+bones/20/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.005, 0.09100002, 0)
+bones/20/enabled = true
+bones/20/position = Vector3(-0.005, 0.09100002, 0)
+bones/20/rotation = Quaternion(0, 0, 0, 1)
+bones/20/scale = Vector3(1, 1, 1)
+bones/21/name = "LeftMiddleIntermediate"
+bones/21/parent = 20
+bones/21/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04699999, 0)
+bones/21/enabled = true
+bones/21/position = Vector3(0, 0.04699999, 0)
+bones/21/rotation = Quaternion(0, 0, 0, 1)
+bones/21/scale = Vector3(1, 1, 1)
+bones/22/name = "LeftMiddleDistal"
+bones/22/parent = 21
+bones/22/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.028999984, 0)
+bones/22/enabled = true
+bones/22/position = Vector3(0, 0.028999984, 0)
+bones/22/rotation = Quaternion(0, 0, 0, 1)
+bones/22/scale = Vector3(1, 1, 1)
+bones/23/name = "LeftRingProximal"
+bones/23/parent = 13
+bones/23/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.016, 0.08700001, 0.0019999743)
+bones/23/enabled = true
+bones/23/position = Vector3(0.016, 0.08700001, 0.0019999743)
+bones/23/rotation = Quaternion(0, 0, 0, 1)
+bones/23/scale = Vector3(1, 1, 1)
+bones/24/name = "LeftRingIntermediate"
+bones/24/parent = 23
+bones/24/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04400003, 0)
+bones/24/enabled = true
+bones/24/position = Vector3(0, 0.04400003, 0)
+bones/24/rotation = Quaternion(0, 0, 0, 1)
+bones/24/scale = Vector3(1, 1, 1)
+bones/25/name = "LeftRingDistal"
+bones/25/parent = 24
+bones/25/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02699995, 0)
+bones/25/enabled = true
+bones/25/position = Vector3(0, 0.02699995, 0)
+bones/25/rotation = Quaternion(0, 0, 0, 1)
+bones/25/scale = Vector3(1, 1, 1)
+bones/26/name = "LeftLittleProximal"
+bones/26/parent = 13
+bones/26/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.034, 0.078999996, 0.004999995)
+bones/26/enabled = true
+bones/26/position = Vector3(0.034, 0.078999996, 0.004999995)
+bones/26/rotation = Quaternion(0, 0, 0, 1)
+bones/26/scale = Vector3(1, 1, 1)
+bones/27/name = "LeftLittleIntermediate"
+bones/27/parent = 26
+bones/27/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035000026, 0)
+bones/27/enabled = true
+bones/27/position = Vector3(0, 0.035000026, 0)
+bones/27/rotation = Quaternion(0, 0, 0, 1)
+bones/27/scale = Vector3(1, 1, 1)
+bones/28/name = "LeftLittleDistal"
+bones/28/parent = 27
+bones/28/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.020999968, 0)
+bones/28/enabled = true
+bones/28/position = Vector3(0, 0.020999968, 0)
+bones/28/rotation = Quaternion(0, 0, 0, 1)
+bones/28/scale = Vector3(1, 1, 1)
+bones/29/name = "RightShoulder"
+bones/29/parent = 4
+bones/29/rest = Transform3D(0, -1, 0, 0, 0, 1, -1, 0, 0, -0.03, 0.120000005, 0)
+bones/29/enabled = true
+bones/29/position = Vector3(-0.03, 0.120000005, 0)
+bones/29/rotation = Quaternion(0.5, -0.5, -0.5, -0.5)
+bones/29/scale = Vector3(1, 1, 1)
+bones/30/name = "RightUpperArm"
+bones/30/parent = 29
+bones/30/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.15, 0.004999995)
+bones/30/enabled = true
+bones/30/position = Vector3(0, 0.15, 0.004999995)
+bones/30/rotation = Quaternion(0, 1, 0, 0)
+bones/30/scale = Vector3(1, 1, 1)
+bones/31/name = "RightLowerArm"
+bones/31/parent = 30
+bones/31/rest = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.285, 0)
+bones/31/enabled = true
+bones/31/position = Vector3(0, 0.285, 0)
+bones/31/rotation = Quaternion(0, 0.70710677, 0, 0.70710677)
+bones/31/scale = Vector3(1, 1, 1)
+bones/32/name = "RightHand"
+bones/32/parent = 31
+bones/32/rest = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0.25500003, 0)
+bones/32/enabled = true
+bones/32/position = Vector3(0, 0.25500003, 0)
+bones/32/rotation = Quaternion(0, -0.70710677, 0, 0.70710677)
+bones/32/scale = Vector3(1, 1, 1)
+bones/33/name = "RightThumbMetacarpal"
+bones/33/parent = 32
+bones/33/rest = Transform3D(0, 0.5773508, -0.81649613, 0, 0.81649613, 0.5773508, 1, 0, 0, 0.024, 0.022000015, 0.011999965)
+bones/33/enabled = true
+bones/33/position = Vector3(0.024, 0.022000015, 0.011999965)
+bones/33/rotation = Quaternion(-0.21418673, -0.67388725, -0.21418673, 0.67388725)
+bones/33/scale = Vector3(1, 0.99999994, 0.99999994)
+bones/34/name = "RightThumbProximal"
+bones/34/parent = 33
+bones/34/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, 0.006713271, 0.041457117, -0.0004903376)
+bones/34/enabled = true
+bones/34/position = Vector3(0.006713271, 0.041457117, -0.0004903376)
+bones/34/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/34/scale = Vector3(1, 1, 1)
+bones/35/name = "RightThumbDistal"
+bones/35/parent = 34
+bones/35/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, 0.005114913, 0.03158635, -0.00037366152)
+bones/35/enabled = true
+bones/35/position = Vector3(0.005114913, 0.03158635, -0.00037366152)
+bones/35/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/35/scale = Vector3(1, 1, 1)
+bones/36/name = "RightIndexProximal"
+bones/36/parent = 32
+bones/36/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.026, 0.088, 0.0019999743)
+bones/36/enabled = true
+bones/36/position = Vector3(0.026, 0.088, 0.0019999743)
+bones/36/rotation = Quaternion(0, 0, 0, 1)
+bones/36/scale = Vector3(1, 1, 1)
+bones/37/name = "RightIndexIntermediate"
+bones/37/parent = 36
+bones/37/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.042999983, 0)
+bones/37/enabled = true
+bones/37/position = Vector3(0, 0.042999983, 0)
+bones/37/rotation = Quaternion(0, 0, 0, 1)
+bones/37/scale = Vector3(1, 1, 1)
+bones/38/name = "RightIndexDistal"
+bones/38/parent = 37
+bones/38/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026000023, 0)
+bones/38/enabled = true
+bones/38/position = Vector3(0, 0.026000023, 0)
+bones/38/rotation = Quaternion(0, 0, 0, 1)
+bones/38/scale = Vector3(1, 1, 1)
+bones/39/name = "RightMiddleProximal"
+bones/39/parent = 32
+bones/39/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005, 0.09100002, 0)
+bones/39/enabled = true
+bones/39/position = Vector3(0.005, 0.09100002, 0)
+bones/39/rotation = Quaternion(0, 0, 0, 1)
+bones/39/scale = Vector3(1, 1, 1)
+bones/40/name = "RightMiddleIntermediate"
+bones/40/parent = 39
+bones/40/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04699999, 0)
+bones/40/enabled = true
+bones/40/position = Vector3(0, 0.04699999, 0)
+bones/40/rotation = Quaternion(0, 0, 0, 1)
+bones/40/scale = Vector3(1, 1, 1)
+bones/41/name = "RightMiddleDistal"
+bones/41/parent = 40
+bones/41/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.028999984, 0)
+bones/41/enabled = true
+bones/41/position = Vector3(0, 0.028999984, 0)
+bones/41/rotation = Quaternion(0, 0, 0, 1)
+bones/41/scale = Vector3(1, 1, 1)
+bones/42/name = "RightRingProximal"
+bones/42/parent = 32
+bones/42/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.016, 0.08700001, 0.0019999743)
+bones/42/enabled = true
+bones/42/position = Vector3(-0.016, 0.08700001, 0.0019999743)
+bones/42/rotation = Quaternion(0, 0, 0, 1)
+bones/42/scale = Vector3(1, 1, 1)
+bones/43/name = "RightRingIntermediate"
+bones/43/parent = 42
+bones/43/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04400003, 0)
+bones/43/enabled = true
+bones/43/position = Vector3(0, 0.04400003, 0)
+bones/43/rotation = Quaternion(0, 0, 0, 1)
+bones/43/scale = Vector3(1, 1, 1)
+bones/44/name = "RightRingDistal"
+bones/44/parent = 43
+bones/44/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02699995, 0)
+bones/44/enabled = true
+bones/44/position = Vector3(0, 0.02699995, 0)
+bones/44/rotation = Quaternion(0, 0, 0, 1)
+bones/44/scale = Vector3(1, 1, 1)
+bones/45/name = "RightLittleProximal"
+bones/45/parent = 32
+bones/45/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.034, 0.078999996, 0.004999995)
+bones/45/enabled = true
+bones/45/position = Vector3(-0.034, 0.078999996, 0.004999995)
+bones/45/rotation = Quaternion(0, 0, 0, 1)
+bones/45/scale = Vector3(1, 1, 1)
+bones/46/name = "RightLittleIntermediate"
+bones/46/parent = 45
+bones/46/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035000026, 0)
+bones/46/enabled = true
+bones/46/position = Vector3(0, 0.035000026, 0)
+bones/46/rotation = Quaternion(0, 0, 0, 1)
+bones/46/scale = Vector3(1, 1, 1)
+bones/47/name = "RightLittleDistal"
+bones/47/parent = 46
+bones/47/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.020999968, 0)
+bones/47/enabled = true
+bones/47/position = Vector3(0, 0.020999968, 0)
+bones/47/rotation = Quaternion(0, 0, 0, 1)
+bones/47/scale = Vector3(1, 1, 1)
+bones/48/name = "LeftUpperLeg"
+bones/48/parent = 1
+bones/48/rest = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, 0.09, -0.04000002, 0)
+bones/48/enabled = true
+bones/48/position = Vector3(0.09, -0.04000002, 0)
+bones/48/rotation = Quaternion(0, 0, 1, 0)
+bones/48/scale = Vector3(1, 1, 1)
+bones/49/name = "LeftLowerLeg"
+bones/49/parent = 48
+bones/49/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.42000002, 0)
+bones/49/enabled = true
+bones/49/position = Vector3(0, 0.42000002, 0)
+bones/49/rotation = Quaternion(0, 1, 0, 0)
+bones/49/scale = Vector3(1, 1, 1)
+bones/50/name = "LeftFoot"
+bones/50/parent = 49
+bones/50/rest = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0.43, 0.01)
+bones/50/enabled = true
+bones/50/position = Vector3(0, 0.43, 0.01)
+bones/50/rotation = Quaternion(0, 0.70710677, -0.70710677, 0)
+bones/50/scale = Vector3(1, 1, 1)
+bones/51/name = "LeftToes"
+bones/51/parent = 50
+bones/51/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.14, -0.065)
+bones/51/enabled = true
+bones/51/position = Vector3(0, 0.14, -0.065)
+bones/51/rotation = Quaternion(0, 1, 0, 0)
+bones/51/scale = Vector3(1, 1, 1)
+bones/52/name = "RightUpperLeg"
+bones/52/parent = 1
+bones/52/rest = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, -0.09, -0.04000002, 0)
+bones/52/enabled = true
+bones/52/position = Vector3(-0.09, -0.04000002, 0)
+bones/52/rotation = Quaternion(0, 0, 1, 0)
+bones/52/scale = Vector3(1, 1, 1)
+bones/53/name = "RightLowerLeg"
+bones/53/parent = 52
+bones/53/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.42000002, 0)
+bones/53/enabled = true
+bones/53/position = Vector3(0, 0.42000002, 0)
+bones/53/rotation = Quaternion(0, 1, 0, 0)
+bones/53/scale = Vector3(1, 1, 1)
+bones/54/name = "RightFoot"
+bones/54/parent = 53
+bones/54/rest = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0.43, 0.01)
+bones/54/enabled = true
+bones/54/position = Vector3(0, 0.43, 0.01)
+bones/54/rotation = Quaternion(0, 0.70710677, -0.70710677, 0)
+bones/54/scale = Vector3(1, 1, 1)
+bones/55/name = "RightToes"
+bones/55/parent = 54
+bones/55/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.14, -0.065)
+bones/55/enabled = true
+bones/55/position = Vector3(0, 0.14, -0.065)
+bones/55/rotation = Quaternion(0, 1, 0, 0)
+bones/55/scale = Vector3(1, 1, 1)
+metadata/vibe_height = 1.8
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Alpinista" unique_id=1144608968]
+libraries/ = SubResource("AnimationLibrary_5eh4k")
+autoplay = &"olha_em_volta_acena"
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1914916564 instance=ExtResource("10_ac4qs")]
 layer = 10
 script = ExtResource("11_s8wfp")
 title = "Montanhas nevadas"
-subtitle = "realistic · amanhecer · cordilheira com erosão"
-prompt = "cordilheira nevada ao amanhecer com neve caindo"
+subtitle = "realistic · amanhecer · pinheiros e cordilheira com erosão"
+prompt = "cordilheira nevada ao amanhecer com pinheiros, neve caindo e uma alpinista acenando"

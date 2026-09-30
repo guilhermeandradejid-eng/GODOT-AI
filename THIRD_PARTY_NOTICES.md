@@ -8,6 +8,9 @@
 | `addons/vibe_terrain/textures/rock_*` (ambientCG **Rock023**) | via demo do Terrain3D — <https://ambientcg.com/view?id=Rock023> | CC0 1.0 |
 | `addons/vibe_terrain/textures/sandstone_*` | [godot-demo-projects](https://github.com/godotengine/godot-demo-projects) (`3d/material_testers`), reempacotada (altura → normal) | MIT — © Godot Engine contributors |
 | Demais texturas de terreno (`sand`, `snow`, `dirt`, `gravel`, `mud`, `ash`, `lava`, `ice`, `moss`, `crystal`, `regolith`) e todos os sprites de `addons/vibe_vfx/textures/` | Gerados proceduralmente por `tools/texture_gen/generate_textures.py` | CC0 1.0 (domínio público) |
+| `addons/vibe_vfx/textures/cloud_noise.png`, `addons/vibe_terrain/textures/water_normal.png` | Gerados por `tools/gen_sky_water_textures.py` (ruído espectral/Perlin-Worley, espectro de oceano via FFT) | CC0 1.0 (domínio público) |
+| `addons/vibe_scatter/textures/*` (folhas, agulhas, palmas, casca) | Gerados por `tools/gen_vegetation_textures.py` | CC0 1.0 (domínio público) |
+| Trilha sonora do trailer (`docs/video/trailer.mp4`) | Sintetizada por `tools/make_trailer.py` | CC0 1.0 (domínio público) |
 
 As texturas foram reempacotadas em WebP no formato esperado pelos shaders
 (`albedo_height`: RGB = cor, A = altura; `normal_rough`: RGB = normal, A = rugosidade).
@@ -21,6 +24,9 @@ As texturas foram reempacotadas em WebP no formato esperado pelos shaders
 | Iluminação toon em bandas, rim light | [FlexibleToonShaderGD](https://github.com/CaptainProton42/FlexibleToonShaderGD) — CaptainProton42 | MIT |
 | Água estilizada, campo de força, dissolve/erosão de partículas | [godot-shaders](https://github.com/gdquest-demos/godot-shaders) — GDQuest | MIT (código) |
 | Normais triplanares "UDN" / whiteout | Ben Golus — *Normal Mapping for a Triplanar Shader* (artigo) | — (técnica) |
+| Alfa de folhagem corrigido por mip ("Anti-aliased Alpha Test") | Ben Golus (artigo) | — (técnica) |
+| Ondas de Gerstner | GPU Gems, cap. 1 (Finch) / Catlike Coding (tutorial) | — (técnica) |
+| Backend opcional de texto → movimento | Kimodo (NVIDIA, difusão texto → movimento) via servidor do kimodo.cpp — não incluído; a suíte só fala com a API HTTP | licença do projeto de origem |
 
 Nenhum arquivo de código desses projetos foi copiado: as ideias foram reimplementadas
 nos shaders da suíte. Os avisos de licença MIT abaixo cobrem os assets MIT redistribuídos

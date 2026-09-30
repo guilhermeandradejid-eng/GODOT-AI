@@ -1,62 +1,102 @@
 [gd_scene format=3]
 
 [ext_resource type="Shader" path="res://addons/vibe_vfx/shaders/vibe_sky.gdshader" id="1_whp70"]
-[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/noise_fbm.webp" id="2_t45n4"]
+[ext_resource type="Texture2D" path="res://addons/vibe_vfx/textures/cloud_noise.png" id="2_ay7xm"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_3d.gd" id="3_yjy3h"]
 [ext_resource type="Resource" path="res://demos/deserto_canion_data/terrain_terrain.res" id="4_ay7xm"]
 [ext_resource type="Script" path="res://addons/vibe_terrain/vibe_terrain_layer.gd" id="5_ulpxg"]
 [ext_resource type="Script" path="res://addons/vibe_grass/vibe_grass_3d.gd" id="6_ny6h5"]
 [ext_resource type="Resource" path="res://demos/deserto_canion_data/grass_grass.res" id="7_xa3qd"]
 [ext_resource type="Script" path="res://addons/vibe_vfx/vibe_vfx_3d.gd" id="8_4ifqt"]
+[ext_resource type="Script" path="res://addons/vibe_scatter/vibe_scatter_3d.gd" id="8_ulpxg"]
 [ext_resource type="Script" path="res://addons/vibe_core/runtime/vibe_fly_camera.gd" id="9_13dsm"]
 [ext_resource type="PackedScene" path="res://demos/demo_hud.tscn" id="10_hbra7"]
 [ext_resource type="Script" path="res://demos/demo_hud.gd" id="11_2pu5a"]
+[ext_resource type="Script" path="res://addons/vibe_motion/vibe_character_3d.gd" id="11_ny6h5"]
+[ext_resource type="Animation" path="res://animations/senta_cansado.res" id="12_xa3qd"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pxwdr"]
+[sub_resource type="Gradient" id="Gradient_4ifqt"]
+offsets = PackedFloat32Array(0, 0.25, 0.5, 0.75, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.23605664, 0.23309845, 0.24875572, 1, 0.48094606, 0.46520588, 0.4710049, 1, 0.747547, 0.71983993, 0.6863455, 1, 1, 0.98088235, 0.9553922, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_13dsm"]
+gradient = SubResource("Gradient_4ifqt")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hbra7"]
 shader = ExtResource("1_whp70")
-shader_parameter/top_color = Color(0.22745098, 0.30980393, 0.56078434, 1)
-shader_parameter/horizon_color = Color(1, 0.5882353, 0.3372549, 1)
-shader_parameter/ground_color = Color(0.2509804, 0.1882353, 0.17254902, 1)
+shader_parameter/top_color = Color(0.23921569, 0.37254903, 0.62352943, 1)
+shader_parameter/horizon_color = Color(1, 0.6039216, 0.32156864, 1)
+shader_parameter/mid_color = Color(0.9137255, 0.72156864, 0.63529414, 1)
+shader_parameter/use_mid = 1.0
+shader_parameter/mid_height = 0.3
+shader_parameter/ground_color = Color(0.23529412, 0.20392157, 0.2509804, 1)
 shader_parameter/horizon_sharpness = null
-shader_parameter/sun_color = Color(1, 0.7647059, 0.5647059, 1)
+shader_parameter/haze = 0.7
+shader_parameter/sun_color = Color(1, 0.7529412, 0.5411765, 1)
 shader_parameter/sun_size = 0.035
 shader_parameter/sun_glow = 0.9
 shader_parameter/moon = 0.0
 shader_parameter/stars = 0.0
 shader_parameter/cloud_coverage = 0.45
-shader_parameter/cloud_color = Color(1, 0.70980394, 0.5411765, 1)
-shader_parameter/cloud_offset = null
+shader_parameter/cloud_color = Color(1, 0.6901961, 0.49411765, 1)
+shader_parameter/cloud_shade = Color(0.43137255, 0.29803923, 0.42352942, 1)
+shader_parameter/cloud_scale = 1.0
+shader_parameter/cloud_softness = null
+shader_parameter/cirrus = 0.55
+shader_parameter/cloud_offset = Vector2(0, 0)
 shader_parameter/bands = 0.0
 shader_parameter/toon = 0.0
 shader_parameter/energy = null
-shader_parameter/noise_tex = ExtResource("2_t45n4")
+shader_parameter/cloud_tex = ExtResource("2_ay7xm")
 
-[sub_resource type="Sky" id="Sky_ddjxj"]
-sky_material = SubResource("ShaderMaterial_pxwdr")
+[sub_resource type="Sky" id="Sky_2pu5a"]
+sky_material = SubResource("ShaderMaterial_hbra7")
 
-[sub_resource type="Environment" id="Environment_02dg5"]
+[sub_resource type="Environment" id="Environment_pxwdr"]
 background_mode = 2
-sky = SubResource("Sky_ddjxj")
+sky = SubResource("Sky_2pu5a")
 ambient_light_source = 3
-ambient_light_energy = 0.858
+ambient_light_energy = 0.792
 reflected_light_source = 2
 tonemap_mode = 2
 tonemap_exposure = 1.05
 tonemap_white = 6.0
 ssao_enabled = true
+ssao_radius = 1.6
+ssao_intensity = 1.8
+ssao_power = 1.6
+ssao_detail = 0.6
+ssao_light_affect = 0.15
+ssil_enabled = true
+ssil_radius = 6.0
+ssil_intensity = 0.9
+sdfgi_use_occlusion = true
+sdfgi_cascades = 6
+sdfgi_min_cell_size = 0.4
+sdfgi_energy = 0.9
 glow_enabled = true
 glow_intensity = 0.712
 glow_bloom = 0.0312
 fog_enabled = true
-fog_light_color = Color(0.76862746, 0.627451, 0.5568628, 1)
+fog_light_color = Color(0.78039217, 0.6117647, 0.5254902, 1)
+fog_sun_scatter = 0.25
 fog_density = 0.0004
 fog_aerial_perspective = 0.4
 fog_sky_affect = 0.25
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.00176
+volumetric_fog_albedo = Color(0.8682353, 0.76705885, 0.7152941, 1)
+volumetric_fog_gi_inject = 0.5
+volumetric_fog_anisotropy = 0.6
+volumetric_fog_length = 160.0
+volumetric_fog_ambient_inject = 0.3
+volumetric_fog_sky_affect = 0.0
 adjustment_enabled = true
-adjustment_contrast = 1.04
-adjustment_saturation = 1.1
+adjustment_contrast = 1.05
+adjustment_saturation = 1.14
+adjustment_color_correction = SubResource("GradientTexture1D_13dsm")
 
-[sub_resource type="Resource" id="Resource_dr7yy"]
+[sub_resource type="Resource" id="Resource_ddjxj"]
 script = ExtResource("5_ulpxg")
 name = "Areia vermelha"
 color_a = Color(0.69803923, 0.35686275, 0.2, 1)
@@ -66,7 +106,7 @@ roughness = 0.95
 texture_set = "sand"
 tint = Color(0.9411765, 0.65882355, 0.47058824, 1)
 
-[sub_resource type="Resource" id="Resource_qgddq"]
+[sub_resource type="Resource" id="Resource_02dg5"]
 script = ExtResource("5_ulpxg")
 name = "Terra"
 color_a = Color(0.5411765, 0.2901961, 0.16862746, 1)
@@ -77,7 +117,7 @@ texture_set = "dirt"
 tint = Color(0.8784314, 0.6039216, 0.40784314, 1)
 uv_scale = 3.0
 
-[sub_resource type="Resource" id="Resource_4mfpf"]
+[sub_resource type="Resource" id="Resource_dr7yy"]
 script = ExtResource("5_ulpxg")
 name = "Rocha em camadas"
 color_a = Color(0.61960787, 0.3019608, 0.17254902, 1)
@@ -88,7 +128,7 @@ roughness = 0.85
 texture_set = "sandstone"
 uv_scale = 7.0
 
-[sub_resource type="Resource" id="Resource_1kebf"]
+[sub_resource type="Resource" id="Resource_qgddq"]
 script = ExtResource("5_ulpxg")
 name = "Rocha clara"
 color_a = Color(0.7882353, 0.63529414, 0.47843137, 1)
@@ -100,38 +140,51 @@ texture_set = "sandstone"
 tint = Color(0.95686275, 0.8627451, 0.7529412, 1)
 uv_scale = 5.0
 
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4mfpf"]
+_data = {
+&"senta_cansado": ExtResource("12_xa3qd")
+}
+
 [node name="DesertoCanion" type="Node3D" unique_id=2117337987]
 metadata/vibe_style = "stylized"
 
-[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=1509180777]
-environment = SubResource("Environment_02dg5")
+[node name="VibeEnvironment" type="WorldEnvironment" parent="." unique_id=645549307]
+environment = SubResource("Environment_pxwdr")
 metadata/vibe_preset = "sunset"
 metadata/vibe_style = "stylized"
+metadata/vibe_quality = "high"
+metadata/vibe_env_overrides = {}
 
-[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=1692147982]
+[node name="VibeSun" type="DirectionalLight3D" parent="." unique_id=72659171]
 transform = Transform3D(0.34202015, 0.1793018, -0.9224278, 0, 0.98162717, 0.190809, 0.9396926, -0.06526052, 0.33573627, 0, 0, 0)
-light_color = Color(1, 0.7647059, 0.5647059, 1)
-light_energy = 1.55
+light_color = Color(1, 0.7529412, 0.5411765, 1)
+light_energy = 1.6
+light_volumetric_fog_energy = 1.2
+light_angular_distance = 0.4
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.2
 shadow_blur = 1.5
-directional_shadow_max_distance = 250.0
+directional_shadow_blend_splits = true
+directional_shadow_fade_start = 0.85
+directional_shadow_max_distance = 300.0
 
-[node name="Terrain" type="Node3D" parent="." unique_id=416888658]
+[node name="Terrain" type="Node3D" parent="." unique_id=436448872]
 script = ExtResource("3_yjy3h")
 data = ExtResource("4_ay7xm")
 style = "stylized"
 palette = "canyon"
-layer_0 = SubResource("Resource_dr7yy")
-layer_1 = SubResource("Resource_qgddq")
-layer_2 = SubResource("Resource_4mfpf")
-layer_3 = SubResource("Resource_1kebf")
+layer_0 = SubResource("Resource_ddjxj")
+layer_1 = SubResource("Resource_02dg5")
+layer_2 = SubResource("Resource_dr7yy")
+layer_3 = SubResource("Resource_qgddq")
 rivers = [{
 "levels": PackedFloat32Array(31.26995, 30.796799, 30.232042, 29.665085, 29.151392, 28.740845, 28.403929, 27.805529, 27.217701, 26.631084, 26.051699, 25.488533, 24.968594, 24.578474, 24.327744, 24.195751, 24.135118, 24.085228, 24.023865, 23.953173, 23.880009, 23.808912, 23.747099, 23.707628, 23.700037, 23.7, 23.7, 23.7, 23.7, 23.7, 23.664875, 23.524801, 23.118208, 22.45314, 21.78114, 21.109985, 20.438145, 19.766144, 19.094143, 18.422144, 17.750143, 17.078144, 16.416946, 15.814154, 15.395969, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.308619, 15.229029, 14.592651, 13.910399, 13.178985, 12.352562, 11.276984, 9.750624, 8.2950735, 6.927429, 5.583192, 4.239192, 3.0231013, 2.3174374, 2.0587227, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 2.019073, 1.7751307, 1.1360366, 0.7144768, 0.30339766, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343, 0.20916343),
 "points": PackedVector2Array(-40.454117, 50.555954, -40.40496, 49.55716, -40.258224, 48.567978, -39.97428, 47.60913, -39.581886, 46.68933, -39.101112, 45.812485, -38.53637, 44.987213, -37.920853, 44.19908, -37.254623, 43.45334, -36.561142, 42.732864, -35.826195, 42.05475, -35.209732, 41.267365, -34.766457, 40.370987, -34.50309, 39.406296, -34.381973, 38.41365, -34.42859, 37.414734, -34.53444, 36.42035, -34.641068, 35.426056, -34.723816, 34.42949, -34.76758, 33.43045, -34.776985, 32.430496, -34.596344, 31.446945, -34.250183, 30.508774, -33.679306, 29.687744, -32.944145, 29.009857, -32.107277, 28.462448, -31.349098, 27.81041, -30.71164, 27.039932, -30.113289, 26.238693, -29.334312, 25.611649, -28.638031, 24.893875, -27.86737, 24.256622, -27.174118, 23.53592, -26.538208, 22.76416, -25.888016, 22.004395, -25.31092, 21.187714, -24.799461, 20.328415, -24.386642, 19.417603, -24.07808, 18.4664, -23.851646, 17.49237, -23.684647, 16.506409, -23.311684, 15.5785675, -22.74704, 14.753235, -22.043404, 14.042679, -21.243095, 13.443085, -20.450897, 12.832825, -19.55951, 12.379578, -18.597092, 12.108002, -17.603943, 11.991119, -16.660683, 11.659073, -15.799126, 11.151413, -15.032257, 10.509613, -14.159531, 10.021408, -13.207809, 9.714447, -12.21608, 9.586075, -11.221947, 9.47789, -10.259949, 9.204849, -9.365517, 8.757645, -8.562309, 8.161942, -7.836479, 7.4740753, -7.189583, 6.711502, -6.616226, 5.8921967, -6.08564, 5.044571, -5.5646133, 4.191025, -5.088814, 3.3114624, -4.633339, 2.4212189, -4.220253, 1.5105286, -3.983673, 0.5389099, -3.8111954, -0.44610596, -3.66671, -1.4356155, -3.5611115, -2.4300232, -3.4730988, -3.4261398, -3.5653915, -4.421875, -3.8466873, -5.3815002, -4.297386, -6.2741776, -4.6941605, -7.192093, -4.9802704, -8.150291, -5.1092606, -9.141937, -5.0665283, -10.141022, -4.805832, -11.106445, -4.3246536, -11.98307, -3.6704102, -12.739357, -2.8945313, -13.370239, -2.016304, -13.84848, -1.0674896, -14.164322, -0.08182526, -14.333031, 0.917984, -14.352707, 1.9082489, -14.213539, 2.8515778, -13.881668, 3.7197418, -13.385399, 4.517334, -12.782196, 5.2317963, -12.082527, 5.85672, -11.301834, 6.408493, -10.467842, 6.897537, -9.595581, 7.281296, -8.67215, 7.5380554, -7.705673, 7.6675415, -6.7140884, 7.7009125, -5.7146454, 7.649765, -4.7159576, 7.531555, -3.722969, 7.422928, -2.7288895, 7.3461, -1.731842, 7.363632, -0.7319946, 7.4790344, 0.26132202, 7.6719055, 1.2425385, 7.973755, 2.1958923, 8.470459, 3.0638123, 9.113159, 3.8299255, 9.847183, 4.5090485, 10.644806, 5.112198, 11.486343, 5.652405, 12.357376, 6.1436157, 13.269211, 6.554184, 14.209015, 6.895874, 15.199799, 7.031357, 16.197556, 6.9643555, 17.16542, 6.7128906, 18.077148, 6.3020782, 18.9066, 5.7434998, 19.629807, 5.0528564, 20.217224, 4.243576, 20.644058, 3.3392487, 20.884705, 2.368637, 20.923706, 1.3694, 20.833145, 0.37350464, 20.709122, -0.6187744, 20.596008, -1.6123581, 20.506653, -2.6083603, 20.408539, -3.6035385, 20.56131, -4.5918045, 20.61679, -5.5902634, 20.689957, -6.5875854, 20.837418, -7.5766525, 21.021072, -8.559639, 21.135147, -9.553108, 21.072968, -10.55117, 20.823639, -11.519592, 20.404068, -12.427315, 20.144821, -13.393127, 19.702087, -14.28978, 19.119797, -15.10276, 18.39827, -15.795143, 17.555069, -16.332748, 16.611343, -16.663467, 15.629257, -16.851936, 14.658844, -17.093384, 13.716766, -17.428772, 12.806976, -17.843826, 11.88826, -18.238731, 10.937576, -18.54889, 9.950256, -18.707642, 8.952423, -18.641754, 7.9967804, -18.347244, 7.144821, -17.823624, 6.438278, -17.115952, 5.757538, -16.383423, 5.267853, -15.51152, 4.8752594, -14.5918045, 4.5950775, -13.631859, 4.4147186, -12.648262, 4.3007355, -11.654778, 4.221878, -10.65789, 4.1728973, -9.659088, 4.1793976, -8.659111, 4.2810974, -7.664299, 4.486191, -6.6855545, 4.9181976, -5.783684, 5.4719696, -4.9510193, 6.1697235, -4.23468, 6.9917297, -3.6651917, 7.920639, -3.294876, 8.910065, -3.149788, 9.906387, -3.235489, 10.888992, -3.4212189, 11.862656, -3.649208, 12.811432, -3.965149, 13.749771, -4.3108597, 14.607239, -4.825409, 15.342758, -5.5029144, 15.981644, -6.2722244, 16.527603, -7.110031, 16.97258, -8.005577, 17.293594, -8.952652, 17.55098, -9.918961, 17.75618, -10.897682, 17.999084, -11.867737, 18.413208, -12.777962, 18.968872, -13.609375, 19.6595, -14.332588, 20.412598, -14.990501, 21.15152, -15.664284, 21.925262, -16.297775, 22.754059, -16.857323, 23.672394, -17.253113, 24.646805, -17.47786, 25.646393, -17.506706, 26.63034, -17.328217, 27.564392, -16.971092, 28.41069, -16.438377, 29.133255, -15.747078, 29.705582, -14.927055, 30.103027, -14.00943, 30.31697, -13.032585, 30.342941, -12.032921, 30.19255, -11.044296, 29.90805, -10.085625, 29.50084, -9.172287, 28.95366, -8.335274, 28.319489, -7.5620804, 27.631958, -6.8359222, 26.886658, -6.1691895, 26.048462, -5.6238174, 25.118027, -5.257347, 24.134018, -5.079193, 23.134247, -5.057808, 22.139023, -5.1554337, 21.166718, -5.3891754, 20.26741, -5.8264847, 19.475708, -6.4373856, 18.830765, -7.2016144, 18.331009, -8.067787, 17.93013, -8.983917, 17.616806, -9.933563, 17.373993, -10.903633, 17.363297, -11.90358),
 "width": 8.0
 }]
 
-[node name="Grass" type="Node3D" parent="Terrain" unique_id=348798068]
+[node name="Grass" type="Node3D" parent="Terrain" unique_id=1484920267]
 script = ExtResource("6_ny6h5")
 data = ExtResource("7_xa3qd")
 preset = "dry"
@@ -148,27 +201,462 @@ sss_color = Color(0.9490196, 0.84705883, 0.5647059, 1)
 flower_colors = PackedColorArray(1, 0.88235295, 0.3019608, 1, 1, 0.37254903, 0.61960787, 1, 1, 1, 1, 1, 0.69803923, 0.48235294, 1, 1)
 wind_strength = 0.4
 
-[node name="Dust" type="Node3D" parent="." unique_id=1909558034]
+[node name="Cacti" type="Node3D" parent="Terrain" unique_id=1816016628]
+script = ExtResource("8_ulpxg")
+preset = "cacti"
+style = "stylized"
+
+[node name="Rocks" type="Node3D" parent="Terrain" unique_id=900750948]
+script = ExtResource("8_ulpxg")
+preset = "rocks"
+style = "stylized"
+density = 0.8
+random_seed = 18
+
+[node name="Boulders" type="Node3D" parent="Terrain" unique_id=1528214163]
+script = ExtResource("8_ulpxg")
+preset = "boulders"
+style = "stylized"
+density = 0.6
+random_seed = 35
+
+[node name="DeadTrees" type="Node3D" parent="Terrain" unique_id=785304644]
+script = ExtResource("8_ulpxg")
+preset = "dead_trees"
+style = "stylized"
+density = 0.4
+random_seed = 52
+
+[node name="Dust" type="Node3D" parent="." unique_id=677160274]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7624598, 0)
 script = ExtResource("8_4ifqt")
 preset = "dust"
 style = "stylized"
 follow_camera = true
 
-[node name="Fogueira" type="Node3D" parent="." unique_id=1699207416]
+[node name="Fogueira" type="Node3D" parent="." unique_id=835405567]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.621208, 25.2, 29.07123)
 script = ExtResource("8_4ifqt")
 preset = "campfire"
 style = "stylized"
 
-[node name="VibeCamera" type="Camera3D" parent="." unique_id=857782875]
+[node name="VibeCamera" type="Camera3D" parent="." unique_id=2081486663]
 transform = Transform3D(-0.70710677, 0.1175824, -0.69726205, 0, 0.9860775, 0.16628663, 0.70710677, 0.1175824, -0.69726205, -36.20387, 20.880384, -36.20387)
 current = true
 script = ExtResource("9_13dsm")
 
-[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1082696788 instance=ExtResource("10_hbra7")]
+[node name="Viajante" type="Node3D" parent="." unique_id=1628128882]
+transform = Transform3D(-0.5646427, 0, -0.82533544, 0, 1, 0, 0.82533544, 0, -0.5646427, 14.602014, 25.2, 30.426373)
+script = ExtResource("11_ny6h5")
+outfit = "adventurer"
+colors = {
+"hat": "cowboy",
+"shirt": "#8a5a3a"
+}
+style = "stylized"
+animation = "senta_cansado"
+
+[node name="Skeleton3D" type="Skeleton3D" parent="Viajante" unique_id=672570115]
+bones/0/name = "Root"
+bones/0/parent = -1
+bones/0/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+bones/0/enabled = true
+bones/0/position = Vector3(0, 0, 0)
+bones/0/rotation = Quaternion(0, 0, 0, 1)
+bones/0/scale = Vector3(1, 1, 1)
+bones/1/name = "Hips"
+bones/1/parent = 0
+bones/1/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.97, 0)
+bones/1/enabled = true
+bones/1/position = Vector3(0, 0.97, 0)
+bones/1/rotation = Quaternion(0, 0, 0, 1)
+bones/1/scale = Vector3(1, 1, 1)
+bones/2/name = "Spine"
+bones/2/parent = 1
+bones/2/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, 0)
+bones/2/enabled = true
+bones/2/position = Vector3(0, 0.100000024, 0)
+bones/2/rotation = Quaternion(0, 0, 0, 1)
+bones/2/scale = Vector3(1, 1, 1)
+bones/3/name = "Chest"
+bones/3/parent = 2
+bones/3/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.120000005, 0)
+bones/3/enabled = true
+bones/3/position = Vector3(0, 0.120000005, 0)
+bones/3/rotation = Quaternion(0, 0, 0, 1)
+bones/3/scale = Vector3(1, 1, 1)
+bones/4/name = "UpperChest"
+bones/4/parent = 3
+bones/4/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.119999886, 0)
+bones/4/enabled = true
+bones/4/position = Vector3(0, 0.119999886, 0)
+bones/4/rotation = Quaternion(0, 0, 0, 1)
+bones/4/scale = Vector3(1, 1, 1)
+bones/5/name = "Neck"
+bones/5/parent = 4
+bones/5/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16000009, 0)
+bones/5/enabled = true
+bones/5/position = Vector3(0, 0.16000009, 0)
+bones/5/rotation = Quaternion(0, 0, 0, 1)
+bones/5/scale = Vector3(1, 1, 1)
+bones/6/name = "Head"
+bones/6/parent = 5
+bones/6/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.11500001, 0.01)
+bones/6/enabled = true
+bones/6/position = Vector3(0, 0.11500001, 0.01)
+bones/6/rotation = Quaternion(0, 0, 0, 1)
+bones/6/scale = Vector3(1, 1, 1)
+bones/7/name = "LeftEye"
+bones/7/parent = 6
+bones/7/rest = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.032, 0.099999905, 0.072000004)
+bones/7/enabled = true
+bones/7/position = Vector3(0.032, 0.099999905, 0.072000004)
+bones/7/rotation = Quaternion(0.70710677, 0, 0, 0.70710677)
+bones/7/scale = Vector3(1, 1, 1)
+bones/8/name = "RightEye"
+bones/8/parent = 6
+bones/8/rest = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -0.032, 0.099999905, 0.072000004)
+bones/8/enabled = true
+bones/8/position = Vector3(-0.032, 0.099999905, 0.072000004)
+bones/8/rotation = Quaternion(0.70710677, 0, 0, 0.70710677)
+bones/8/scale = Vector3(1, 1, 1)
+bones/9/name = "Jaw"
+bones/9/parent = 6
+bones/9/rest = Transform3D(-1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0.034999967, 0.025)
+bones/9/enabled = true
+bones/9/position = Vector3(0, 0.034999967, 0.025)
+bones/9/rotation = Quaternion(0, 0.70710677, 0.70710677, 0)
+bones/9/scale = Vector3(1, 1, 1)
+bones/10/name = "LeftShoulder"
+bones/10/parent = 4
+bones/10/rest = Transform3D(0, 1, 0, 0, 0, 1, 1, 0, 0, 0.03, 0.120000005, 0)
+bones/10/enabled = true
+bones/10/position = Vector3(0.03, 0.120000005, 0)
+bones/10/rotation = Quaternion(0.5, 0.5, 0.5, -0.5)
+bones/10/scale = Vector3(1, 1, 1)
+bones/11/name = "LeftUpperArm"
+bones/11/parent = 10
+bones/11/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.15, 0.004999995)
+bones/11/enabled = true
+bones/11/position = Vector3(0, 0.15, 0.004999995)
+bones/11/rotation = Quaternion(0, 1, 0, 0)
+bones/11/scale = Vector3(1, 1, 1)
+bones/12/name = "LeftLowerArm"
+bones/12/parent = 11
+bones/12/rest = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0.285, 0)
+bones/12/enabled = true
+bones/12/position = Vector3(0, 0.285, 0)
+bones/12/rotation = Quaternion(0, -0.70710677, 0, 0.70710677)
+bones/12/scale = Vector3(1, 1, 1)
+bones/13/name = "LeftHand"
+bones/13/parent = 12
+bones/13/rest = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.25500003, 0)
+bones/13/enabled = true
+bones/13/position = Vector3(0, 0.25500003, 0)
+bones/13/rotation = Quaternion(0, 0.70710677, 0, 0.70710677)
+bones/13/scale = Vector3(1, 1, 1)
+bones/14/name = "LeftThumbMetacarpal"
+bones/14/parent = 13
+bones/14/rest = Transform3D(0, -0.5773508, 0.81649613, 0, 0.81649613, 0.5773508, -1, 0, 0, -0.024, 0.022000015, 0.011999965)
+bones/14/enabled = true
+bones/14/position = Vector3(-0.024, 0.022000015, 0.011999965)
+bones/14/rotation = Quaternion(-0.21418673, 0.67388725, 0.21418673, 0.67388725)
+bones/14/scale = Vector3(1, 0.99999994, 0.99999994)
+bones/15/name = "LeftThumbProximal"
+bones/15/parent = 14
+bones/15/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, -0.006713271, 0.041457117, -0.0004903376)
+bones/15/enabled = true
+bones/15/position = Vector3(-0.006713271, 0.041457117, -0.0004903376)
+bones/15/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/15/scale = Vector3(1, 1, 1)
+bones/16/name = "LeftThumbDistal"
+bones/16/parent = 15
+bones/16/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, -0.005114913, 0.03158635, -0.00037366152)
+bones/16/enabled = true
+bones/16/position = Vector3(-0.005114913, 0.03158635, -0.00037366152)
+bones/16/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/16/scale = Vector3(1, 1, 1)
+bones/17/name = "LeftIndexProximal"
+bones/17/parent = 13
+bones/17/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.026, 0.088, 0.0019999743)
+bones/17/enabled = true
+bones/17/position = Vector3(-0.026, 0.088, 0.0019999743)
+bones/17/rotation = Quaternion(0, 0, 0, 1)
+bones/17/scale = Vector3(1, 1, 1)
+bones/18/name = "LeftIndexIntermediate"
+bones/18/parent = 17
+bones/18/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.042999983, 0)
+bones/18/enabled = true
+bones/18/position = Vector3(0, 0.042999983, 0)
+bones/18/rotation = Quaternion(0, 0, 0, 1)
+bones/18/scale = Vector3(1, 1, 1)
+bones/19/name = "LeftIndexDistal"
+bones/19/parent = 18
+bones/19/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026000023, 0)
+bones/19/enabled = true
+bones/19/position = Vector3(0, 0.026000023, 0)
+bones/19/rotation = Quaternion(0, 0, 0, 1)
+bones/19/scale = Vector3(1, 1, 1)
+bones/20/name = "LeftMiddleProximal"
+bones/20/parent = 13
+bones/20/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.005, 0.09100002, 0)
+bones/20/enabled = true
+bones/20/position = Vector3(-0.005, 0.09100002, 0)
+bones/20/rotation = Quaternion(0, 0, 0, 1)
+bones/20/scale = Vector3(1, 1, 1)
+bones/21/name = "LeftMiddleIntermediate"
+bones/21/parent = 20
+bones/21/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04699999, 0)
+bones/21/enabled = true
+bones/21/position = Vector3(0, 0.04699999, 0)
+bones/21/rotation = Quaternion(0, 0, 0, 1)
+bones/21/scale = Vector3(1, 1, 1)
+bones/22/name = "LeftMiddleDistal"
+bones/22/parent = 21
+bones/22/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.028999984, 0)
+bones/22/enabled = true
+bones/22/position = Vector3(0, 0.028999984, 0)
+bones/22/rotation = Quaternion(0, 0, 0, 1)
+bones/22/scale = Vector3(1, 1, 1)
+bones/23/name = "LeftRingProximal"
+bones/23/parent = 13
+bones/23/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.016, 0.08700001, 0.0019999743)
+bones/23/enabled = true
+bones/23/position = Vector3(0.016, 0.08700001, 0.0019999743)
+bones/23/rotation = Quaternion(0, 0, 0, 1)
+bones/23/scale = Vector3(1, 1, 1)
+bones/24/name = "LeftRingIntermediate"
+bones/24/parent = 23
+bones/24/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04400003, 0)
+bones/24/enabled = true
+bones/24/position = Vector3(0, 0.04400003, 0)
+bones/24/rotation = Quaternion(0, 0, 0, 1)
+bones/24/scale = Vector3(1, 1, 1)
+bones/25/name = "LeftRingDistal"
+bones/25/parent = 24
+bones/25/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02699995, 0)
+bones/25/enabled = true
+bones/25/position = Vector3(0, 0.02699995, 0)
+bones/25/rotation = Quaternion(0, 0, 0, 1)
+bones/25/scale = Vector3(1, 1, 1)
+bones/26/name = "LeftLittleProximal"
+bones/26/parent = 13
+bones/26/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.034, 0.078999996, 0.004999995)
+bones/26/enabled = true
+bones/26/position = Vector3(0.034, 0.078999996, 0.004999995)
+bones/26/rotation = Quaternion(0, 0, 0, 1)
+bones/26/scale = Vector3(1, 1, 1)
+bones/27/name = "LeftLittleIntermediate"
+bones/27/parent = 26
+bones/27/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035000026, 0)
+bones/27/enabled = true
+bones/27/position = Vector3(0, 0.035000026, 0)
+bones/27/rotation = Quaternion(0, 0, 0, 1)
+bones/27/scale = Vector3(1, 1, 1)
+bones/28/name = "LeftLittleDistal"
+bones/28/parent = 27
+bones/28/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.020999968, 0)
+bones/28/enabled = true
+bones/28/position = Vector3(0, 0.020999968, 0)
+bones/28/rotation = Quaternion(0, 0, 0, 1)
+bones/28/scale = Vector3(1, 1, 1)
+bones/29/name = "RightShoulder"
+bones/29/parent = 4
+bones/29/rest = Transform3D(0, -1, 0, 0, 0, 1, -1, 0, 0, -0.03, 0.120000005, 0)
+bones/29/enabled = true
+bones/29/position = Vector3(-0.03, 0.120000005, 0)
+bones/29/rotation = Quaternion(0.5, -0.5, -0.5, -0.5)
+bones/29/scale = Vector3(1, 1, 1)
+bones/30/name = "RightUpperArm"
+bones/30/parent = 29
+bones/30/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.15, 0.004999995)
+bones/30/enabled = true
+bones/30/position = Vector3(0, 0.15, 0.004999995)
+bones/30/rotation = Quaternion(0, 1, 0, 0)
+bones/30/scale = Vector3(1, 1, 1)
+bones/31/name = "RightLowerArm"
+bones/31/parent = 30
+bones/31/rest = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.285, 0)
+bones/31/enabled = true
+bones/31/position = Vector3(0, 0.285, 0)
+bones/31/rotation = Quaternion(0, 0.70710677, 0, 0.70710677)
+bones/31/scale = Vector3(1, 1, 1)
+bones/32/name = "RightHand"
+bones/32/parent = 31
+bones/32/rest = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0.25500003, 0)
+bones/32/enabled = true
+bones/32/position = Vector3(0, 0.25500003, 0)
+bones/32/rotation = Quaternion(0, -0.70710677, 0, 0.70710677)
+bones/32/scale = Vector3(1, 1, 1)
+bones/33/name = "RightThumbMetacarpal"
+bones/33/parent = 32
+bones/33/rest = Transform3D(0, 0.5773508, -0.81649613, 0, 0.81649613, 0.5773508, 1, 0, 0, 0.024, 0.022000015, 0.011999965)
+bones/33/enabled = true
+bones/33/position = Vector3(0.024, 0.022000015, 0.011999965)
+bones/33/rotation = Quaternion(-0.21418673, -0.67388725, -0.21418673, 0.67388725)
+bones/33/scale = Vector3(1, 0.99999994, 0.99999994)
+bones/34/name = "RightThumbProximal"
+bones/34/parent = 33
+bones/34/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, 0.006713271, 0.041457117, -0.0004903376)
+bones/34/enabled = true
+bones/34/position = Vector3(0.006713271, 0.041457117, -0.0004903376)
+bones/34/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/34/scale = Vector3(1, 1, 1)
+bones/35/name = "RightThumbDistal"
+bones/35/parent = 34
+bones/35/rest = Transform3D(1, 0, 0, 0, 1, 2.9802322e-08, 0, -2.9802322e-08, 1, 0.005114913, 0.03158635, -0.00037366152)
+bones/35/enabled = true
+bones/35/position = Vector3(0.005114913, 0.03158635, -0.00037366152)
+bones/35/rotation = Quaternion(-1.4901161e-08, 0, 0, 1)
+bones/35/scale = Vector3(1, 1, 1)
+bones/36/name = "RightIndexProximal"
+bones/36/parent = 32
+bones/36/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.026, 0.088, 0.0019999743)
+bones/36/enabled = true
+bones/36/position = Vector3(0.026, 0.088, 0.0019999743)
+bones/36/rotation = Quaternion(0, 0, 0, 1)
+bones/36/scale = Vector3(1, 1, 1)
+bones/37/name = "RightIndexIntermediate"
+bones/37/parent = 36
+bones/37/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.042999983, 0)
+bones/37/enabled = true
+bones/37/position = Vector3(0, 0.042999983, 0)
+bones/37/rotation = Quaternion(0, 0, 0, 1)
+bones/37/scale = Vector3(1, 1, 1)
+bones/38/name = "RightIndexDistal"
+bones/38/parent = 37
+bones/38/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.026000023, 0)
+bones/38/enabled = true
+bones/38/position = Vector3(0, 0.026000023, 0)
+bones/38/rotation = Quaternion(0, 0, 0, 1)
+bones/38/scale = Vector3(1, 1, 1)
+bones/39/name = "RightMiddleProximal"
+bones/39/parent = 32
+bones/39/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005, 0.09100002, 0)
+bones/39/enabled = true
+bones/39/position = Vector3(0.005, 0.09100002, 0)
+bones/39/rotation = Quaternion(0, 0, 0, 1)
+bones/39/scale = Vector3(1, 1, 1)
+bones/40/name = "RightMiddleIntermediate"
+bones/40/parent = 39
+bones/40/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04699999, 0)
+bones/40/enabled = true
+bones/40/position = Vector3(0, 0.04699999, 0)
+bones/40/rotation = Quaternion(0, 0, 0, 1)
+bones/40/scale = Vector3(1, 1, 1)
+bones/41/name = "RightMiddleDistal"
+bones/41/parent = 40
+bones/41/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.028999984, 0)
+bones/41/enabled = true
+bones/41/position = Vector3(0, 0.028999984, 0)
+bones/41/rotation = Quaternion(0, 0, 0, 1)
+bones/41/scale = Vector3(1, 1, 1)
+bones/42/name = "RightRingProximal"
+bones/42/parent = 32
+bones/42/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.016, 0.08700001, 0.0019999743)
+bones/42/enabled = true
+bones/42/position = Vector3(-0.016, 0.08700001, 0.0019999743)
+bones/42/rotation = Quaternion(0, 0, 0, 1)
+bones/42/scale = Vector3(1, 1, 1)
+bones/43/name = "RightRingIntermediate"
+bones/43/parent = 42
+bones/43/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04400003, 0)
+bones/43/enabled = true
+bones/43/position = Vector3(0, 0.04400003, 0)
+bones/43/rotation = Quaternion(0, 0, 0, 1)
+bones/43/scale = Vector3(1, 1, 1)
+bones/44/name = "RightRingDistal"
+bones/44/parent = 43
+bones/44/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02699995, 0)
+bones/44/enabled = true
+bones/44/position = Vector3(0, 0.02699995, 0)
+bones/44/rotation = Quaternion(0, 0, 0, 1)
+bones/44/scale = Vector3(1, 1, 1)
+bones/45/name = "RightLittleProximal"
+bones/45/parent = 32
+bones/45/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.034, 0.078999996, 0.004999995)
+bones/45/enabled = true
+bones/45/position = Vector3(-0.034, 0.078999996, 0.004999995)
+bones/45/rotation = Quaternion(0, 0, 0, 1)
+bones/45/scale = Vector3(1, 1, 1)
+bones/46/name = "RightLittleIntermediate"
+bones/46/parent = 45
+bones/46/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035000026, 0)
+bones/46/enabled = true
+bones/46/position = Vector3(0, 0.035000026, 0)
+bones/46/rotation = Quaternion(0, 0, 0, 1)
+bones/46/scale = Vector3(1, 1, 1)
+bones/47/name = "RightLittleDistal"
+bones/47/parent = 46
+bones/47/rest = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.020999968, 0)
+bones/47/enabled = true
+bones/47/position = Vector3(0, 0.020999968, 0)
+bones/47/rotation = Quaternion(0, 0, 0, 1)
+bones/47/scale = Vector3(1, 1, 1)
+bones/48/name = "LeftUpperLeg"
+bones/48/parent = 1
+bones/48/rest = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, 0.09, -0.04000002, 0)
+bones/48/enabled = true
+bones/48/position = Vector3(0.09, -0.04000002, 0)
+bones/48/rotation = Quaternion(0, 0, 1, 0)
+bones/48/scale = Vector3(1, 1, 1)
+bones/49/name = "LeftLowerLeg"
+bones/49/parent = 48
+bones/49/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.42000002, 0)
+bones/49/enabled = true
+bones/49/position = Vector3(0, 0.42000002, 0)
+bones/49/rotation = Quaternion(0, 1, 0, 0)
+bones/49/scale = Vector3(1, 1, 1)
+bones/50/name = "LeftFoot"
+bones/50/parent = 49
+bones/50/rest = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0.43, 0.01)
+bones/50/enabled = true
+bones/50/position = Vector3(0, 0.43, 0.01)
+bones/50/rotation = Quaternion(0, 0.70710677, -0.70710677, 0)
+bones/50/scale = Vector3(1, 1, 1)
+bones/51/name = "LeftToes"
+bones/51/parent = 50
+bones/51/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.14, -0.065)
+bones/51/enabled = true
+bones/51/position = Vector3(0, 0.14, -0.065)
+bones/51/rotation = Quaternion(0, 1, 0, 0)
+bones/51/scale = Vector3(1, 1, 1)
+bones/52/name = "RightUpperLeg"
+bones/52/parent = 1
+bones/52/rest = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, -0.09, -0.04000002, 0)
+bones/52/enabled = true
+bones/52/position = Vector3(-0.09, -0.04000002, 0)
+bones/52/rotation = Quaternion(0, 0, 1, 0)
+bones/52/scale = Vector3(1, 1, 1)
+bones/53/name = "RightLowerLeg"
+bones/53/parent = 52
+bones/53/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.42000002, 0)
+bones/53/enabled = true
+bones/53/position = Vector3(0, 0.42000002, 0)
+bones/53/rotation = Quaternion(0, 1, 0, 0)
+bones/53/scale = Vector3(1, 1, 1)
+bones/54/name = "RightFoot"
+bones/54/parent = 53
+bones/54/rest = Transform3D(-1, 0, 0, 0, 0, -1, 0, -1, 0, 0, 0.43, 0.01)
+bones/54/enabled = true
+bones/54/position = Vector3(0, 0.43, 0.01)
+bones/54/rotation = Quaternion(0, 0.70710677, -0.70710677, 0)
+bones/54/scale = Vector3(1, 1, 1)
+bones/55/name = "RightToes"
+bones/55/parent = 54
+bones/55/rest = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.14, -0.065)
+bones/55/enabled = true
+bones/55/position = Vector3(0, 0.14, -0.065)
+bones/55/rotation = Quaternion(0, 1, 0, 0)
+bones/55/scale = Vector3(1, 1, 1)
+metadata/vibe_height = 1.8
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Viajante" unique_id=1669372594]
+libraries/ = SubResource("AnimationLibrary_4mfpf")
+
+[node name="DemoHUD" type="CanvasLayer" parent="." unique_id=1086563866 instance=ExtResource("10_hbra7")]
 layer = 10
 script = ExtResource("11_2pu5a")
 title = "Cânion no deserto"
-subtitle = "stylized · entardecer · rio esculpido"
-prompt = "cânion vermelho no entardecer com um rio, capim seco, poeira e uma fogueira"
+subtitle = "stylized · entardecer · rio esculpido e cactos"
+prompt = "cânion vermelho no entardecer com um rio, cactos, capim seco, poeira e uma fogueira"

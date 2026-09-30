@@ -21,6 +21,7 @@ extends SceneTree
 ##   loop_animations  true: characters loop their animation; "anim_offset" 0..1
 ##   play      ["VfxName", ...] restarts these effects when the move starts
 ##   hide      node names to hide (default: DemoHUD)
+##   render_scale  < 1 renders 3D at a lower resolution, upscaled with FSR
 
 const Env = preload("res://addons/vibe_vfx/env_presets.gd")
 
@@ -60,6 +61,12 @@ func _setup() -> void:
 		return
 	world = packed.instantiate()
 	root.add_child(world)
+	# Optional lower 3D resolution, upscaled with FSR (faster recording).
+	var rs := float(shot.get("render_scale", 1.0))
+	if rs < 0.999:
+		root.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
+		root.scaling_3d_scale = rs
+		root.fsr_sharpness = 0.35
 	for n in shot.get("hide", ["DemoHUD"]):
 		var h := world.find_child(str(n), true, false)
 		if h != null and "visible" in h:
