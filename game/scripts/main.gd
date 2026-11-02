@@ -110,10 +110,13 @@ func _build_ui() -> void:
 		_button("Demos da Vibe Suite", func(): get_tree().change_scene_to_file("res://demos/demo_hub.tscn"))
 		_button("Sair", func(): get_tree().quit())
 	var hint := UITheme.label("Toque e arraste à esquerda para andar • Botões à direita para pular, agir e trocar de herói", 18, Color(1, 1, 1, 0.85), 500)
-	hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	hint.position = Vector2(-520, -54)
-	hint.size = Vector2(1040, 30)
+	# à direita da coluna de botões (no PC o menu tem 7 botões e chega ao rodapé)
+	hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	hint.position = Vector2(-840, -74)
+	hint.size = Vector2(820, 60)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.38, 0.6))
 	hint.add_theme_constant_override("outline_size", 6)
 	if not Game.touch_enabled:
