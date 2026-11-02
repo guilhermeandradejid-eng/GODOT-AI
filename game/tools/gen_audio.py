@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SOPRO — sintetiza todos os sons do jogo (CC0, feitos aqui; só numpy + ffmpeg).
+"""Sintetiza todos os sons do jogo YLVAAR (CC0, feitos aqui; só numpy + ffmpeg).
 
     python3 game/tools/gen_audio.py            # efeitos + músicas
     python3 game/tools/gen_audio.py --sfx      # só efeitos
@@ -257,9 +257,9 @@ def make_sfx():
     for k, m in enumerate((72, 76, 79, 83, 86, 91)):
         place(buf, fm_bell(note_hz(m), 0.9, sr, ratio=2.0, index=0.6, tau=0.35), k * 0.07 * sr, 0.3)
     S["respawn"] = buf * np.linspace(0.6, 1, n)
-    lume = fm_bell(note_hz(84), 0.6, sr, ratio=2.0, index=1.0, tau=0.22) * 0.8
-    place(lume, fm_bell(note_hz(96), 0.4, sr, ratio=3.0, index=0.5, tau=0.1), 0, 0.2)
-    S["mote"] = lume
+    mote = fm_bell(note_hz(84), 0.6, sr, ratio=2.0, index=1.0, tau=0.22) * 0.8
+    place(mote, fm_bell(note_hz(96), 0.4, sr, ratio=3.0, index=0.5, tau=0.1), 0, 0.2)
+    S["mote"] = mote
     buf = np.zeros(int(3.0 * sr))
     for k, m in enumerate((60, 64, 67, 71, 74, 76, 79, 83, 86, 88)):
         place(buf, pluck(note_hz(m), 2.0, sr, tau=1.0, bright=1.2), k * 0.07 * sr, 0.35)

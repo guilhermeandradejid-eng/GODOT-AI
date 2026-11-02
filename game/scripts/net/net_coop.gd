@@ -2,7 +2,7 @@ extends Node
 ## Co-op em rede local (Wi-Fi) com ENet: quem cria a sala joga com a
 ## personagem ágil, quem entra joga com a forte. Descoberta automática por broadcast UDP.
 ## Cada aparelho é dono do próprio herói (envia estado a 30 Hz); eventos do
-## mundo (lumes, sementes, Breus vencidos, catapulta) vão por RPC confiável.
+## mundo (centelhas, Pedras das Horas, Silentes vencidos, lançamento) vão por RPC confiável.
 
 signal hosts_changed(hosts: Array)
 signal connected(as_host: bool)
@@ -230,4 +230,4 @@ func _do_catapult(v: Vector3) -> void:
 	if mine != null and mine.hero_id == "agile" and mine.state == Hero.S.RIDE:
 		mine.dismount(v)
 		mine.set_state(Hero.S.LAUNCH)
-		mine.visual.restart_state("double_jump")
+		mine.visual.restart_state("launch" if mine.visual.has_state("launch") else "double_jump")

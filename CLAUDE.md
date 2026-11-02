@@ -18,7 +18,7 @@ Tudo que dá para fazer no editor também dá para fazer por comandos.
 | `recipes/` | receitas JSON dos mundos de demonstração (bons exemplos para copiar) |
 | `demos/` | cenas de demonstração geradas + hub (`demo_hub.tscn` é a cena principal) |
 | `tests/` | `run_tests.py` (testes headless), `render_gallery.py` (galeria de estilos) |
-| `game/` | **SOPRO**, MVP de aventura 3D co-op (cena principal `game/main.tscn`) — veja `game/README.md` |
+| `game/` | **YLVAAR — A Última Hora**, MVP de aventura 3D co-op (cena principal `game/main.tscn`) — veja `game/README.md` |
 
 ## Como executar comandos
 
@@ -107,22 +107,25 @@ efeitos e personagens, abrindo clareiras em volta deles), `camera` e `commands` 
 - Validação antes de commitar: `godot --headless --path . --import` (sem erros de script/shader)
   e `python3 tests/run_tests.py`. Visual: `python3 tests/render_gallery.py`, `python3 tools/build_demos.py <demo>`.
 
-## SOPRO (game/) — o jogo
+## YLVAAR (game/) — o jogo
 
-MVP de aventura co-op (Juba, o mico-leão-dourado, e Caju, a capivara) no mundo "Lençóis do Céu".
-É a cena principal do projeto (`game/main.tscn`); o hub de demos da suíte continua em `demos/`.
+MVP de aventura co-op (Saeli, a sprite-vela ágil, e Hulvar, o navio-guardião forte) no mar de areia
+de fantasia "Ylvaar". É a cena principal do projeto (`game/main.tscn`); o hub de demos da suíte
+continua em `demos/`. Designs em `game/design/` (herois.md, mundo.md). Nada de elementos nacionais.
 
-- **Mundo = receita** `game/world/lencois.json`: ilhas (forma, lagoas, platôs) e todo o conteúdo
-  (props, lumes, sementes, águas-vivas, flores-canhão, fita de vento, portais, placas, Breus, totens,
-  bandeirinhas, pipas). Mudou ilha/lagoa/platô → rode `blender -b --factory-startup --python game/blender/build_world.py`.
-  Mudou só conteúdo → basta rodar o jogo.
-- **Assets por código**: `game/blender/build_{world,props,characters}.py` (Blender 4.x headless),
+- **Mundo = receita** `game/world/world.json`: seção `terrain` (dunas, platôs, bacias, rampas de
+  surfe...) gerada por `python3 game/tools/gen_terrain.py --preview` em `game/world/world_terrain/`, e
+  seção `content` (props, pedras-guia, Pedras das Horas, centelhas, urnas-canhão, respiros, trilhos,
+  fendas, placas/portões, Silentes, cascatas de areia, Portão de Vael). Mudou o terreno → rode o
+  gerador; mudou só conteúdo → basta rodar o jogo. Posições `[x, z]` encaixam no chão; `"h"` = altura.
+- **Assets por código**: personagens e props com o kit SDF (`game/blender/lib/sdfkit.py`, `sdfprop.py`,
+  `sdfchar.py`): `game/blender/build_{saeli,hulvar,world_props}.py` (Blender 4.x headless);
   `game/tools/gen_textures.py`, `game/tools/gen_audio.py` (sons/músicas CC0). Não edite os `.glb` à mão.
-- **Visual**: shaders em `game/shaders/` (renderer Mobile/Vulkan). Para olhar o resultado:
-  `xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --views hero,aerial,east`
-  (views em `game/tools/capture.gd`, ou `"px,py,pz>tx,ty,tz"`; `--player --bot run` usa a câmera do jogo).
-  Personagens: `res://game/tools/char_preview.tscn -- --hero juba|caju --anims run,glide [--turntable|--closeup]`.
-- **Validação do jogo**: `python3 tests/run_tests.py --game-only` (playtest automático de todas as
-  mecânicas + co-op em rede com duas instâncias). Sempre rode antes de commitar mudanças em `game/`.
+- **Visual**: shaders em `game/shaders/` (renderer Mobile/Vulkan; areia estilo Journey em
+  `sand_terrain.gdshader`). Para olhar o resultado:
+  `xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --views "px,py,pz>tx,ty,tz"`
+  (`--player --bot run|surf` usa a câmera do jogo). Modelos: `res://game/tools/model_preview.tscn -- --glb <caminho absoluto> [--props] [--anim run --t 0.25]`.
+- **Validação do jogo**: `python3 tests/run_tests.py --game-only` (playtest automático guiado pela
+  receita + co-op em rede com duas instâncias). Sempre rode antes de commitar mudanças em `game/`.
 - **APK Android**: `python3 tools/build_android.py` (arm64, Vulkan, paisagem, debug assinado; `--install` usa adb).
   Requer export templates da versão do Godot, `ANDROID_HOME` (apksigner) e JDK.

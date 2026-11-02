@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera o APK Android de SOPRO (o jogo em game/) para testar no celular.
+"""Gera o APK Android de YLVAAR (o jogo em game/) para testar no celular.
 
     python3 tools/build_android.py                 # APK debug (assinado com a keystore de debug)
     python3 tools/build_android.py --release       # APK release (precisa de keystore própria, veja abaixo)
@@ -14,7 +14,7 @@ Pré-requisitos (uma vez):
     ANDROID_HOME=/caminho/android-sdk  (ou configure em Editor Settings → Export → Android).
   * JDK 17+ (JAVA_HOME).
   * Keystore de debug: usa ~/.android/debug.keystore ou cria uma com keytool.
-    Release: SOPRO_KEYSTORE, SOPRO_KEYSTORE_USER, SOPRO_KEYSTORE_PASS.
+    Release: GAME_KEYSTORE, GAME_KEYSTORE_USER, GAME_KEYSTORE_PASS.
 
 O que o script faz: escreve/atualiza o preset "Android" em export_presets.cfg (arm64,
 renderer Mobile/Vulkan, paisagem, imersivo, permissões de rede para o co-op em Wi-Fi,
@@ -35,8 +35,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 PRESET_NAME = "Android"
-PACKAGE = "com.sopro.lencois"
-APP_NAME = "Sopro"
+PACKAGE = "com.ylvaar.ultimahora"
+APP_NAME = "Ylvaar"
 VERSION_NAME = "0.1.0"
 VERSION_CODE = 1
 EXTRA_RESOURCES = [
@@ -103,7 +103,7 @@ def write_preset(release: bool) -> None:
         "name": q(PRESET_NAME), "platform": q("Android"), "runnable": "true", "advanced_options": "false",
         "dedicated_server": "false", "custom_features": q(""), "export_filter": q("resources"),
         "export_files": f"PackedStringArray({files})", "include_filter": q(INCLUDE_FILTER),
-        "exclude_filter": q("game/blender/*, game/tools/*"), "export_path": q("build/sopro-debug.apk"),
+        "exclude_filter": q("game/blender/*, game/tools/*"), "export_path": q("build/ylvaar-debug.apk"),
         "patches": "PackedStringArray()", "encryption_include_filters": q(""),
         "encryption_exclude_filters": q(""), "seed": "0", "encrypt_pck": "false",
         "encrypt_directory": "false", "script_export_mode": "2",
@@ -141,7 +141,7 @@ def write_preset(release: bool) -> None:
 
 
 def write_linux_check_preset() -> None:
-    """Preset "SoproLinuxCheck": same resources as the APK, exported for Linux so the
+    """Preset "GameLinuxCheck": same resources as the APK, exported for Linux so the
     exported build can be self-tested on a PC (no phone needed)."""
     path = ROOT / "export_presets.cfg"
     cfg = configparser.RawConfigParser()
@@ -152,7 +152,7 @@ def write_linux_check_preset() -> None:
     for sec in cfg.sections():
         if sec.startswith("preset.") and sec.count(".") == 1:
             used.append(int(sec.split(".")[1]))
-            if cfg.get(sec, "name", fallback="").strip('"') == "SoproLinuxCheck":
+            if cfg.get(sec, "name", fallback="").strip('"') == "GameLinuxCheck":
                 idx = int(sec.split(".")[1])
     if idx is None:
         idx = max(used) + 1 if used else 0
@@ -162,10 +162,10 @@ def write_linux_check_preset() -> None:
             cfg.remove_section(s_)
         cfg.add_section(s_)
     files = ", ".join(f'"{f}"' for f in game_resources())
-    for k, v in {"name": '"SoproLinuxCheck"', "platform": '"Linux"', "runnable": "false",
+    for k, v in {"name": '"GameLinuxCheck"', "platform": '"Linux"', "runnable": "false",
                  "export_filter": '"resources"', "export_files": f"PackedStringArray({files})",
                  "include_filter": f'"{INCLUDE_FILTER}"', "exclude_filter": '"game/blender/*, game/tools/*"',
-                 "export_path": '"build/selftest/sopro.x86_64"'}.items():
+                 "export_path": '"build/selftest/ylvaar.x86_64"'}.items():
         cfg.set(sec, k, v)
     for k, v in {"binary_format/embed_pck": "true", "binary_format/architecture": '"x86_64"',
                  "texture_format/s3tc_bptc": "true", "texture_format/etc2_astc": "false"}.items():
@@ -175,10 +175,10 @@ def write_linux_check_preset() -> None:
 
 
 def run_check(godot: str, env: dict) -> int:
-    out = ROOT / "build" / "selftest" / "sopro.x86_64"
+    out = ROOT / "build" / "selftest" / "ylvaar.x86_64"
     out.parent.mkdir(parents=True, exist_ok=True)
     write_linux_check_preset()
-    proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "--export-debug", "SoproLinuxCheck", str(out)],
+    proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "--export-debug", "GameLinuxCheck", str(out)],
                           env=env, capture_output=True, text=True, timeout=1800)
     if not out.exists():
         print((proc.stdout + proc.stderr)[-3000:])
@@ -209,7 +209,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--release", action="store_true")
     ap.add_argument("--install", action="store_true", help="instala com adb depois de gerar")
-    ap.add_argument("--out", default=None, help="caminho do APK (padrão build/sopro-debug.apk)")
+    ap.add_argument("--out", default=None, help="caminho do APK (padrão build/ylvaar-debug.apk)")
     ap.add_argument("--check", action="store_true",
                     help="exporta os mesmos recursos para Linux e roda um autoteste no build exportado")
     a = ap.parse_args()
@@ -219,7 +219,7 @@ def main() -> int:
         rc = run_check(godot, dict(os.environ))
         if rc != 0:
             return rc
-    out = Path(a.out) if a.out else ROOT / "build" / ("sopro-release.apk" if a.release else "sopro-debug.apk")
+    out = Path(a.out) if a.out else ROOT / "build" / ("ylvaar-release.apk" if a.release else "ylvaar-debug.apk")
     out.parent.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     if not a.release:
@@ -228,9 +228,9 @@ def main() -> int:
         env.setdefault("GODOT_ANDROID_KEYSTORE_DEBUG_USER", "androiddebugkey")
         env.setdefault("GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD", "android")
     else:
-        for k_src, k_dst in (("SOPRO_KEYSTORE", "GODOT_ANDROID_KEYSTORE_RELEASE_PATH"),
-                             ("SOPRO_KEYSTORE_USER", "GODOT_ANDROID_KEYSTORE_RELEASE_USER"),
-                             ("SOPRO_KEYSTORE_PASS", "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD")):
+        for k_src, k_dst in (("GAME_KEYSTORE", "GODOT_ANDROID_KEYSTORE_RELEASE_PATH"),
+                             ("GAME_KEYSTORE_USER", "GODOT_ANDROID_KEYSTORE_RELEASE_USER"),
+                             ("GAME_KEYSTORE_PASS", "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD")):
             if not env.get(k_src) and not env.get(k_dst):
                 sys.exit(f"--release precisa de {k_src}")
             if env.get(k_src):

@@ -256,7 +256,7 @@ func _sandfalls() -> void:
 	for e in data.get("sandfalls", []):
 		var top := pos_of(e["top"], float(e.get("h", 0.0)))
 		add_child(SandFx.sandfall(top, float(e.get("height", 20.0)), float(e.get("width", 6.0)),
-			float(e.get("facing", 0.0)), sun))
+			float(e.get("facing", 0.0)), sun, level.atmosphere.sun_direction if level.atmosphere != null else Vector3(-0.45, 0.36, -0.82)))
 
 
 # ---------------------------------------------------------------------------- collectibles

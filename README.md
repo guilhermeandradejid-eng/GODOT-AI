@@ -1,11 +1,11 @@
 # Godot Vibe Suite
 
-> **Novo: [SOPRO — Juba & Caju nos Lençóis do Céu](game/README.md)**, um MVP de aventura 3D
-> **co-op** (solo com IA, co-op local e co-op em Wi-Fi) feito com Godot 4.7 + Blender, com
-> personagens originais, mundo semiaberto em ilhas flutuantes e visual/pós-processamento no
-> espírito de *Sky*. Roda no celular Android (Snapdragon/Vulkan): `python3 tools/build_android.py`.
+> **Novo: [YLVAAR — A Última Hora](game/README.md)**, um MVP de aventura 3D **co-op** (solo com
+> IA, co-op local e co-op em Wi-Fi) feito com Godot 4.7 + Blender: um mundo de fantasia **contínuo**
+> num mar de areia no estilo de *Journey* (surfe nas dunas, rastros, cascatas de areia) e uma dupla
+> original, Saeli & Hulvar. Roda no celular Android (Snapdragon/Vulkan): `python3 tools/build_android.py`.
 >
-> ![SOPRO](docs/img/sopro_mundo.webp)
+> ![YLVAAR](docs/img/ylvaar_mundo.webp)
 
 Suíte de plugins para **Godot 4.3+** que cria mundos 3D — **terreno**, **grama**, **árvores e
 rochas**, **céu, água e VFX** e **personagens com animações geradas por texto** — tanto de forma

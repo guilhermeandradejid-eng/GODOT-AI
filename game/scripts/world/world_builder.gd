@@ -37,6 +37,7 @@ func build(atmosphere: Node) -> void:
 	add_child(trails)
 	trails.setup(terrain)
 	add_child(SandStreamers.new())
+	add_child(DustMotes.new())
 
 
 func _border_mean() -> float:
@@ -116,3 +117,54 @@ class SandStreamers extends GPUParticles3D:
 		var cam := get_viewport().get_camera_3d()
 		if cam != null:
 			global_position = cam.global_position + (-cam.global_transform.basis.z) * 14.0 + Vector3.DOWN * 3.0
+
+
+## Poeira dourada flutuando no ar perto da câmera (brilho de sonho, estilo Sky).
+class DustMotes extends GPUParticles3D:
+	func _ready() -> void:
+		name = "PoeiraDourada"
+		amount = 56
+		lifetime = 6.0
+		preprocess = 6.0
+		local_coords = false
+		visibility_aabb = AABB(Vector3(-30, -10, -30), Vector3(60, 25, 60))
+		var pm := ParticleProcessMaterial.new()
+		pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+		pm.emission_box_extents = Vector3(18, 5, 18)
+		pm.direction = Vector3(0.3, 1.0, 0.15)
+		pm.spread = 60.0
+		pm.initial_velocity_min = 0.1
+		pm.initial_velocity_max = 0.5
+		pm.gravity = Vector3(0.25, 0.05, 0.1)
+		pm.turbulence_enabled = true
+		pm.turbulence_noise_strength = 0.6
+		pm.turbulence_noise_scale = 6.0
+		pm.scale_min = 0.5
+		pm.scale_max = 1.3
+		var curve := Curve.new()
+		curve.add_point(Vector2(0, 0))
+		curve.add_point(Vector2(0.2, 1))
+		curve.add_point(Vector2(0.8, 1))
+		curve.add_point(Vector2(1, 0))
+		var ct := CurveTexture.new()
+		ct.curve = curve
+		pm.scale_curve = ct
+		pm.color = Color(1.0, 0.88, 0.62, 0.7)
+		process_material = pm
+		var q := QuadMesh.new()
+		q.size = Vector2(0.09, 0.09)
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		m.albedo_texture = preload("res://game/assets/textures/soft_dot.png")
+		m.vertex_color_use_as_albedo = true
+		q.material = m
+		draw_pass_1 = q
+		cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	func _process(_d: float) -> void:
+		var cam := get_viewport().get_camera_3d()
+		if cam != null:
+			global_position = cam.global_position + (-cam.global_transform.basis.z) * 10.0

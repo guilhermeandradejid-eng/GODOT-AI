@@ -1,4 +1,4 @@
-// "fita de vento": trilho translúcido que flui (chevrons andando no
+// Trilho de areia (correnteza de glifos): faixa translúcida que flui (chevrons andando no
 // sentido do trilho), bordas douradas brilhantes e ondulação suave.
 shader_type spatial;
 render_mode blend_add, depth_draw_never, cull_disabled, unshaded, shadows_disabled;

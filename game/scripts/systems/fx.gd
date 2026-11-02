@@ -27,8 +27,6 @@ func _ready() -> void:
 			"end_color": Color(1.0, 0.9, 0.7, 0.0)},
 		"splash": {"amount": 16, "life": 0.7, "color": Color(0.85, 1.0, 1.0, 0.9), "size": [0.08, 0.2],
 			"vel": [2.5, 5.0], "spread": 35.0, "dir": Vector3.UP, "grav": Vector3(0, -12.0, 0), "damp": 0.2, "add": false},
-		"petals": {"amount": 20, "life": 1.4, "color": Color(1.0, 0.62, 0.72, 1.0), "size": [0.1, 0.2],
-			"vel": [2.0, 5.0], "spread": 120.0, "dir": Vector3.UP, "grav": Vector3(0, -2.0, 0), "damp": 1.0, "add": false},
 		"wisp": {"amount": 30, "life": 1.2, "color": Color(1.0, 0.95, 0.8, 1.0), "size": [0.08, 0.22],
 			"vel": [0.5, 2.5], "spread": 180.0, "dir": Vector3.UP, "grav": Vector3(0, 2.5, 0), "damp": 1.0, "add": true},
 		"ring_light": {"amount": 26, "life": 0.6, "color": Color(1.0, 0.95, 0.75, 1.0), "size": [0.06, 0.12],

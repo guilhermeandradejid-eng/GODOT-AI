@@ -1,80 +1,70 @@
-# SOPRO — Juba & Caju nos Lençóis do Céu
+# YLVAAR — A Última Hora
 
-MVP de **aventura 3D co-op** feito com **Godot 4.7** + **Blender** (tudo gerado por código neste
-repositório), pensado para **celular Android (Snapdragon, Vulkan)** e também jogável no PC.
+MVP de aventura 3D **co-op** (solo com IA, co-op local e co-op em Wi-Fi) feito com **Godot 4.7 +
+Blender**, tudo gerado por código neste repositório. Um mundo de fantasia **contínuo** — um mar de
+areia com dunas no estilo de *Journey* — e uma dupla original, Saeli & Hulvar. Roda no celular
+Android (renderer Mobile/Vulkan, Snapdragon).
 
-![Menu](../docs/img/sopro_menu.webp)
+![Menu](../docs/img/ylvaar_menu.webp)
 
-> **Premissa.** As ilhas dos Lençóis do Céu flutuam graças ao *sopro* do grande vento — que
-> adormeceu. Juba e Caju precisam achar as **3 Sementes de Sopro** e tocar o **Grande Sino** para
-> acordar o vento.
+> **Premissa.** Ylvaar é um mar de areia viva regido pela **Agulha de Vael**, um relógio de sol
+> gigante. Os **Silentes** arrancaram as três **Pedras das Horas** e o tempo congelou uma hora antes
+> do pôr do sol. Saeli e Hulvar precisam devolver as pedras ao **Portão de Vael** para que o sol,
+> enfim, se ponha.
 
-## A dupla (personagens originais)
+## A dupla: "Vela e Casco"
 
-| | |
+| **Saeli** (ágil) | **Hulvar** (forte) |
 |---|---|
-| **Juba** — mico-leão-dourado agitado, com juba de sol, cachecol turquesa e fitinhas do Bonfim nos pulsos. **Pulo duplo** (pirueta), **planar** com o cachecol que vira **pipa**, **giro** com o rabo, e **sobe nas costas do Caju**. | **Caju** — capivara tranquila com uma manta de **chita** e um **caju na cabeça** (que balança!). **Barrigada** (ground pound com onda de choque), **cabeçada**, **nada rápido**, **carrega o Juba** e o **catapulta** longe. Só ele afunda as **placas pesadas**. |
+| Sprite-vela de pele verde-azulada, máscara-coração marfim, olhos âmbar e sardas que brilham. **Bater de Leques** (pulo duplo), **Planar** com os leques dos braços, **Rodopio**, **Cometa** (surfe de barriga na cauda-prancha) e **Embarcar** no cesto do Hulvar. | Antigo navio-guardião de porcelana esmaltada: olhos de escotilha, mandíbula de proa, punhos-marreta e uma âncora como cauda. **Salto Pesado**, **Aríete de Proa**, **Barrigada** (onda de choque), **Trenó de Quilha** nas dunas e o **Canhão do Ninho**: dispara a Saeli longe. Só ele afunda as **placas pesadas**. |
 
-![Juba e Caju](../docs/img/sopro_herois.webp)
+O glifo da popa do Hulvar tem 3 pontos — o mesmo triângulo das sardas da Saeli. Design completo em
+[`game/design/herois.md`](design/herois.md).
 
-Modelados, riggados e animados **proceduralmente no Blender** (`game/blender/build_characters.py`):
-malhas por partes com pesos de skinning calculados, esqueletos próprios (bípede com rabo/cachecol e
-quadrúpede com orelhas/caju) e **23 animações** amostradas a 30 fps (andar, correr, pular, cair,
-pousar, pirueta, planar, giro, carona, comemorar, dano, nadar; galope, barrigada, sentar...).
+![Saeli e Hulvar](../docs/img/ylvaar_herois.webp)
 
-**Animação fluida no Godot:** `AnimationTree` com locomoção sincronizada (idle/andar/correr com a
-mesma linha do tempo, velocidade do ciclo casada com a velocidade real), crossfades entre estados,
-**física secundária** (`SpringBoneSimulator3D` no rabo, no cachecol, nas orelhas e no caju),
-inclinação nas curvas e na aceleração, *squash & stretch* com mola, olhos procedurais que piscam,
-**interpolação de física** (suave em telas de 90/120 Hz) e câmera com amortecimento.
+## O mundo: Ylvaar (contínuo, semiaberto)
 
-## O mundo: "Lençóis do Céu" (semiaberto)
+Um único terreno de ~1 km (heightfield com LOD contínuo), com dunas infinitas além da borda.
+**Sobe pelo vento e pela pedra, desce pela areia**: a bacia central (o Berço, com a Agulha de Vael)
+é o ponto mais baixo; urnas-canhão na borda lançam a dupla para as três zonas elevadas, e de cada uma
+se volta **surfando**. Design em [`game/design/mundo.md`](design/mundo.md).
 
-Inspirado nos **Lençóis Maranhenses**: dunas brancas com lagoas turquesa — só que flutuando sobre
-um **mar de nuvens** ao pôr do sol, com festa junina, pipas, cata-ventos e águas-vivas do céu.
+| Zona | Destaques |
+|---|---|
+| **A Proa** (partida) | duna mais alta; a **Primeira Descida** já é surfe, com a Agulha contra o sol |
+| **O Berço** | bacia-funil com paredes surfáveis, a **Agulha de Vael** e o **Portão de Vael** |
+| **Tolvaren** | colosso adormecido sob a areia; **Balança de Tolvaren**: placa pesada na palma + placa leve na corcunda abrem a gaiola da cabeça |
+| **Véu de Saryth** | mesa com **cascatas de areia** contraluz; respiros de vento, urna e **arena de Silentes** |
+| **Kesrin** | cratera de areia vitrificada com cristais; **fendas** e duas placas abrem o geodo |
 
-![Mundo](../docs/img/sopro_mundo.webp)
+![Mundo](../docs/img/ylvaar_mundo.webp)
 
-| Ilha | Como chegar | Desafio |
-|---|---|---|
-| **Ilha do Sino** (centro) | — | Torre do Grande Sino, lagoas, arcos de arenito, Breus |
-| **Ilha das Águas-Vivas** (leste) | ponte de **águas-vivas trampolim** | subir a agulha de pedra quicando em espiral |
-| **Ilha dos Cata-ventos** (norte) | **flor-canhão** | **placa normal + placa pesada** ao mesmo tempo abrem o **portão-flor**; corrente de ar até uma pedra flutuante |
-| **Ilha da Fita** (oeste) | **fita de vento** (trilho que se desliza) | arena com 3 Breus guardando a semente |
-| **Ilhota Secreta** (alto, sul) | **portal (fenda)** escondido num arco | chuva de lumes |
+### A areia (no espírito de *Journey*)
+- **Contraste difuso** de Journey no relevo (normal com Y achatado), sombras tingidas pelo céu.
+- **Ondulações do vento** com anti-serrilhado por derivadas, **grão**, **brilho especular "de oceano"**,
+  **cintilância** de microfacetas, contraluz nas cristas e estratos de arenito nas encostas íngremes.
+- **Rastros contínuos** atrás dos heróis (sulcos que o vento apaga em ~10 s) e **surfe nas dunas**
+  automático em encostas ≥ 17°, mantendo o embalo ao saltar das cristas.
+- **Cascatas de areia**, faixas de areia levadas pelo vento e dunas procedurais até o horizonte.
 
-Qualquer ordem. **Lumes** (191) marcam caminhos e viram melodia ao serem coletados em sequência;
-**totens** são pontos de retorno; cair no mar de nuvens devolve ao último totem.
+![Surfe](../docs/img/ylvaar_surfe.webp)
 
-## Visual e pós-processamento (renderer Mobile/Vulkan)
+### As horas
+Cada Pedra das Horas coletada baixa o sol uma "hora" (dourado → rosa → violeta) e enche um terço da
+costura dourada da Agulha. O final — **"A Última Hora"** — leva o céu ao crepúsculo.
 
-Shaders próprios em `game/shaders/`:
-
-- **Céu** pastel (pêssego → rosa → lavanda) com halo largo, nuvens pintadas com borda dourada no
-  contraluz e cirros — calculado no passe de **meia resolução** e fora do cubemap de radiância.
-- **Areia** com **brilho de microfacetas** (glitter estilo *Journey/Sky*), ondulações do vento com
-  anti-aliasing por derivada, sheen de contraluz, areia molhada e **arenito estratificado** na raiz.
-- **Lagoas** com cor por profundidade, **cáusticas projetadas no fundo** (reconstruído do depth
-  buffer), espuma na margem e brilho do sol — sem ler a tela (barato).
-- **Mar de nuvens** iluminado pelo sol baixo, que **dissolve suavemente** a raiz das ilhas.
-- Personagens **toon suave** (bandas + subsurface quente + rim de contraluz) com **contorno**.
-- Águas-vivas iridescentes, folhagem translúcida com vento, bandeirinhas que tremulam, portal,
-  fita de vento, feixes de luz, nuvens fofas, partículas de luz no ar.
-- **Pós**: glow, ACES, névoa com *sun scatter* e perspectiva aérea, DOF de distância (Alta) e um
-  passe de tela cheia com **raios de sol radiais**, gradação de "hora dourada", vinheta colorida,
-  aberração cromática nas bordas e grão.
-
-**Qualidade** (menu/pausa): *Baixa* (escala 72%, FXAA, sem sombras), *Média* (85%, MSAA 2×, sombras
-2 cascatas até 45 m — padrão no celular) e *Alta* (100%, MSAA 4×, DOF, mais capim).
+**Qualidade** (menu/pausa): *Baixa* (escala 72%, sem sombras, grade de terreno de 2 m), *Média*
+(85%, MSAA 2×, sombras só perto da câmera — padrão no celular) e *Alta* (100%, MSAA 4×, DOF,
+grade de 1 m).
 
 ## Co-op
 
-- **Solo:** você controla um herói e o outro segue pela **IA** (pula obstáculos, plana, sobe na
-  carona, ocupa a placa livre quando você está na outra, reaparece se ficar para trás).
-  **TROCAR** alterna entre Juba e Caju.
+- **Solo:** você controla um herói e o outro segue pela **IA** (pula obstáculos, plana, embarca,
+  ocupa a placa livre, reaparece se ficar para trás). **TROCAR** alterna entre Saeli e Hulvar.
 - **Co-op local:** o jogador 2 entra apertando **START** num controle (Bluetooth no celular, ou
-  F2/setas no PC). Câmera compartilhada enquadra os dois.
-- **Co-op na rede (Wi-Fi):** um aparelho **cria a sala** (Juba), o outro **procura/entra** (Caju).
+  F2/setas no PC). Câmera compartilhada.
+- **Co-op na rede (Wi-Fi):** um aparelho **cria a sala** (Saeli), o outro **procura/entra** (Hulvar).
   ENet + descoberta por broadcast UDP; dá para digitar o IP.
 
 ## Controles
@@ -84,59 +74,64 @@ Shaders próprios em `game/shaders/`:
 | Andar | arrastar à esquerda (analógico flutuante) | WASD | analógico esquerdo |
 | Câmera | arrastar à direita | botão direito do mouse / setas | analógico direito |
 | Pular / pulo duplo / planar (segure) | **PULAR** | Espaço | A |
-| Giro (Juba) · cabeçada / barrigada no ar (Caju) | **AÇÃO** | J / clique | X / RT |
-| Dupla: subir no Caju · catapultar · chamar | **DUPLA** | K / E | B |
+| Rodopio (Saeli) · Aríete / Barrigada no ar (Hulvar) | **AÇÃO** | J / clique | X / RT |
+| Dupla: embarcar · Canhão do Ninho · chamar | **DUPLA** | K / E | B |
 | Trocar de herói (solo) | **TROCAR** | Tab / Q | Y / RB |
 | Pausa | ⏸ | Esc | Start |
 
 ## Gerar o APK (Android)
 
 ```bash
-python3 tools/build_android.py            # build/sopro-debug.apk (arm64, assinado com keystore de debug)
+python3 tools/build_android.py            # build/ylvaar-debug.apk (arm64, assinado com keystore de debug)
 python3 tools/build_android.py --install  # + adb install -r no aparelho conectado
 ```
 
 Precisa de Godot 4.7.x + export templates da mesma versão, Android SDK (`ANDROID_HOME`, com
 `build-tools/*/apksigner`) e JDK 17+. O script cria o preset "Android" (renderer Mobile/Vulkan,
 **paisagem com sensor**, tela cheia imersiva, permissões de rede para o co-op), exporta só os
-recursos do jogo (sem as demos da suíte) e verifica a assinatura. Instalação manual: copie o APK
-para o celular e abra (permita "instalar apps desconhecidos").
+recursos do jogo (incluindo os dados brutos do terreno) e verifica a assinatura.
 
 ## Estrutura
 
 | Pasta | Conteúdo |
 |---|---|
 | `game/main.tscn` | cena principal: o mundo ao fundo + menu (sem tela de carregamento) |
-| `game/scripts/player/` | `Hero` (controlador), `HeroVisual` (animação), `PlayerInput`/`InputSources`, `CompanionAI`, `SoproParty` |
-| `game/scripts/world/` | montagem da fase pela receita, props, lumes, interativos, Breus, Torre do Sino, decoração |
-| `game/scripts/camera/` | câmera co-op |
-| `game/scripts/ui/` | tema (Fredoka), HUD, controles de toque |
-| `game/scripts/net/` | co-op na rede (ENet + descoberta) |
-| `game/scripts/systems/` | autoloads `Game`, `Sfx`, `Fx` |
-| `game/shaders/` | todos os shaders |
-| `game/world/lencois.json` | **receita do mundo**: ilhas, lagoas, platôs e todo o conteúdo de jogo (edite e rode o jogo) |
-| `game/blender/` | scripts Blender (ilhas, props, personagens) + `.blend` editáveis |
-| `game/tools/` | áudio procedural, texturas, capturas, playtest e teste de rede |
+| `game/world/world.json` | **receita do mundo**: seção `terrain` (gerador) + `content` (tudo o que é de jogo) |
+| `game/world/world_terrain/` | dados gerados do terreno (`height.bin`, `normals.png`, `masks.png`, `meta.json`) |
+| `game/scripts/world/` | terreno (`SandTerrain`, LOD contínuo), rastros, montagem do conteúdo, props, interativos, Silentes, Portão de Vael, atmosfera e horas |
+| `game/scripts/player/` | `Hero` (controlador), `HeroVisual` (animação), `HeroDefs` (dados das personagens), `CompanionAI`, `HeroParty` |
+| `game/scripts/camera/`, `ui/`, `net/`, `systems/` | câmera co-op, HUD/toque, co-op em rede, autoloads `Game`/`Sfx`/`Fx` |
+| `game/shaders/` | areia (`sand_terrain`), personagens, props, cristal, céu, pós-processamento... |
+| `game/blender/` | personagens (`build_saeli.py`, `build_hulvar.py`) e props (`build_world_props.py`) com o kit SDF (`lib/sdfkit.py`) |
+| `game/design/` | documentos de design da dupla e do mundo |
+| `game/tools/` | gerador de terreno, áudio, capturas, prévias, playtest e teste de rede |
 
 ### Regerar os assets
 
 ```bash
-blender -b --factory-startup --python game/blender/build_world.py        # ilhas (lê lencois.json)
-blender -b --factory-startup --python game/blender/build_props.py        # props
-blender -b --factory-startup --python game/blender/build_characters.py   # Juba e Caju (+ .blend)
-python3 game/tools/gen_textures.py && python3 game/tools/gen_audio.py     # texturas e sons (CC0)
+python3 game/tools/gen_terrain.py --preview                                   # terreno (lê world.json)
+blender -b --factory-startup --python game/blender/build_world_props.py       # props
+blender -b --factory-startup --python game/blender/build_saeli.py             # Saeli (+ .blend)
+blender -b --factory-startup --python game/blender/build_hulvar.py            # Hulvar (+ .blend)
+python3 game/tools/gen_textures.py && python3 game/tools/gen_audio.py          # texturas e sons (CC0)
 ```
+
+**Kit SDF** (`game/blender/lib/sdfkit.py`): personagens e props são modelados como campos de
+distância (uniões suaves, cascas de tecido, lâminas, pinturas com emissão, erosão por ruído),
+malhados por *Surface Nets* + projeção exata, decimados (QEM) e coloridos por vértice com AO do
+próprio campo; os pesos de skin saem das próprias partes.
 
 ### Testes e capturas
 
 ```bash
-python3 tests/run_tests.py --game-only     # playtest automático (43 verificações) + co-op em rede
-xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --views hero,aerial,east
-xvfb-run -a godot --path . --rendering-method mobile res://game/tools/char_preview.tscn -- --hero juba --anims run,glide --out /tmp/prev
+python3 tests/run_tests.py --game-only     # playtest automático (posições lidas da receita) + co-op em rede
+xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --views "72,60,290>0,20,0"
+xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --player --bot surf --views a,b,c
+xvfb-run -a godot --path . --rendering-method mobile res://game/tools/model_preview.tscn -- --glb $PWD/game/assets/characters/saeli.glb --out /tmp/prev --anim run --t 0.25
 ```
 
 ## Próximos passos sugeridos
 
-Mais fases (o formato de receita já suporta), salvar progresso, áudio espacial com reverb por
-área, IA de inimigos mais variada, lobby online (além da LAN), *gyro* para mirar a câmera e um
-build release com keystore própria para a Play Store.
+Mais zonas na mesma receita (a Arquivo soterrado, o coral de tubos), a correnteza de areia do
+cânion, o espelhamento de luz em Kesrin, salvar progresso, áudio espacial com reverb por zona e um
+time-lapse completo do sol no final.

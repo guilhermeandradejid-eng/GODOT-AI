@@ -17,12 +17,12 @@ enum S { GROUND, AIR, GLIDE, POUND, RIDE, LAUNCH, GRIND, SWIM, HURT, CUTSCENE, S
 const CONFIG := {
 	"agile": {"speed": 8.2, "accel": 46.0, "decel": 58.0, "air_accel": 22.0, "turn": 13.0, "jump": 11.6,
 		"jump2": 10.4, "gravity": 30.0, "fall_mult": 1.6, "low_jump": 2.1, "max_fall": 26.0,
-		"glide_fall": 2.3, "glide_speed": 9.2, "swim_speed": 3.6, "radius": 0.28, "height": 0.95,
+		"glide_fall": 2.3, "glide_speed": 9.2, "swim_speed": 3.6, "radius": 0.24, "height": 0.9,
 		"surf_max": 21.0, "surf_grip": 2.7,
 		"walk_v": 2.0, "run_v": 7.5},
 	"strong": {"speed": 7.0, "accel": 34.0, "decel": 46.0, "air_accel": 14.0, "turn": 9.0, "jump": 10.4,
 		"jump2": 0.0, "gravity": 32.0, "fall_mult": 1.7, "low_jump": 2.0, "max_fall": 30.0,
-		"pound_speed": 28.0, "swim_speed": 6.0, "radius": 0.4, "height": 0.85,
+		"pound_speed": 28.0, "swim_speed": 6.0, "radius": 0.46, "height": 1.3,
 		"surf_max": 18.5, "surf_grip": 1.9,
 		"walk_v": 1.8, "run_v": 6.5},
 }
@@ -569,21 +569,29 @@ func catapult() -> void:
 	else:
 		r.dismount(v)
 		r.set_state(S.LAUNCH)
-		r.visual.restart_state("double_jump")
+		r.visual.restart_state("launch" if r.visual.has_state("launch") else "double_jump")
+	visual.restart_state("brace")
 	Sfx.play_at("launch", global_position)
-	Fx.burst("petals", global_position + Vector3.UP * 0.8, Color(1, 0.8, 0.4), 0.8)
+	Fx.burst("dust", global_position + Vector3.UP * 0.4, Color(1.0, 0.86, 0.66, 0.6), 1.2)
+	Fx.burst("ring_light", global_position + Vector3.UP * 1.4, Color(0.55, 1.0, 0.95), 1.0)
 
 
+## Onde o passageiro fica: no osso "nest" (o cesto da gávea do Hulvar) quando
+## existir; senão um pouco acima das costas, acompanhando o balanço da coluna.
 func saddle_transform() -> Transform3D:
 	var t := global_transform
 	var yaw_basis := Basis(Vector3.UP, facing)
-	var bob := 0.0
 	if visual != null and visual.skeleton != null:
+		var ni := visual.skeleton.find_bone("nest")
+		if ni >= 0:
+			var np := visual.skeleton.global_transform * visual.skeleton.get_bone_global_pose(ni)
+			return Transform3D(yaw_basis, np.origin + Vector3.DOWN * 0.02)
 		var bi := visual.skeleton.find_bone("spine")
 		if bi >= 0:
 			var gp := visual.skeleton.global_transform * visual.skeleton.get_bone_global_pose(bi)
-			bob = gp.origin.y - global_position.y - 0.45
-	return Transform3D(yaw_basis, t.origin + Vector3.UP * (0.36 + bob) + yaw_basis * Vector3(0, 0, -0.06))
+			var bob := gp.origin.y - global_position.y - 0.45
+			return Transform3D(yaw_basis, t.origin + Vector3.UP * (0.36 + bob) + yaw_basis * Vector3(0, 0, -0.06))
+	return Transform3D(yaw_basis, t.origin + Vector3.UP * 1.2)
 
 
 func _st_ride(delta: float) -> void:

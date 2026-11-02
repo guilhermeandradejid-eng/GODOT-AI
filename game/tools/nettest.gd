@@ -2,8 +2,9 @@ extends Node
 ## Teste do co-op em rede: rode duas instâncias (host e cliente) no mesmo PC.
 ##   godot --headless --path . res://game/tools/nettest.tscn -- --host
 ##   godot --headless --path . res://game/tools/nettest.tscn -- --client
-## O host anda com o Juba (e coleta lumes), o cliente anda com o Caju; cada lado
-## confere se o herói do outro se moveu e se os lumes chegaram.
+## O host anda com a Saeli pela primeira trilha de centelhas da receita (e coleta),
+## o cliente anda com o Hulvar; cada lado confere se o herói do outro se moveu e
+## se as centelhas chegaram.
 
 const LEVEL := preload("res://game/scenes/level.tscn")
 
@@ -68,12 +69,19 @@ func _run() -> void:
 	var other_start := other.global_position
 	var bot := Bot.new()
 	mine.controller = bot
+	var terrain: SandTerrain = level.builder.terrain
+	var lines: Array = level.content.data.get("motes", []).filter(func(e): return e.has("line"))
+	var a: Array = lines[0]["line"]
+	var s0 := terrain.surface(float(a[0][0]), float(a[0][1]))
+	var s1 := terrain.surface(float(a[1][0]), float(a[1][1]))
+	var dir := Vector3(s1.x - s0.x, 0.0, s1.z - s0.z).normalized()
 	if host:
-		mine.teleport(Vector3(0, 4, 34), PI)
+		mine.teleport(s0 + Vector3.UP * 0.6, atan2(dir.x, dir.z))
 		await get_tree().create_timer(0.8).timeout
-		bot.move = Vector2(0, -1)              # north along the lume trail
+		bot.yaw = atan2(-dir.x, -dir.z)
+		bot.move = Vector2(0, -1)              # along the first mote trail
 	else:
-		mine.teleport(Vector3(-8, 4, 20), 0.0)
+		mine.teleport(s0 + Vector3(6, 0.6, 0), 0.0)
 		await get_tree().create_timer(0.8).timeout
 		bot.yaw = 0.0
 		bot.move = Vector2(1, 0)               # east
@@ -84,9 +92,9 @@ func _run() -> void:
 	check(moved > 4.0, "vejo o %s se mexer pela rede (%.1f m)" % [other.hero_id, moved])
 	check(other.is_remote, "o herói do outro é marionete de rede")
 	if not host:
-		check(Game.motes >= 4, "lumes coletados pelo host chegaram aqui (%d)" % Game.motes)
+		check(Game.motes >= 4, "centelhas coletadas pelo host chegaram aqui (%d)" % Game.motes)
 	else:
-		check(Game.motes >= 4, "coletei lumes (%d)" % Game.motes)
+		check(Game.motes >= 4, "coletei centelhas (%d)" % Game.motes)
 	await get_tree().create_timer(1.0).timeout
 	say("fim: " + ("OK" if ok else "FALHOU"))
 	get_tree().quit(0 if ok else 1)

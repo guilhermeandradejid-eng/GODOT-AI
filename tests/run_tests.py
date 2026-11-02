@@ -6,7 +6,7 @@
 
 Checks: project import (no script errors), every command family through the
 headless CLI, the prompt interpreter, the command schema snapshot, the MCP
-server handshake and the SOPRO game (automated playtest + LAN co-op between two
+server handshake and the YLVAAR game (automated playtest + LAN co-op between two
 instances; `--game-only` runs just those). Exit code 0 = all good.
 """
 from __future__ import annotations
@@ -426,8 +426,8 @@ def test_render(client: VibeClient) -> None:
 
 
 def test_game(godot: str) -> None:
-    """SOPRO (game/): automated playtest of every mechanic + LAN co-op between two instances."""
-    print("[jogo SOPRO]")
+    """YLVAAR (game/): automated playtest of every mechanic + LAN co-op between two instances."""
+    print("[jogo YLVAAR]")
     proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "res://game/tools/playtest.tscn"],
                           capture_output=True, text=True, timeout=900)
     out = proc.stdout + proc.stderr
@@ -453,7 +453,7 @@ def main() -> int:
     ap.add_argument("--render", action="store_true", help="also render every style (needs a display or xvfb-run)")
     ap.add_argument("--editor", action="store_true", help="also start the editor and test the live HTTP bridge")
     ap.add_argument("--skip-import", action="store_true")
-    ap.add_argument("--game-only", action="store_true", help="only the SOPRO game tests")
+    ap.add_argument("--game-only", action="store_true", help="only the YLVAAR game tests")
     a = ap.parse_args()
     godot = find_godot(None)
     print("godot:", godot)

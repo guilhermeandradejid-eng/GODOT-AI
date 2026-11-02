@@ -9,7 +9,8 @@ const SOFT := preload("res://addons/vibe_vfx/textures/soft_circle.webp")
 
 
 ## Cascata de areia: `top` é o ponto de onde a areia cai; a cortina olha para `facing` (graus).
-static func sandfall(top: Vector3, height: float, width: float, facing_deg := 0.0, sun_color := Color(1.0, 0.85, 0.62)) -> Node3D:
+static func sandfall(top: Vector3, height: float, width: float, facing_deg := 0.0, sun_color := Color(1.0, 0.85, 0.62),
+		sun_dir := Vector3(-0.45, 0.36, -0.82)) -> Node3D:
 	var root := Node3D.new()
 	root.name = "CascataDeAreia"
 	root.position = top
@@ -19,6 +20,7 @@ static func sandfall(top: Vector3, height: float, width: float, facing_deg := 0.
 	mat.set_shader_parameter("noise_tex", NOISE)
 	mat.set_shader_parameter("aspect", height / maxf(width, 0.5))
 	mat.set_shader_parameter("sun_color", sun_color)
+	mat.set_shader_parameter("sun_dir", sun_dir.normalized())
 	for k in 2:
 		# two crossed, slightly offset sheets give volume from any angle
 		var q := QuadMesh.new()

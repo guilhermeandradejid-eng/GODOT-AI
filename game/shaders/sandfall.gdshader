@@ -10,6 +10,7 @@ uniform vec3 sun_color : source_color = vec3(1.0, 0.85, 0.62);
 uniform float speed = 0.55;
 uniform float density = 0.85;
 uniform float aspect = 3.0;          // altura / largura (escala dos fios)
+uniform vec3 sun_dir = vec3(-0.45, 0.36, -0.82);   // direção PARA o sol (mundo)
 
 void fragment() {
 	vec2 uv = UV;                                     // y: 0 topo -> 1 base
@@ -27,6 +28,11 @@ void fragment() {
 	float a = sheet * side * top * bottom * density;
 	vec3 col = mix(sand_top, sand_bottom, uv.y);
 	col += sun_color * pow(fine, 6.0) * 0.8;          // sparkling grains
+	// backlit curtain: sand glows when you look toward the sun through it
+	vec3 vw = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz);
+	float fwd = pow(clamp(dot(-vw, normalize(sun_dir)), 0.0, 1.0), 6.0);
+	col += sun_color * fwd * 1.3;
+	a *= 1.0 + fwd * 0.35;
 	ALBEDO = col;
 	ALPHA = clamp(a, 0.0, 1.0);
 }

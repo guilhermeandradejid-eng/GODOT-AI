@@ -35,14 +35,14 @@ func _ready() -> void:
 	mote_box.position = Vector2(34, 26)
 	mote_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(mote_box)
-	var icon := _LumeIcon.new()
+	var icon := _MoteIcon.new()
 	icon.custom_minimum_size = Vector2(44, 44)
 	mote_box.add_child(icon)
 	_mote_label = UITheme.label("0", 34, Color(1, 1, 1), 700)
 	_mote_label.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.35, 0.6))
 	_mote_label.add_theme_constant_override("outline_size", 8)
 	mote_box.add_child(_mote_label)
-	# seeds
+	# Pedras das Horas
 	var seeds := HBoxContainer.new()
 	seeds.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	seeds.position = Vector2(-80, 22)
@@ -54,7 +54,7 @@ func _ready() -> void:
 		s.custom_minimum_size = Vector2(40, 52)
 		seeds.add_child(s)
 		_seed_slots.append(s)
-	# petals (health) per hero
+	# vida (pontos do emblema) por herói
 	var hp := VBoxContainer.new()
 	hp.position = Vector2(34, 84)
 	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -109,10 +109,13 @@ func _on_motes(total: int) -> void:
 	_mote_pop = 1.0
 
 
-func _on_seed(_id: String, total: int) -> void:
+func _on_seed(id: String, total: int) -> void:
 	for i in _seed_slots.size():
-		(_seed_slots[i] as _SeedSlot).filled = i < total
-		_seed_slots[i].queue_redraw()
+		var slot := _seed_slots[i] as _SeedSlot
+		if i == total - 1:
+			slot.color = Interactables.Relic.RELIC_COLORS.get(id, Color(1.0, 0.86, 0.45))
+		slot.filled = i < total
+		slot.queue_redraw()
 
 
 func show_toast(text: String, seconds := 3.0) -> void:
@@ -224,52 +227,61 @@ func toggle_pause() -> void:
 
 
 # ------------------------------------------------------------------ widgets
-class _LumeIcon extends Control:
+## Centelha: estrela de 4 pontas que pulsa.
+class _MoteIcon extends Control:
 	var t := 0.0
 	func _process(d: float) -> void:
 		t += d
 		queue_redraw()
 	func _draw() -> void:
 		var c := size * 0.5
-		var r := size.x * 0.32 * (1.0 + 0.06 * sin(t * 4.0))
-		draw_circle(c, r * 1.6, Color(1.0, 0.85, 0.5, 0.25))
-		draw_circle(c, r, Color(1.0, 0.92, 0.65))
-		draw_circle(c + Vector2(-r * 0.3, -r * 0.3), r * 0.35, Color(1, 1, 1, 0.9))
+		var r := size.x * 0.42 * (1.0 + 0.06 * sin(t * 4.0))
+		draw_circle(c, r * 0.9, Color(1.0, 0.88, 0.55, 0.22))
+		var pts := PackedVector2Array()
+		for i in 8:
+			var a := TAU * i / 8.0 - PI * 0.5
+			var rr := r if i % 2 == 0 else r * 0.32
+			pts.append(c + Vector2(cos(a), sin(a)) * rr)
+		draw_colored_polygon(pts, Color(1.0, 0.93, 0.7))
+		draw_circle(c, r * 0.18, Color(1, 1, 1))
 
 
+## Encaixe de uma Pedra das Horas: gema facetada na cor da relíquia quando cheia.
 class _SeedSlot extends Control:
 	var filled := false
+	var color := Color(1.0, 0.86, 0.45)
 	func _draw() -> void:
 		var c := size * 0.5
 		var t := Time.get_ticks_msec() * 0.001
-		var pts := PackedVector2Array()
-		for i in 24:
-			var a := TAU * i / 24.0
-			var rx := size.x * 0.36
-			var ry := size.y * 0.44
-			pts.append(c + Vector2(cos(a) * rx * (0.75 + 0.25 * sin(a)), sin(a) * ry))
+		var w := size.x * 0.3
+		var h := size.y * 0.46
+		var pts := PackedVector2Array([c + Vector2(0, -h), c + Vector2(w, -h * 0.3), c + Vector2(w * 0.8, h * 0.45),
+			c + Vector2(0, h), c + Vector2(-w * 0.8, h * 0.45), c + Vector2(-w, -h * 0.3)])
 		if filled:
-			draw_circle(c, size.x * (0.7 + 0.05 * sin(t * 3.0)), Color(1.0, 0.86, 0.45, 0.35))
-			draw_colored_polygon(pts, Color(1.0, 0.86, 0.45))
-			draw_circle(c + Vector2(-4, -8), 5, Color(1, 1, 1, 0.9))
+			draw_circle(c, size.x * (0.62 + 0.05 * sin(t * 3.0)), Color(color.r, color.g, color.b, 0.3))
+			draw_colored_polygon(pts, color)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -h), c + Vector2(w, -h * 0.3), c]), color.lightened(0.35))
+			draw_circle(c + Vector2(-w * 0.35, -h * 0.35), 3.5, Color(1, 1, 1, 0.9))
 		else:
-			draw_colored_polygon(pts, Color(1, 1, 1, 0.18))
+			draw_colored_polygon(pts, Color(1, 1, 1, 0.16))
 		pts.append(pts[0])
-		draw_polyline(pts, Color(1, 1, 1, 0.85), 3.0, true)
+		draw_polyline(pts, Color(1, 1, 1, 0.85), 2.5, true)
 
 
+## Vida: selo na cor do herói + os 3 pontos do emblema da dupla.
 class _Petals extends Control:
 	var hero_id := "agile"
 	var hero: Node = null
 	func _draw() -> void:
-		var col := Color(1.0, 0.62, 0.2) if hero_id == "agile" else Color(0.72, 0.48, 0.3)
+		var col := Color("17808e") if hero_id == "agile" else Color("2c5e86")
 		draw_circle(Vector2(14, 15), 12, col)
 		draw_arc(Vector2(14, 15), 12, 0, TAU, 32, Color(1, 1, 1, 0.9), 2.5, true)
+		draw_circle(Vector2(14, 15), 4.0, Color("8ffff2"))
 		var n: int = hero.petals if hero != null else 3
 		for i in 3:
-			var c := Vector2(44 + i * 30, 15)
+			var c := Vector2(42 + i * 24, 15)
 			var on := i < n
-			for k in 5:
-				var a := TAU * k / 5.0 - PI * 0.5
-				draw_circle(c + Vector2(cos(a), sin(a)) * 6.0, 5.5, Color(1.0, 0.55, 0.65, 0.95) if on else Color(1, 1, 1, 0.25))
-			draw_circle(c, 4.0, Color(1.0, 0.9, 0.4) if on else Color(1, 1, 1, 0.3))
+			var d := PackedVector2Array([c + Vector2(0, -8), c + Vector2(7, 0), c + Vector2(0, 8), c + Vector2(-7, 0)])
+			draw_colored_polygon(d, Color("8ffff2") if on else Color(1, 1, 1, 0.22))
+			if on:
+				draw_circle(c, 2.5, Color(1, 1, 1, 0.95))
