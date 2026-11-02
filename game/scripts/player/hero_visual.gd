@@ -25,6 +25,7 @@ var mesh: MeshInstance3D
 var anim: AnimationPlayer
 var tree: AnimationTree
 var springs: SpringBoneSimulator3D
+var spring_groups := {}
 var eye_materials: Array[ShaderMaterial] = []
 var body_materials: Array[ShaderMaterial] = []
 var glyph_material: ShaderMaterial
@@ -222,6 +223,7 @@ func set_state(s: String, xfade := -1.0) -> void:
 	if xfade >= 0.0:
 		(tree.tree_root as AnimationNodeBlendTree).get_node("state").xfade_time = xfade
 	tree.set("parameters/state/transition_request", s)
+	_update_spring_groups(s)
 	_oneshot_left = anim.get_animation(s).length if s in AUTO_RETURN and anim.has_animation(s) else 0.0
 
 
@@ -246,24 +248,43 @@ func _chain(sb: SpringBoneSimulator3D, i: int, root: String, end: String, stiff:
 func _setup_springs() -> void:
 	if skeleton == null:
 		return
-	var chains: Array = []
+	## Cada grupo de molas é um SpringBoneSimulator3D próprio, para poder ser
+	## desligado (influência 0) nos estados com pose autoral (ex.: cauda no surfe).
+	var groups := {}
 	for c in def.get("springs", []):
-		if skeleton.find_bone(c[0]) >= 0 and skeleton.find_bone(c[1]) >= 0:
-			chains.append(c)
-	if chains.is_empty():
-		return
-	springs = SpringBoneSimulator3D.new()
-	springs.name = "Molas"
-	skeleton.add_child(springs)
-	springs.setting_count = chains.size()
-	for i in chains.size():
-		var c: Array = chains[i]
-		_chain(springs, i, c[0], c[1], c[2], c[3], c[4], c[5], c[6] if c.size() > 6 else 0.06)
+		if skeleton.find_bone(c[0]) < 0 or skeleton.find_bone(c[1]) < 0:
+			continue
+		var g: String = c[7] if c.size() > 7 else "main"
+		if not groups.has(g):
+			groups[g] = []
+		groups[g].append(c)
+	for g in groups:
+		var sb := SpringBoneSimulator3D.new()
+		sb.name = "Molas_" + g
+		skeleton.add_child(sb)
+		var chains: Array = groups[g]
+		sb.setting_count = chains.size()
+		for i in chains.size():
+			var c: Array = chains[i]
+			_chain(sb, i, c[0], c[1], c[2], c[3], c[4], c[5], c[6] if c.size() > 6 else 0.06)
+		spring_groups[g] = sb
+		if springs == null:
+			springs = sb
+
+
+## Liga/desliga grupos de molas conforme o estado de animação (HeroDefs "spring_off").
+func _update_spring_groups(s: String) -> void:
+	var off: Dictionary = def.get("spring_off", {})
+	for g in spring_groups:
+		var want := 0.0 if s in off.get(g, []) else 1.0
+		var sb: SpringBoneSimulator3D = spring_groups[g]
+		if not is_equal_approx(sb.influence, want):
+			create_tween().tween_property(sb, "influence", want, 0.12)
 
 
 func set_springs_active(v: bool) -> void:
-	if springs != null:
-		springs.active = v
+	for g in spring_groups:
+		(spring_groups[g] as SpringBoneSimulator3D).active = v
 
 
 # ------------------------------------------------------------------ face

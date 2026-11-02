@@ -9,16 +9,22 @@ const DEFS := {
 	"agile": {
 		"name": "Saeli",
 		"model": "res://game/assets/characters/saeli.glb",
-		"fallback": "res://game/assets/characters/juba.glb",
+		"fallback": "res://game/assets/characters/saeli.glb",
 		"base_lid": 0.08,
 		"outline": 0.0026,
 		"outline_color": Color("1b2350"),
-		"eye": {"iris_inner": Color("ffb13b"), "iris_outer": Color("c2621e"), "pupil_color": Color("1b1530"),
-			"lid_color": Color("17808e"), "iris_size": 0.4, "pupil_size": 0.18},
-		## [raiz, fim, rigidez, arrasto, gravidade, raio, comprimento da ponta]
-		"springs": [],
-		"materials": {},
-		"aliases": {"swim": "fall", "sit": "idle", "flop": "spin"},
+		"eye": {"sclera": Color("fffdf6"), "iris_inner": Color("ffb13b"), "iris_outer": Color("c2621e"),
+			"pupil_color": Color("1b1530"), "lid_color": Color("17808e"), "iris_size": 0.6, "pupil_size": 0.28},
+		## [raiz, fim, rigidez, arrasto, gravidade, raio, comprimento da ponta, grupo]
+		"springs": [
+			["earfin_L_1", "earfin_L_2", 2.4, 0.3, 0.15, 0.02, 0.04, "ears"],
+			["earfin_R_1", "earfin_R_2", 2.4, 0.3, 0.15, 0.02, 0.04, "ears"],
+			["tail_1", "board", 1.4, 0.35, 0.5, 0.03, 0.06, "tail"],
+		],
+		## grupos de molas desligados nestes estados (poses autorais)
+		"spring_off": {"tail": ["surf", "glide", "launch", "spin", "ride", "double_jump"]},
+		"materials": {"glow": {"vertex_glow": 2.4, "rim_strength": 0.9}},
+		"aliases": {"swim": "fall", "sit": "idle", "flop": "spin", "brace": "ride"},
 	},
 	"strong": {
 		"name": "Hulvar",
