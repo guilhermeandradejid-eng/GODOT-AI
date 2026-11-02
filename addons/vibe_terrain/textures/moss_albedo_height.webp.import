@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2dxqpel2l57u"
 path.s3tc="res://.godot/imported/moss_albedo_height.webp-16bb657f25b76a79b2c2302ded3320ac.s3tc.ctex"
+path.etc2="res://.godot/imported/moss_albedo_height.webp-16bb657f25b76a79b2c2302ded3320ac.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/moss_albedo_height.webp"
-dest_files=["res://.godot/imported/moss_albedo_height.webp-16bb657f25b76a79b2c2302ded3320ac.s3tc.ctex"]
+dest_files=["res://.godot/imported/moss_albedo_height.webp-16bb657f25b76a79b2c2302ded3320ac.s3tc.ctex", "res://.godot/imported/moss_albedo_height.webp-16bb657f25b76a79b2c2302ded3320ac.etc2.ctex"]
 
 [params]
 

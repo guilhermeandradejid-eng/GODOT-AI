@@ -17,3 +17,6 @@ Thumbs.db
 
 # Test scratch output
 tests/tmp/
+
+# Builds (APK do jogo SOPRO)
+/build/

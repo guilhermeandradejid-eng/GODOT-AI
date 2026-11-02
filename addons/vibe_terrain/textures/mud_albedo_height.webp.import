@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bq72wpo4r4y7n"
 path.s3tc="res://.godot/imported/mud_albedo_height.webp-545cbee13fc6cdf6340bf6230e0e1bbb.s3tc.ctex"
+path.etc2="res://.godot/imported/mud_albedo_height.webp-545cbee13fc6cdf6340bf6230e0e1bbb.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/mud_albedo_height.webp"
-dest_files=["res://.godot/imported/mud_albedo_height.webp-545cbee13fc6cdf6340bf6230e0e1bbb.s3tc.ctex"]
+dest_files=["res://.godot/imported/mud_albedo_height.webp-545cbee13fc6cdf6340bf6230e0e1bbb.s3tc.ctex", "res://.godot/imported/mud_albedo_height.webp-545cbee13fc6cdf6340bf6230e0e1bbb.etc2.ctex"]
 
 [params]
 

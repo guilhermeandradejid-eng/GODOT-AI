@@ -1,0 +1,286 @@
+{
+  "_doc": "Receita do mundo-demo 'Lençóis do Céu'. Coordenadas do Godot (x leste, y cima, z sul). 'at' = [x, z] (encaixa no chão por raycast) ou [x, y, z]. As ilhas são geradas no Blender por game/blender/build_world.py; o resto é montado em jogo por game/scripts/world/level_builder.gd.",
+  "water_level": 0.6,
+  "kill_y": -30.0,
+  "cloud_sea_y": -34.0,
+  "islands": [
+    {
+      "name": "IlhaSino",
+      "title": "Ilha do Sino",
+      "center": [0, 0, 0],
+      "radius": 56,
+      "seed": 11,
+      "base": 1.6,
+      "dune_amp": 4.6,
+      "dune_freq": 0.05,
+      "wind_deg": 28,
+      "depth": 62,
+      "spacing": 1.15,
+      "lagoons": [
+        {"at": [22, 12], "r": 10.5, "depth": 3.0},
+        {"at": [-25, 4], "r": 9.0, "depth": 2.6},
+        {"at": [15, -31], "r": 8.0, "depth": 2.4},
+        {"at": [-13, 31], "r": 6.5, "depth": 2.0}
+      ],
+      "flats": [
+        {"at": [0, -8], "r": 13, "h": 3.0},
+        {"at": [0, 38], "r": 7, "h": 2.2},
+        {"at": [-4, -47], "r": 5, "h": 2.6},
+        {"at": [52, -5], "r": 5, "h": 2.4},
+        {"at": [-51, 6], "r": 5, "h": 2.6},
+        {"at": [31, 31], "r": 6, "h": 2.6}
+      ]
+    },
+    {
+      "name": "IlhaAguasVivas",
+      "title": "Ilha das Águas-Vivas",
+      "center": [116, 5, -10],
+      "radius": 24,
+      "seed": 23,
+      "base": 1.4,
+      "dune_amp": 2.8,
+      "dune_freq": 0.07,
+      "wind_deg": 40,
+      "depth": 44,
+      "spacing": 1.1,
+      "lagoons": [{"at": [8, 9], "r": 6.0, "depth": 2.0}],
+      "flats": [{"at": [-16, 0], "r": 5, "h": 2.0}, {"at": [2, -6], "r": 6, "h": 2.4}]
+    },
+    {
+      "name": "IlhaCataVentos",
+      "title": "Ilha dos Cata-ventos",
+      "center": [-6, 14, -122],
+      "radius": 28,
+      "seed": 37,
+      "base": 1.5,
+      "dune_amp": 3.2,
+      "dune_freq": 0.06,
+      "wind_deg": 15,
+      "depth": 50,
+      "spacing": 1.1,
+      "lagoons": [{"at": [-12, -8], "r": 6.5, "depth": 2.2}],
+      "flats": [{"at": [0, 16], "r": 6, "h": 2.2}, {"at": [10, -6], "r": 9, "h": 2.6}, {"at": [-14, 10], "r": 4, "h": 2.4}]
+    },
+    {
+      "name": "IlhaFita",
+      "title": "Ilha da Fita",
+      "center": [-122, 0, 14],
+      "radius": 26,
+      "seed": 51,
+      "base": 1.5,
+      "dune_amp": 3.0,
+      "dune_freq": 0.06,
+      "wind_deg": 60,
+      "depth": 46,
+      "spacing": 1.1,
+      "lagoons": [{"at": [10, 12], "r": 5.5, "depth": 2.0}],
+      "flats": [{"at": [20, -2], "r": 6, "h": 2.4}, {"at": [-4, -4], "r": 11, "h": 2.2}]
+    },
+    {
+      "name": "IlhotaSegredo",
+      "title": "Ilhota Secreta",
+      "center": [36, 34, 98],
+      "radius": 10,
+      "seed": 77,
+      "base": 1.2,
+      "dune_amp": 1.2,
+      "dune_freq": 0.12,
+      "wind_deg": 0,
+      "depth": 22,
+      "spacing": 0.9,
+      "lagoons": [],
+      "flats": [{"at": [0, 0], "r": 4, "h": 1.6}]
+    }
+  ],
+  "far_islands": [
+    {"at": [260, -20, -240], "radius": 40, "seed": 101},
+    {"at": [-300, 10, -180], "radius": 55, "seed": 102},
+    {"at": [-60, 40, -380], "radius": 70, "seed": 103},
+    {"at": [340, 30, 120], "radius": 45, "seed": 104},
+    {"at": [-280, -8, 260], "radius": 50, "seed": 105},
+    {"at": [120, 60, -420], "radius": 60, "seed": 106},
+    {"at": [80, -12, 330], "radius": 38, "seed": 107}
+  ],
+  "content": {
+    "_doc": "Conteúdo de jogo. 'at': [x,z] encaixa no chão (só ilhas); [x,y,z] absoluto; 'top' = topo de trampolim.",
+    "spawn": [0, 38],
+    "tower": {"at": [0, -8]},
+    "seeds": [
+      {"id": "aguasvivas", "at": [118, 26.6, -16], "hint": "Ilha das Águas-Vivas"},
+      {"id": "cataventos", "at": [4, -128], "gate": "g1", "hint": "Ilha dos Cata-ventos"},
+      {"id": "fita", "at": [-126, 10], "arena": "a1", "hint": "Ilha da Fita"}
+    ],
+    "jellies": [
+      {"top": [58, 3.0, -6], "size": 1.7},
+      {"top": [64.5, 4.0, -9], "size": 1.7},
+      {"top": [71, 5.0, -6.5], "size": 1.7},
+      {"top": [77.5, 6.0, -10], "size": 1.7},
+      {"top": [84, 6.8, -8], "size": 1.7},
+      {"top": [90.5, 7.4, -10.5], "size": 1.7},
+      {"top": [112.17, 10.0, -18.12], "size": 1.5, "bob": 0.3},
+      {"top": [118.0, 13.4, -22.2], "size": 1.5, "bob": 0.3},
+      {"top": [123.83, 16.8, -18.12], "size": 1.5, "bob": 0.3},
+      {"top": [121.99, 20.2, -11.25], "size": 1.5, "bob": 0.3},
+      {"top": [114.9, 23.6, -10.63], "size": 1.5, "bob": 0.3}
+    ],
+    "spire": {"at": [118, 7.4, -16]},
+    "cannons": [
+      {"at": [-4, -46], "target": [-6, 16.8, -105], "time": 2.6, "name": "para Cata-ventos"},
+      {"at": [-20, -112], "target": [-4, 3.4, -50], "time": 2.6, "name": "volta ao Sino"},
+      {"at": [-98, 17], "target": [-48, 3.4, 6], "time": 2.4, "name": "volta ao Sino"},
+      {"at": [96, -2], "target": [50, 3.2, -4], "time": 2.3, "name": "volta ao Sino"}
+    ],
+    "ribbons": [
+      {
+        "points": [[-53, 4.0, 6], [-61, 7.5, 1], [-72, 10.0, 6], [-84, 8.5, 15], [-94, 5.5, 13], [-100, 3.8, 11]],
+        "speed": 15
+      }
+    ],
+    "portals": [
+      {"at": [31, 31], "rot": 0, "exit": [36, 36.4, 101], "exit_rot": 0},
+      {"at": [36, 94], "rot": 180, "exit": [31, 3.4, 35], "exit_rot": 0}
+    ],
+    "plates": [{"at": [-10, -134], "group": "g1"}, {"at": [12, -115], "group": "g1", "heavy": true}],
+    "gates": [{"at": [4, -128], "group": "g1", "seed": "cataventos"}],
+    "updrafts": [{"at": [4, -112], "radius": 3.0, "height": 20, "strength": 34}],
+    "floating_rocks": [{"at": [4, 31, -112], "prop": "rock_1", "scale": 3.2}],
+    "enemies": [
+      {"at": [-18, 18]},
+      {"at": [20, -20]},
+      {"at": [34, 24]},
+      {"at": [110, -2]},
+      {"at": [124, -4]},
+      {"at": [2, -118]},
+      {"at": [-131, 6], "arena": "a1"},
+      {"at": [-121, 4], "arena": "a1"},
+      {"at": [-127, 16], "arena": "a1"}
+    ],
+    "totems": [
+      {"at": [4, 33], "rot": 180},
+      {"at": [9, -1], "rot": 200},
+      {"at": [-1, -103], "rot": 180},
+      {"at": [101, -5], "rot": 90},
+      {"at": [-104, 7], "rot": -90},
+      {"at": [40, 98], "rot": 180}
+    ],
+    "props": [
+      {"type": "arch", "at": [18, 2], "rot": 30},
+      {"type": "arch", "at": [-31, -14], "rot": -25},
+      {"type": "arch", "at": [6, 26], "rot": 80},
+      {"type": "arch", "at": [-22, 20], "rot": 10},
+      {"type": "arch", "at": [34, -18], "rot": 60},
+      {"type": "arch", "at": [-120, 2], "rot": 20},
+      {"type": "arch", "at": [-132, 16], "rot": -40},
+      {"type": "arch", "at": [110, -14], "rot": 70},
+      {"type": "pillar", "at": [12, -22], "rot": 0},
+      {"type": "pillar", "at": [-14, -24], "rot": 90},
+      {"type": "pillar", "at": [28, -6], "rot": 40},
+      {"type": "pillar", "at": [-38, 18], "rot": 10},
+      {"type": "pillar", "at": [-8, 14], "rot": 200},
+      {"type": "pillar", "at": [40, 8], "rot": 70},
+      {"type": "pillar", "at": [-12, -122], "rot": 30},
+      {"type": "pillar", "at": [14, -132], "rot": 100},
+      {"type": "pillar", "at": [-118, 22], "rot": 10},
+      {"type": "rock_0", "at": [25, 28], "scale": 1.4},
+      {"type": "rock_1", "at": [-40, -6], "scale": 1.2},
+      {"type": "rock_2", "at": [-6, -36], "scale": 1.0},
+      {"type": "rock_0", "at": [44, -24], "scale": 1.6},
+      {"type": "rock_1", "at": [-28, 34], "scale": 1.0},
+      {"type": "rock_2", "at": [10, -42], "scale": 1.3},
+      {"type": "rock_1", "at": [38, -32], "scale": 1.1},
+      {"type": "rock_2", "at": [-44, 26], "scale": 1.5},
+      {"type": "rock_0", "at": [124, 4], "scale": 1.2},
+      {"type": "rock_2", "at": [-16, -130], "scale": 1.4},
+      {"type": "rock_0", "at": [-136, 4], "scale": 1.3},
+      {"type": "rock_1", "at": [32, 100], "scale": 0.9},
+      {"type": "palm_0", "at": [31, 19]},
+      {"type": "palm_1", "at": [13, 21], "rot": 120},
+      {"type": "palm_0", "at": [30, 3], "rot": 40},
+      {"type": "palm_1", "at": [-33, 11], "rot": 200},
+      {"type": "palm_0", "at": [-17, -4], "rot": 300},
+      {"type": "palm_1", "at": [-31, -4], "rot": 80},
+      {"type": "palm_0", "at": [23, -37], "rot": 160},
+      {"type": "palm_1", "at": [7, -25], "rot": 20},
+      {"type": "palm_0", "at": [-20, 37], "rot": 250},
+      {"type": "palm_1", "at": [-5, 36], "rot": 330},
+      {"type": "palm_0", "at": [125, 0], "rot": 60},
+      {"type": "palm_1", "at": [-17, -131], "rot": 10},
+      {"type": "palm_0", "at": [-112, 26], "rot": 120},
+      {"type": "palm_1", "at": [39, 102], "rot": 200}
+    ],
+    "chimes": [
+      [-5, 28],
+      [6, 17],
+      [-6, 6],
+      [-9, -43],
+      [47, -2],
+      [-46, 10],
+      [28, 34],
+      [-8, -110],
+      [106, -12],
+      [-108, 4],
+      [33, 96]
+    ],
+    "pinwheels": [
+      {"at": [4, 36], "scale": 1.0},
+      {"at": [-3, 33], "scale": 0.8},
+      {"at": [15, 10], "scale": 1.0},
+      {"at": [-12, -16], "scale": 1.2},
+      {"at": [8, -112], "scale": 3.2, "spin": 5.0},
+      {"at": [0, -108], "scale": 2.6, "spin": 4.0},
+      {"at": [-120, 20], "scale": 1.0}
+    ],
+    "flag_poles": [[11.26, -1.5], [0.0, 5.0], [-11.26, -1.5], [-11.26, -14.5], [-0.0, -21.0], [11.26, -14.5]],
+    "flag_strings": [[[-7, 41], [7, 41]], [[-7, 41], [-4, 30]], [[7, 41], [5, 30]], [[-48, 4], [-46, 12]], [[46, -8], [48, 0]]],
+    "kites": [
+      {"at": [12, 32], "h": 18},
+      {"at": [-18, 26], "h": 22},
+      {"at": [30, -24], "h": 16},
+      {"at": [-30, -30], "h": 20},
+      {"at": [-118, 8], "h": 15}
+    ],
+    "lumes": [
+      {"line": [[0, 34], [0, 10]], "n": 12, "h": 1.1},
+      {"arc": [[2, 6], [14, -4]], "n": 7, "h": 1.0, "peak": 3.0},
+      {"circle": [22, 12], "r": 5, "n": 10, "y": 1.6},
+      {"circle": [-25, 4], "r": 4, "n": 8, "y": 1.6},
+      {"line": [[26, -5], [49, -5]], "n": 9, "h": 1.1},
+      {"line": [[-2, -24], [-4, -41]], "n": 8, "h": 1.1},
+      {"line": [[-28, 8], [-47, 6]], "n": 8, "h": 1.1},
+      {"line": [[20, 28], [29, 31]], "n": 5, "h": 1.1},
+      {"circle": [0, -8], "r": 8, "n": 14, "h": 1.2},
+      {
+        "points": [[18, 9.4, 2], [-31, 9.4, -14], [6, 9.4, 26], [-22, 9.4, 20], [34, 9.4, -18]]
+      },
+      {
+        "points": [[61, 6.6, -7.5], [67.5, 7.6, -9.5], [74, 8.6, -8], [80.5, 9.6, -9], [87, 10.4, -9.2]]
+      },
+      {"circle": [118, -16], "r": 9, "n": 12, "h": 1.2},
+      {"line": [[-6, -108], [2, -124]], "n": 8, "h": 1.1},
+      {"circle": [4, -128], "r": 6, "n": 10, "h": 1.2},
+      {"line": [[4, 18, -112], [4, 30, -112]], "n": 8},
+      {"circle": [4, -112], "r": 2.2, "n": 8, "y": 35.2},
+      {"circle": [-126, 10], "r": 7, "n": 12, "h": 1.2},
+      {"line": [[-100, 8], [-116, 10]], "n": 6, "h": 1.1},
+      {"circle": [36, 98], "r": 4.5, "n": 16, "h": 1.3},
+      {"circle": [36, 98], "r": 2.5, "n": 10, "h": 3.0}
+    ],
+    "giant_jellies": [
+      {"center": [0, 40, 0], "radius": 170, "scale": 14, "speed": 0.02},
+      {"center": [40, 70, -60], "radius": 240, "scale": 18, "speed": 0.012},
+      {"center": [-60, 20, 40], "radius": 200, "scale": 11, "speed": 0.025},
+      {"center": [0, 95, 0], "radius": 300, "scale": 22, "speed": 0.008}
+    ],
+    "sun_beams": [
+      [-20, 2, -30],
+      [25, 2, -40],
+      [-40, 2, 10],
+      [15, 2, 15],
+      [0, 4, -8],
+      [-6, 16, -122],
+      [118, 8, -16],
+      [-122, 2, 14],
+      [36, 35, 98]
+    ]
+  }
+}

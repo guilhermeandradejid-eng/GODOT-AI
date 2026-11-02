@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c82pshvgqeglb"
 path.s3tc="res://.godot/imported/mud_normal_rough.webp-c4d888b688b8fecc5bf199815ea0c132.s3tc.ctex"
+path.etc2="res://.godot/imported/mud_normal_rough.webp-c4d888b688b8fecc5bf199815ea0c132.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/mud_normal_rough.webp"
-dest_files=["res://.godot/imported/mud_normal_rough.webp-c4d888b688b8fecc5bf199815ea0c132.s3tc.ctex"]
+dest_files=["res://.godot/imported/mud_normal_rough.webp-c4d888b688b8fecc5bf199815ea0c132.s3tc.ctex", "res://.godot/imported/mud_normal_rough.webp-c4d888b688b8fecc5bf199815ea0c132.etc2.ctex"]
 
 [params]
 

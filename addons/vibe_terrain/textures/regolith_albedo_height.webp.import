@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c6wvp8ksof1s7"
 path.s3tc="res://.godot/imported/regolith_albedo_height.webp-1e976b610fa3b23debb98cb130d225ae.s3tc.ctex"
+path.etc2="res://.godot/imported/regolith_albedo_height.webp-1e976b610fa3b23debb98cb130d225ae.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/regolith_albedo_height.webp"
-dest_files=["res://.godot/imported/regolith_albedo_height.webp-1e976b610fa3b23debb98cb130d225ae.s3tc.ctex"]
+dest_files=["res://.godot/imported/regolith_albedo_height.webp-1e976b610fa3b23debb98cb130d225ae.s3tc.ctex", "res://.godot/imported/regolith_albedo_height.webp-1e976b610fa3b23debb98cb130d225ae.etc2.ctex"]
 
 [params]
 

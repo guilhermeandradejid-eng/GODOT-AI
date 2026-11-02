@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://birqoghv8i7be"
 path.s3tc="res://.godot/imported/snow_normal_rough.webp-c566d5051a1c436fae69fda12e99b4b3.s3tc.ctex"
+path.etc2="res://.godot/imported/snow_normal_rough.webp-c566d5051a1c436fae69fda12e99b4b3.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/snow_normal_rough.webp"
-dest_files=["res://.godot/imported/snow_normal_rough.webp-c566d5051a1c436fae69fda12e99b4b3.s3tc.ctex"]
+dest_files=["res://.godot/imported/snow_normal_rough.webp-c566d5051a1c436fae69fda12e99b4b3.s3tc.ctex", "res://.godot/imported/snow_normal_rough.webp-c566d5051a1c436fae69fda12e99b4b3.etc2.ctex"]
 
 [params]
 

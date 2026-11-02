@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cgoilkb7egwh2"
 path.s3tc="res://.godot/imported/ash_normal_rough.webp-749bf7e101d1ea33a799f9842a10d0a6.s3tc.ctex"
+path.etc2="res://.godot/imported/ash_normal_rough.webp-749bf7e101d1ea33a799f9842a10d0a6.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/ash_normal_rough.webp"
-dest_files=["res://.godot/imported/ash_normal_rough.webp-749bf7e101d1ea33a799f9842a10d0a6.s3tc.ctex"]
+dest_files=["res://.godot/imported/ash_normal_rough.webp-749bf7e101d1ea33a799f9842a10d0a6.s3tc.ctex", "res://.godot/imported/ash_normal_rough.webp-749bf7e101d1ea33a799f9842a10d0a6.etc2.ctex"]
 
 [params]
 

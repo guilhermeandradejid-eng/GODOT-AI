@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c23q5phoctear"
 path.s3tc="res://.godot/imported/ice_albedo_height.webp-222775528b4bd3c996058e5982654646.s3tc.ctex"
+path.etc2="res://.godot/imported/ice_albedo_height.webp-222775528b4bd3c996058e5982654646.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/ice_albedo_height.webp"
-dest_files=["res://.godot/imported/ice_albedo_height.webp-222775528b4bd3c996058e5982654646.s3tc.ctex"]
+dest_files=["res://.godot/imported/ice_albedo_height.webp-222775528b4bd3c996058e5982654646.s3tc.ctex", "res://.godot/imported/ice_albedo_height.webp-222775528b4bd3c996058e5982654646.etc2.ctex"]
 
 [params]
 

@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://c5a50wqnn5cwi"
 path.s3tc="res://.godot/imported/lava_normal_rough.webp-5ecdea821f95cb19e88125c8a2d4013e.s3tc.ctex"
+path.etc2="res://.godot/imported/lava_normal_rough.webp-5ecdea821f95cb19e88125c8a2d4013e.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://addons/vibe_terrain/textures/lava_normal_rough.webp"
-dest_files=["res://.godot/imported/lava_normal_rough.webp-5ecdea821f95cb19e88125c8a2d4013e.s3tc.ctex"]
+dest_files=["res://.godot/imported/lava_normal_rough.webp-5ecdea821f95cb19e88125c8a2d4013e.s3tc.ctex", "res://.godot/imported/lava_normal_rough.webp-5ecdea821f95cb19e88125c8a2d4013e.etc2.ctex"]
 
 [params]
 
