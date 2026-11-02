@@ -1534,7 +1534,48 @@ def board_world(fwd: Vector, up: Vector) -> Matrix:
 
 
 # ============================================================================= clips
+F1 = 1.0 / 30.0
+
+
+def fan_pop(t: float, t0: float, amt: float = 1.0, t1: float | None = None, close: float = 6 * F1) -> float:
+    """Abertura do leque no ritmo do conceito: abre em t0 (2 quadros até 108%, assenta em 3) e,
+    se t1, fecha mais devagar ('close' s, ~5-6 quadros)."""
+    if t < t0:
+        v = 0.0
+    elif t < t0 + 2 * F1:
+        v = 1.08 * ease_out((t - t0) / (2 * F1), 2.0)
+    elif t < t0 + 5 * F1:
+        v = 1.08 - 0.08 * smooth((t - t0 - 2 * F1) / (3 * F1))
+    else:
+        v = 1.0
+    if t1 is not None and t > t1:
+        v *= 1.0 - smooth((t - t1) / close)
+    return amt * v
+
+
+def blend_bones(P: "Pose", P2: "Pose", bones, w: float):
+    """Mistura (slerp) as rotações locais de 'bones' de P em direção a P2."""
+    for b in bones:
+        P.rot[b] = P.rot.get(b, Quaternion()).slerp(P2.rot.get(b, Quaternion()), w)
+    P._dirty()
+
+
+def clone_pose(P: "Pose") -> "Pose":
+    P2 = Pose(K)
+    P2.rot = dict(P.rot)
+    P2.loc = dict(P.loc)
+    P2.scl = dict(P.scl)
+    return P2
+
+
+# tail at rest: a gentle S (down, level, up, the leaf tipping back down) instead of a stiff handle
+TAIL_S = (-15.5, 3.5, 14.0)
+BOARD_S = -14.0
+
+
 def c_idle(t, ph):
+    """3 s: respira, olha em volta; mão na cintura enquanto olha para a esquerda (orelhas atentas);
+    'fwip!' com o leque direito enquanto olha para a direita; duas batidas da prancha."""
     P = Pose(K)
     br = cw(ph * 2.0)                       # 2 breaths per loop
     look = spline(t, [(0, 0), (0.45, 0), (0.80, 26), (1.30, 24), (1.62, -20), (2.15, -18), (2.55, 0), (3.0, 0)], True)
@@ -1545,21 +1586,30 @@ def c_idle(t, ph):
     spine(P, sp=(0.6 * br, 0, look * 0.10), ch=(0.8 * br, -tilt * 0.15, look * 0.15),
           nk=(0, tilt * 0.3, look * 0.25), hd=(nod - 1.0 * br, tilt * 0.7, look * 0.5))
     stand_feet(P)
-    # fan fidget: flick open (overshoot) and snap shut
-    fo = spline(t, [(0, 0), (1.62, 0), (1.74, 0.46), (1.82, 0.36), (2.02, 0.38), (2.12, 0.0), (3.0, 0)])
-    lift_arm = spline(t, [(0, 0), (1.55, 0), (1.74, 12), (2.02, 10), (2.25, 0), (3.0, 0)])
+    # right fan snap ("fwip!" = ta-da): arm flicks out, fan pops open facing forward, closes slowly
+    fo = fan_pop(t, 1.70, 0.80, t1=2.02, close=7 * F1)
+    snap = smooth((t - 1.60) / 0.12) * (1.0 - smooth((t - 2.02) / 0.30))
+    hip_w = smooth((t - 0.50) / 0.30) * (1.0 - smooth((t - 1.40) / 0.32))
     for s in "LR":
         sx = sxs(s)
-        arm(P, s, swing=-4 + 1.5 * br, out=2 + lift_arm + 1.0 * br, twist=-6, flex=22 + 2 * br + lift_arm * 0.8,
-            hand=(4, 0, -6))
-        fan(P, s, fo, flutter=2.0 * fo * wv(t * 8))
-    perk = spline(t, [(0, 0), (0.80, 10), (1.30, 8), (1.62, 2), (2.15, 4), (2.55, 0), (3.0, 0)], True)
-    curious = spline(t, [(0, 0), (1.45, 0), (1.62, 14), (2.0, 12), (2.3, 0), (3.0, 0)])
-    ears(P, lift=perk + 2 * br, flare=8 + 3 * fo, tip=1.5 * cw(ph * 2, 0.15), diff=curious)
+        sn = snap if s == "R" else 0.0
+        arm(P, s, swing=-4 + 1.5 * br - 16 * sn, out=2 + 1.0 * br + 30 * sn, twist=-6, flex=22 + 2 * br + 26 * sn,
+            hand=(4, 0, -6 + 14 * sn))
+        if sn > 1e-3:
+            fan_level(P, s, (-0.35, -1.0, 0.35), amount=sn)
+        fan(P, s, fo if s == "R" else 0.0, flutter=2.0 * fo * wv(t * 8) if s == "R" else 0.0)
+    if hip_w > 1e-3:                       # left hand on the hip (IK pose, slerp-blended)
+        P2 = clone_pose(P)
+        reach(P2, "L", P.point("hips", (0.158, 0.012, 0.428)), hips_q(P) @ Vector((1.0, 0.45, -0.15)))
+        P2.aim("hand_L", hips_q(P) @ Vector((-0.10, 0.20, -1.0)))
+        blend_bones(P, P2, ("upperarm_L", "forearm_L", "hand_L"), hip_w)
+    perk = spline(t, [(0, 0), (0.70, 0), (0.86, 9), (1.25, 7), (1.45, 1), (2.15, 3), (2.55, 0), (3.0, 0)], True)
+    curious = spline(t, [(0, 0), (1.55, 0), (1.70, 8), (2.0, 7), (2.3, 0), (3.0, 0)])
+    ears(P, lift=perk + 2 * br, flare=6 + 4 * snap, tip=1.5 * cw(ph * 2, 0.15), diff=curious)
     # two board taps on the sand
     tap = spline(t, [(0, 0), (2.25, 0), (2.36, 1.0), (2.46, 0.25), (2.58, 1.0), (2.72, 0.0), (3.0, 0)])
-    tail(P, lift=(-12 + 3 * br - 28 * tap, 2, 4 + 6 * tap), sway=(3 * wv(ph), 4 * wv(ph, -0.1), 4 * wv(ph, -0.2)),
-         board=(-4 - 22 * tap, 0, 0))
+    tail(P, lift=(TAIL_S[0] + 3 * br - 18 * tap, TAIL_S[1], TAIL_S[2] + 4 * tap),
+         sway=(3 * wv(ph), 4 * wv(ph, -0.1), 4 * wv(ph, -0.2)), board=(BOARD_S - 16 * tap, 0, 0))
     return P.export()
 
 
@@ -1624,12 +1674,12 @@ def loco(t, ph, walk: bool):
         fan(P, s, 0.0)
     if walk:
         ears(P, lift=2 + 3 * math.cos(TAU * 2 * (ph - 0.12)), flare=8, tip=2 * math.cos(TAU * 2 * (ph - 0.2)))
-        tail(P, lift=(-14 + 3 * math.cos(TAU * 2 * (ph - 0.1)), 0, 2),
+        tail(P, lift=(TAIL_S[0] + 3 * math.cos(TAU * 2 * (ph - 0.1)), TAIL_S[1], TAIL_S[2]),
              sway=(8 * wv(ph, -0.08), 7 * wv(ph, -0.18), 6 * wv(ph, -0.28)),
-             board=(-8 + 3 * math.cos(TAU * 2 * (ph - 0.3)), 0, 4 * wv(ph, -0.35)))
+             board=(BOARD_S + 3 * math.cos(TAU * 2 * (ph - 0.3)), 0, 4 * wv(ph, -0.35)))
     else:
         ears(P, lift=-10 + 4 * math.cos(TAU * 2 * (ph - 0.15)), flare=10, tip=-6 + 3 * math.cos(TAU * 2 * (ph - 0.25)))
-        tail(P, lift=(-12 + 5 * math.cos(TAU * 2 * (ph - 0.12)), -2 + 4 * math.cos(TAU * 2 * (ph - 0.22)), -2),
+        tail(P, lift=(-15 + 5 * math.cos(TAU * 2 * (ph - 0.12)), 2 + 4 * math.cos(TAU * 2 * (ph - 0.22)), 8),
              sway=(4 * wv(ph, -0.06), 4 * wv(ph, -0.16), 4 * wv(ph, -0.26)),
              board=(-12 + 6 * math.cos(TAU * 2 * (ph - 0.32)), 0, 3 * wv(ph, -0.3)))
     return P.export()
@@ -1649,7 +1699,7 @@ def c_jump(t, ph):
     hz = spline(t, list(zip(T, [-0.006, -0.032, -0.040, 0.012, 0.030, 0.035])))
     pit = spline(t, list(zip(T, [2, 9, 11, 2, -4, 2])))
     body(P, pitch=pit, pivot=(0, 0.01, 0.30), off=(0, 0, hz))
-    sq = spline(t, list(zip(T, [1.0, 0.94, 0.92, 1.09, 1.05, 1.0])))
+    sq = spline(t, list(zip(T, [1.0, 0.93, 0.90, 1.12, 1.06, 1.0])))
     P.scale("spine", (1.0 / math.sqrt(sq), sq, 1.0 / math.sqrt(sq)))
     spine(P, sp=(spline(t, list(zip(T, [0, 6, 8, -4, -3, 2]))), 0, 0), ch=(spline(t, list(zip(T, [0, 4, 6, -5, -2, 2]))), 0, 0),
           hd=(spline(t, list(zip(T, [0, -4, -6, -10, -6, 0]))), 0, 0))
@@ -1666,7 +1716,7 @@ def c_jump(t, ph):
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(6, 0, -6))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [0, -12, -16, 18, 14, 8]))), flare=spline(t, list(zip(T, [2, 0, 0, 6, 8, 6]))),
+    ears(P, lift=spline(t, list(zip(T, [0, -12, -16, 12, 10, 6]))), flare=spline(t, list(zip(T, [2, 0, 0, 6, 8, 6]))),
          tip=spline(t, list(zip(T, [0, -6, -8, 10, 6, 2]))))
     tail(P, lift=(spline(t, list(zip(T, [-4, -14, -26, -10, 10, 14]))), spline(t, list(zip(T, [4, -6, -12, 6, 10, 8]))), 6),
          board=(spline(t, list(zip(T, [4, -10, -22, 8, 14, 8]))), 0, 0))
@@ -1684,7 +1734,7 @@ def fall_pose(P, t, ph, fo=0.30):
             hand=(8, 0, -8))
         fan_level(P, s, (0, 0.3, 1), amount=0.4)
         fan(P, s, fo + 0.03 * wv(ph * 2, o), flutter=2.0 * wv(ph * 4, o))
-    ears(P, lift=14 + 4 * wv(ph * 2), flare=6, tip=6 + 4 * wv(ph * 2, 0.15))
+    ears(P, lift=9 + 3 * wv(ph * 2), flare=6, tip=5 + 3 * wv(ph * 2, 0.15))
     tail(P, lift=(18 + 4 * wv(ph, -0.1), 8 + 4 * wv(ph, -0.2), 6 + 3 * wv(ph, -0.3)),
          sway=(4 * wv(ph, 0.1), 4 * wv(ph, 0.0), 3 * wv(ph, -0.1)), board=(10 + 6 * wv(ph, -0.35), 0, 0))
 
@@ -1710,11 +1760,11 @@ def c_land(t, ph):
     sw = spline(t, list(zip(T, [-20, -12, -2, -4, -5, -4])))
     out = spline(t, list(zip(T, [60, 34, 18, 8, 3, 2])))
     fl = spline(t, list(zip(T, [32, 40, 36, 26, 22, 22])))
-    fo = spline(t, list(zip(T, [0.30, 0.10, 0.0, 0.0, 0.0, 0.0])))
+    fo = spline(t, list(zip(T, [0.30, 0.24, 0.14, 0.04, 0.0, 0.0])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(6, 0, -6))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [14, -10, -18, -6, 4, 0]))), flare=2, tip=spline(t, list(zip(T, [6, -8, -10, 2, 2, 0]))))
+    ears(P, lift=spline(t, list(zip(T, [9, -10, -18, -6, 4, 0]))), flare=2, tip=spline(t, list(zip(T, [5, -8, -10, 2, 2, 0]))))
     tail(P, lift=(spline(t, list(zip(T, [18, -8, -16, -10, -4, -6]))), spline(t, list(zip(T, [8, 0, -6, 2, 4, 4]))), 6),
          board=(spline(t, list(zip(T, [10, -8, -14, 0, 6, 4]))), 0, 0))
     return P.export()
@@ -1737,13 +1787,13 @@ def c_double_jump(t, ph):
     sw = spline(t, list(zip(T, [-40, -60, -10, -55, -55, -24])))
     out = spline(t, list(zip(T, [70, 118, 30, 18, 20, 66])))
     fl = spline(t, list(zip(T, [30, 14, 18, 86, 86, 32])))
-    fo = spline(t, list(zip(T, [0.3, 1.08, 0.96, 0.15, 0.12, 0.30])))
+    fo = spline(t, list(zip(T, [0.3, 1.08, 1.0, 0.55, 0.15, 0.30])))
     lv = spline(t, list(zip(T, [0.4, 0.8, 0.8, 0.0, 0.0, 0.4])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-8, flex=fl, hand=(8, 0, -8))
         fan_level(P, s, (0, 0.3, 1), amount=lv)
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [12, 20, 4, -24, -22, 12]))), flare=spline(t, list(zip(T, [6, 12, 4, -4, -4, 6]))),
+    ears(P, lift=spline(t, list(zip(T, [9, 13, 4, -24, -22, 9]))), flare=spline(t, list(zip(T, [6, 12, 4, -4, -4, 6]))),
          tip=spline(t, list(zip(T, [6, 10, -6, -12, -10, 6]))))
     tail(P, lift=(spline(t, list(zip(T, [16, 10, -10, -40, -36, 16]))), spline(t, list(zip(T, [8, 6, -10, -30, -28, 8]))),
                   spline(t, list(zip(T, [6, 4, -6, -20, -18, 6])))),
@@ -1752,44 +1802,55 @@ def c_double_jump(t, ph):
 
 
 def c_glide(t, ph):
+    """Planar, lido da câmera de perseguição como uma pipa/X: braços varridos ~10° para trás com
+    diedro de ~22°, leques 100% abertos com a face virada para cima e para trás (~30° do nível),
+    pernas juntas estendidas para trás (quadril ~20°, joelhos ~24°), cauda e prancha retas atrás
+    como leme (deck para cima). Inclinação lateral ±6°, tremor de 6 Hz na costela 5."""
     P = Pose(K)
     bank = 6.0 * wv(ph)
-    body(P, pitch=26 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.03))
-    spine(P, sp=(2, -bank * 0.2, 0), ch=(-4, -bank * 0.3, 0), nk=(-6, 0, 0), hd=(-18, -bank * 0.4, bank * 0.3))
+    body(P, pitch=32 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.05))
+    spine(P, sp=(0, -bank * 0.2, 0), ch=(-5, -bank * 0.3, 0), nk=(-8, 0, 0), hd=(-22, -bank * 0.4, bank * 0.3))
     for s in "LR":
         sx = sxs(s)
-        dihedral = 6.0 + bank * sx * 0.6
-        arm(P, s, swing=-8 + 1.5 * wv(ph, 0.3), out=49 + dihedral, twist=0, flex=6, hand=(0, 0, -4))
-        fan_level(P, s, (0.0, 0.20, 1.0))
+        dihedral = 22.0 + bank * sx * 0.5
+        arm(P, s, swing=10 + 1.5 * wv(ph, 0.3), out=49 + dihedral, twist=0, flex=6, hand=(0, 0, -4))
+        fan_level(P, s, (0.0, 0.50, 0.866))
         fan(P, s, 1.0 + 0.02 * wv(ph, 0.2), flutter=3.0 * wv(ph * 7), wobble=4.5 * wv(ph * 7, 0.25))
     for s, o_ in (("L", 0.0), ("R", 0.5)):
-        foot(P, s, (0.006, 0.15, 0.11 + 0.008 * wv(ph, o_)), pitch=58, yaw=4, rel=True)
-    ears(P, lift=-18 + 2 * wv(ph * 2), flare=-4, tip=-8 + 3 * wv(ph * 3, 0.2))
-    tail(P, lift=(-24, 0 + wv(ph, -0.1), -2), sway=(-bank * 0.6, -bank * 0.8, -bank), board=(-14, -bank * 1.2, 0))
+        foot(P, s, (-0.022, 0.120 + 0.006 * wv(ph, o_), 0.036 + 0.006 * wv(ph, o_ + 0.25)), pitch=125, yaw=0, rel=True)
+    ears(P, lift=-16 + 2 * wv(ph * 2), flare=-2, tip=-6 + 3 * wv(ph * 3, 0.2))
+    tail(P, lift=(-27.5, -20.5 + wv(ph, -0.1), -14), sway=(-bank * 0.6, -bank * 0.8, -bank), board=(6, -bank * 1.2, 0))
     return P.export()
 
-
 def c_spin(t, ph):
+    """Rodopio 720°: o plano do 'rotor' (braços + leques abertos) inclina ~24° para a frente (longe da
+    câmera de trás, que então vê o disco) e cada leque tem passo de hélice (~18°)."""
     P = Pose(K)
     a = -14.0 * smooth(t / 0.033) if t < 0.033 else 720.0 * ease_out((t - 0.033) / 0.31, 2.4) - 14.0 * (1.0 - smooth((t - 0.033) / 0.06))
     T = [0.0, 0.033, 0.10, 0.25, 0.34, 0.40]
-    hop = spline(t, list(zip(T, [0.0, -0.012, 0.035, 0.040, 0.008, 0.0])))
-    body(P, yaw=a, pitch=spline(t, list(zip(T, [2, 6, 2, 2, 4, 2]))), pivot=(0, 0, 0.0), off=(0, 0, hop))
-    spine(P, ch=(0, 0, 0), hd=(-4, 0, -spline(t, list(zip(T, [0, 0, 10, 10, 4, 0])))))
+    hop = spline(t, list(zip(T, [0.0, -0.012, 0.040, 0.045, 0.010, 0.0])))
     tk = spline(t, list(zip(T, [0.0, 0.2, 1.0, 1.0, 0.3, 0.0])))
+    lean = 24.0 * tk
+    q_body = qw(x=lean) @ qw(z=a) @ qw(x=spline(t, list(zip(T, [2, 6, 2, 2, 4, 2]))))
+    P.root(q_body, (0.0, 0.0, 0.40), (0.0, 0.0, hop + 0.02 * tk))
+    spine(P, ch=(0, 0, 0), hd=(-4 - 10 * tk, 0, -spline(t, list(zip(T, [0, 0, 10, 10, 4, 0])))))
     for s in "LR":
         foot(P, s, (0.004 + 0.006 * tk, 0.01 * tk, 0.05 * tk), pitch=20 * tk, yaw=6, rel=True)
-    out = spline(t, list(zip(T, [2, 22, 50, 52, 24, 2])))
-    fo = spline(t, list(zip(T, [0.0, 0.3, 1.06, 1.0, 0.25, 0.0])))
+    T2 = [0.0, 0.033, 0.067, 0.133, 0.25, 0.34, 0.40]
+    out = spline(t, list(zip(T2, [2, 26, 52, 58, 58, 26, 2])))
+    fo = spline(t, list(zip(T2, [0.0, 0.55, 1.08, 1.0, 1.0, 0.30, 0.0])))
     for s in "LR":
+        sx = sxs(s)
         arm(P, s, swing=-8, out=out, twist=-10, flex=spline(t, list(zip(T, [22, 18, 6, 6, 16, 22]))), hand=(4, 0, -6))
-        fan_level(P, s, (0, 0, 1), amount=smooth(fo))
+        beta = math.radians(18.0)
+        nb = Vector((0.0, -sx * math.sin(beta), math.cos(beta)))
+        fan_level(P, s, tuple(q_body @ nb), amount=smooth(fo))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [0, 4, 12, 12, 6, 0]))), flare=spline(t, list(zip(T, [2, 8, 22, 22, 10, 2]))))
-    tail(P, lift=(spline(t, list(zip(T, [-12, -10, -6, -6, -10, -12]))), 2, 2),
-         sway=(spline(t, list(zip(T, [0, -6, -14, -14, -6, 0]))), -10 * tk, -8 * tk), board=(6 * tk, 0, 0))
+    ears(P, lift=spline(t, list(zip(T, [0, 4, 8, 8, 4, 0]))), flare=spline(t, list(zip(T, [2, 8, 22, 22, 10, 2]))))
+    tail(P, lift=(spline(t, list(zip(T, [TAIL_S[0], -12, -6, -6, -10, TAIL_S[0]]))), TAIL_S[1] * (1 - tk), TAIL_S[2] * (1 - tk)),
+         sway=(spline(t, list(zip(T, [0, -6, -14, -14, -6, 0]))), -10 * tk, -8 * tk),
+         board=(BOARD_S * (1 - tk) + 6 * tk, 0, 0))
     return P.export()
-
 
 def c_surf(t, ph):
     """'Cometa': deitada de barriga na prancha-folha (que se desenrola: x1,4), peito erguido, cabeça
@@ -1804,9 +1865,12 @@ def c_surf(t, ph):
           hd=(-30 + 2.0 * wv(ph * 2, 0.3), -roll * 0.5, 2.5 * wv(ph, 0.2)))
     belly = P.point("spine", (0.0, 0.002, 0.398))
     tail(P, lift=(-40, -55, -50), sway=(0, 0, 0))
-    ccd(P, ["tail_1", "tail_2", "tail_3"], Vector((0.0, belly.y + 0.205, 0.040)))
+    # the tail leaves over her LEFT hip and tucks under the board (no crease between the thighs
+    # from the chase cam); the leaf unfurls ~15% wider than her shoulders so its rim shows
+    P.aim("tail_1", Vector((0.78, 0.30, -0.55)))
+    ccd(P, ["tail_2", "tail_3"], Vector((0.030, belly.y + 0.215, 0.040)))
     P.set_world_rot("board", board_world(Vector((0, -1.0, 0.02)), Vector((roll * 0.004, 0, 1))))
-    P.scale("board", (1.75, 1.42, 1.30))
+    P.scale("board", (2.15, 1.40, 1.25))
     # legs streaming back, soles up, little flutter kick
     for s, o_ in (("L", 0.0), ("R", 0.5)):
         k = wv(ph * 2, o_)
@@ -1822,6 +1886,9 @@ def c_surf(t, ph):
         fan(P, s, 0.24 + 0.04 * wv(ph * 2, 0.1), flutter=2.5 * wv(ph * 4), wobble=3.0 * wv(ph * 4, 0.25))
     ears(P, lift=-28 + 3 * wv(ph * 2, 0.1), flare=-4, tip=-12 + 4 * wv(ph * 3, 0.25))
     return P.export()
+
+
+RIDE_SAIL_GAP = 0.075
 
 
 def c_ride(t, ph):
@@ -1842,9 +1909,17 @@ def c_ride(t, ph):
         reach(P, s, (0.085 * sx, -0.212, 0.262 + lean), (sx * 0.9, 0.35, -0.6))
         P.turn_world(f"hand_{s}", qw(x=62, z=-sx * 18))
         fan(P, s, 0.0)
-    ears(P, lift=6 + 6 * (abs(look) / 38.0), flare=4, tip=2 * wv(ph * 2), diff=look * 0.15)
-    tail(P, lift=(70, 12, 8 + 2 * wv(ph * 2, 0.2)), sway=(look * 0.05, look * 0.06, look * 0.06),
-         board=(4 + 2 * wv(ph * 2, 0.4), 0, 0), roll=(55, 55, 55))
+    ears(P, lift=4 + 5 * (abs(look) / 38.0), flare=4, tip=2 * wv(ph * 2), diff=look * 0.12)
+    # tail up over the back rail; the leaf stands CENTRED behind her spine as a small sail: top below
+    # the ear-fin roots (never a third 'ear' from the front), leaning ~12° back, deck to the follow cam
+    tilt = math.radians(12.0 + 1.5 * wv(ph * 2, 0.4))
+    fwd = Vector((0.0, math.sin(tilt), math.cos(tilt)))
+    top_z = P.point("head", tuple(FIN_ROOT_L)).z - 0.012
+    back = P.point("chest", (0.0, 0.105, 0.470))
+    base = Vector((0.0, back.y + RIDE_SAIL_GAP, top_z - BOARD_LEN * math.cos(tilt)))
+    tail(P, lift=(30, 20, 10), sway=(0, 0, 0))
+    ccd(P, ["tail_1", "tail_2", "tail_3"], base)
+    P.set_world_rot("board", board_world(fwd, Vector((0.0, math.cos(tilt), -math.sin(tilt)))))
     return P.export()
 
 
@@ -1881,14 +1956,15 @@ def c_celebrate(t, ph):
     sw = spline(t, list(zip(T, [-4, 20, -150, -120, -20, -10, -10, -12, -160, -150, -4])))
     out = spline(t, list(zip(T, [2, 12, 40, 50, 30, 74, 74, 30, 40, 44, 2])))
     fl = spline(t, list(zip(T, [22, 30, 10, 14, 30, 8, 8, 26, 6, 8, 22])))
-    fo = spline(t, list(zip(T, [0.0, 0.0, 1.08, 0.95, 0.2, 1.0, 1.0, 0.0, 1.1, 1.0, 0.0])))
+    fo = max(fan_pop(t, 0.16, 1.0, t1=0.40, close=5 * F1), fan_pop(t, 0.58, 1.0, t1=0.97, close=4 * F1),
+             fan_pop(t, 1.09, 1.0, t1=1.36, close=6 * F1))
     lv = spline(t, list(zip(T, [0, 0, 0.3, 0.3, 0, 1.0, 1.0, 0, 0.2, 0.2, 0])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-8, flex=fl, hand=(6, 0, -8))
         if lv > 0.01:
             fan_level(P, s, (0, 0, 1), amount=lv)
         fan(P, s, fo, flutter=2.0 * fo * wv(t * 9))
-    ears(P, lift=spline(t, list(zip(T, [0, -8, 22, 16, -6, 10, 10, 0, 24, 20, 0]))),
+    ears(P, lift=spline(t, list(zip(T, [0, -8, 15, 12, -6, 8, 8, 0, 16, 14, 0]))),
          flare=spline(t, list(zip(T, [2, 0, 12, 10, 2, 16, 16, 4, 14, 12, 2]))))
     wag = math.sin(TAU * t * 4.0) * spline(t, list(zip(T, [0, 0, 0, 0, 0, 0, 0, 0.6, 1.0, 1.0, 0])))
     tail(P, lift=(spline(t, list(zip(T, [-6, -16, 16, 10, -10, 8, 8, -4, 20, 18, -6]))), 6, 8),
@@ -1911,7 +1987,7 @@ def c_hurt(t, ph):
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(10, 0, -8))
         fan(P, s, 0.0)
-    ears(P, lift=spline(t, list(zip(T, [0, 10, -20, -28, -24]))), flare=spline(t, list(zip(T, [2, 10, -4, -8, -6]))),
+    ears(P, lift=spline(t, list(zip(T, [0, 6, -20, -28, -24]))), flare=spline(t, list(zip(T, [2, 10, -4, -8, -6]))),
          tip=spline(t, list(zip(T, [0, 8, -10, -14, -12]))))
     tail(P, lift=(spline(t, list(zip(T, [-6, 14, -10, -24, -20]))), spline(t, list(zip(T, [4, 10, -6, -12, -10]))), 6),
          board=(spline(t, list(zip(T, [4, 16, -6, -14, -10]))), 0, 0))

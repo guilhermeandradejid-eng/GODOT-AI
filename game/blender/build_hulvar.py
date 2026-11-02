@@ -1028,7 +1028,8 @@ def rotz(deg):
 
 SK = None             # Skel, set in bake_all
 ANKLE = (0.210, 0.080, 0.120)
-FIST_DROP = WRIST[2] - (FIST_C[2] - 0.126) - 0.004   # wrist height when the fist rests flat on the sand
+FIST_HALF = 0.128
+FIST_DROP = WRIST[2] - (FIST_C[2] - FIST_HALF) - 0.004   # wrist height when the fist rests flat on the sand
 
 
 def body(P, drop=0.0, pitch=0.0, roll=0.0, yaw=0.0, fwd=0.0, side=0.0, spine=(0, 0, 0), chest=(0, 0, 0)):
@@ -1204,12 +1205,12 @@ FOOT_X = 0.225
 def idle_pose(ph, glance=True):
     P = Pose()
     b = wv(ph, 2)                                            # two slow breaths per loop
-    body(P, drop=0.072 - 0.006 * b, pitch=15.5 + 0.8 * b, roll=0.9 * wv(ph, 1, 0.1), yaw=1.5 * wv(ph, 1, 0.3),
-         spine=(3.0, 0.0, 0.0), chest=(3.5 - 1.2 * b, 0.0, 0.0))
+    body(P, drop=0.095 - 0.006 * b, pitch=4.0 + 0.6 * b, roll=0.9 * wv(ph, 1, 0.1), yaw=1.5 * wv(ph, 1, 0.3),
+         spine=(1.0, 0.0, 0.0), chest=(1.0 - 1.0 * b, 0.0, 0.0))
     breathe(P, b)
     g = bump(ph, 0.30, 0.40, 0.56) if glance else 0.0         # glances up at the nest
     sideways = spline(ph, [(0.0, 0.0), (0.12, 7.0), (0.24, 0.0), (0.62, -6.0), (0.78, -1.0), (1.0, 0.0)], 1.0) if glance else 0.0
-    P.rot("head", -11.0 - 9.0 * g + 1.0 * b, 0.6 * sideways, 0.0)
+    P.rot("head", -2.0 - 8.0 * g + 1.0 * b, 0.6 * sideways, 0.0)
     eyes(P, yaw=1.6 * sideways, pitch=-4.0 + 22.0 * g)
     ch = bump(ph, 0.66, 0.70, 0.84) if glance else 0.0      # rumbling chuckle
     P.rot("jaw", 1.5 + ch * (4.0 + 3.0 * math.sin(ph * 2 * math.pi * 14.0)), 0.0, 0.0)
@@ -1217,8 +1218,8 @@ def idle_pose(ph, glance=True):
     leg(P, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X, 0.08, ANKLE[2]))
     tap = bump(ph, 0.84, 0.88, 0.94) if glance else 0.0     # left knuckles drum once
-    arm_ik(P, "L", (0.530, -0.275, FIST_DROP - 0.010 + 0.05 * tap), hand_pitch=-6.0 * tap)
-    arm_ik(P, "R", (-0.530, -0.275, FIST_DROP - 0.010))
+    arm_ik(P, "L", (0.535, -0.175, FIST_DROP + 0.05 * tap), hand_pitch=-6.0 * tap)
+    arm_ik(P, "R", (-0.535, -0.175, FIST_DROP))
     level_nest(P, 1.0, tilt=(1.2 * wv(ph, 2, -0.12), 0.0))
     chain(P, hang(swing_x=3.0 + 2.0 * wv(ph, 1, -0.1), swing_side=6.0 * wv(ph, 1, -0.2)))
     return P
@@ -1234,18 +1235,18 @@ def c_walk(t, ph):
     P = Pose()
     S, Y0, c, lift = 0.185, 0.07, 0.56, 0.075
     bob = 0.5 - 0.5 * math.cos(4 * math.pi * (ph - 0.05))   # 0 at contacts, 1 at passing
-    body(P, drop=0.050 - 0.026 * bob, pitch=8.0 + 1.5 * bob, roll=-4.0 * wv(ph, 1, -0.03), yaw=-5.0 * math.cos(2 * math.pi * ph),
-         side=0.028 * wv(ph, 1, -0.03), spine=(1.0, 2.0 * math.cos(2 * math.pi * ph), 1.2 * wv(ph, 1, -0.10)),
-         chest=(1.5, 2.5 * math.cos(2 * math.pi * (ph - 0.05)), 1.0 * wv(ph, 1, -0.16)))
+    body(P, drop=0.050 - 0.026 * bob, pitch=3.5 + 1.5 * bob, roll=-4.0 * wv(ph, 1, -0.03), yaw=-5.0 * math.cos(2 * math.pi * ph),
+         side=0.028 * wv(ph, 1, -0.03), spine=(0.5, 2.0 * math.cos(2 * math.pi * ph), 1.2 * wv(ph, 1, -0.10)),
+         chest=(1.0, 2.5 * math.cos(2 * math.pi * (ph - 0.05)), 1.0 * wv(ph, 1, -0.16)))
     for side, sx, c0 in (("L", 1, 0.0), ("R", -1, 0.5)):
         y, z, planted = gait(ph, c0, (c0 + c) % 1.0, Y0 - S, Y0 + S, lift)
         pitch = 0.0 if planted else -14.0 * (z / lift)
         leg(P, side, (FOOT_X * sx, y, ANKLE[2] + z), pitch=pitch)
     for side, sx, off in (("L", 1, 0.5), ("R", -1, 0.0)):
         sw = 24.0 * math.cos(2 * math.pi * (ph - off - 0.07))
-        arm_fk(P, side, swing=sw, out=7.0, twist=-4.0, elbow=10.0 + 9.0 * max(0.0, sw) / 24.0,
-               wrist=(-6.0 - 8.0 * max(0.0, -sw) / 24.0, 0.0, 0.0))
-    P.rot("head", -6.0 + 2.0 * bob, 1.5 * math.cos(2 * math.pi * ph), 1.5 * wv(ph, 1, -0.05))
+        arm_fk(P, side, swing=sw, out=9.0, twist=-4.0, elbow=20.0 + 12.0 * max(0.0, sw) / 24.0,
+               wrist=(-8.0 - 8.0 * max(0.0, -sw) / 24.0, 0.0, 0.0))
+    P.rot("head", -2.0 + 2.0 * bob, 1.5 * math.cos(2 * math.pi * ph), 1.5 * wv(ph, 1, -0.05))
     P.rot("jaw", 2.0 + 2.5 * (1.0 - bob), 0.0, 0.0)
     eyes(P, pitch=-2.0)
     level_nest(P, 0.85, tilt=(2.0 * math.cos(4 * math.pi * (ph - 0.15)), 0.0))
@@ -1273,7 +1274,8 @@ def c_run(t, ph):
     P.rot("jaw", 6.0 + 4.0 * hi, 0.0, 0.0)
     P.rot("brow", 4.0, 0.0, 0.0)
     eyes(P, pitch=4.0)
-    level_nest(P, 1.0, tilt=(3.0 * wv(ph, 2, -0.18), 0.0))   # counter-rotated: stays upright
+    nod = sum(bump((ph - c0) % 1.0, 0.0, 0.035, 0.12) for c0 in (0.0, 0.11))   # nods on each fist plant
+    level_nest(P, 1.0, tilt=(3.0 * wv(ph, 2, -0.18) + 4.0 * nod, 0.0), up=-0.012 * nod)   # counter-rotated
     chain(P, hang(swing_x=38.0 + 10.0 * wv(ph, 2, -0.2), swing_side=6.0 * wv(ph, 1, -0.25), lag=(1.0, 1.15, 1.3, 1.4)))
     return P
 
@@ -1300,13 +1302,13 @@ def c_jump(t, ph):
     sq = bump(t, 0.0, 0.055, 0.13)              # 2-frame squat, push-off
     air = win(t, 0.07, 0.24)
     P0 = Pose()
-    body(P0, drop=0.06 + 0.07 * sq, pitch=12.0 + 6.0 * sq, spine=(3, 0, 0), chest=(3, 0, 0))
+    body(P0, drop=0.095 + 0.07 * sq, pitch=4.0 + 8.0 * sq, spine=(1, 0, 0), chest=(1, 0, 0))
     squash(P0, 1.0 - 0.07 * sq + 0.08 * bump(t, 0.06, 0.12, 0.22))
     leg(P0, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P0, "R", (-FOOT_X, 0.08, ANKLE[2]))
     for side, sx in (("L", 1), ("R", -1)):
-        arm_ik(P0, side, (0.53 * sx, -0.26 + 0.06 * sq, FIST_DROP + 0.01))
-    P0.rot("head", -10.0, 0, 0)
+        arm_ik(P0, side, (0.535 * sx, -0.175 + 0.04 * sq, FIST_DROP))
+    P0.rot("head", -2.0, 0, 0)
     P0.rot("jaw", 2.0 + 6.0 * sq, 0, 0)
     eyes(P0, pitch=6.0 * sq)
     level_nest(P0, 1.0, back=0.0, up=-0.025 * sq)
@@ -1343,14 +1345,14 @@ def c_land(t, ph):
     hit = bump(t, 0.0, 0.035, 0.20)
     reb = bump(t, 0.10, 0.17, 0.32)
     P = Pose()
-    body(P, drop=0.062 + 0.10 * hit - 0.035 * reb, pitch=15.5 + 9.0 * hit - 3.0 * reb, spine=(3.0 + 3.0 * hit, 0, 0),
-         chest=(3.5 + 4.0 * hit, 0, 0))
+    body(P, drop=0.095 + 0.10 * hit - 0.035 * reb, pitch=4.0 + 11.0 * hit - 3.0 * reb, spine=(1.0 + 3.0 * hit, 0, 0),
+         chest=(1.0 + 4.0 * hit, 0, 0))
     squash(P, 1.0 - 0.09 * hit + 0.04 * reb)
     leg(P, "L", (FOOT_X + 0.02 * hit, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X - 0.02 * hit, 0.08, ANKLE[2]))
     for side, sx in (("L", 1), ("R", -1)):
-        arm_ik(P, side, (0.56 * sx, -0.28 - 0.04 * hit, FIST_DROP + 0.024 * reb))
-    P.rot("head", -11.0 + 8.0 * hit - 4.0 * reb, 0, 0)
+        arm_ik(P, side, (0.56 * sx, -0.19 - 0.06 * hit, FIST_DROP + 0.024 * reb))
+    P.rot("head", -2.0 + 8.0 * hit - 4.0 * reb, 0, 0)
     P.rot("jaw", 1.5 + 13.0 * bump(t, 0.02, 0.07, 0.22), 0, 0)
     P.rot("brow", 1.5 + 5.0 * hit, 0, 0)
     eyes(P, pitch=-4.0, squash=1.0 - 0.45 * bump(t, 0.0, 0.04, 0.14))
@@ -1409,16 +1411,19 @@ def c_ram(t, ph):
     go = win(t, 0.05, 0.12) * (1.0 - win(t, 0.32, 0.48))
     shake = math.sin(t * 2 * math.pi * 18.0) * go * (1.0 - win(t, 0.25, 0.32))
     P = Pose()
-    body(P, drop=0.06 + 0.04 * go, pitch=15.5 - 10.0 * ant + 18.0 * go + 1.2 * shake, fwd=0.05 * go, spine=(3.0 + 4.0 * go, 0, 0),
-         chest=(3.5 + 4.0 * go, 0, 0))
+    imp = bump(t, 0.10, 0.135, 0.20)                           # impact accent: 2-frame squash along the bow
+    body(P, drop=0.09 + 0.04 * go, pitch=4.0 - 8.0 * ant + 24.0 * go + 1.2 * shake, fwd=0.05 * go + 0.03 * imp,
+         spine=(1.0 + 4.0 * go, 0, 0), chest=(1.0 + 4.0 * go, 0, 0))
     squash(P, 1.0 + 0.05 * go)
+    P.scl("spine", 1.0 + 0.05 * imp, 1.0 + 0.04 * imp, 1.0 - 0.11 * imp)
+    P.scl("chest", 1.0 / (1.0 + 0.05 * imp), 1.0 / (1.0 + 0.04 * imp), 1.0 / (1.0 - 0.11 * imp))
     leg(P, "L", (FOOT_X, lerp(0.08, -0.16, go), ANKLE[2]))
     leg(P, "R", (-FOOT_X, lerp(0.08, 0.34, go), ANKLE[2] + toe_lift(28.0 * go)), pitch=28.0 * go)
     for side, sx in (("L", 1), ("R", -1)):
         sw = lerp(-8.0 * ant, -62.0, go)
         arm_fk(P, side, swing=sw, out=lerp(8.0, 22.0, go), twist=-10.0 * go, elbow=lerp(12.0, 4.0, go), wrist=(18.0 * go, 0.0, 0.0))
     idle = idle_pose(0.0)
-    P.rot("head", -11.0 + 26.0 * go + 6.0 * ant * -1.0, 0, 0)
+    P.rot("head", -2.0 + 16.0 * go - 6.0 * ant, 0, 0)
     P.rot("jaw", 1.5 - 1.5 * go, 0, 0)
     P.rot("brow", 1.5 + 9.0 * go, 0, 0)
     eyes(P, pitch=8.0 * go, squash=1.0 - 0.18 * go)
@@ -1429,6 +1434,8 @@ def c_ram(t, ph):
 
 
 def brace_pose(t):
+    """Canhão do Ninho: wide low stance leaning back, fists planted far forward and wide, jaw
+    clenched, anchor dug into the sand behind; the shot (recoil + nest kick) at t = 0.25 s."""
     P = Pose()
     fire = 0.25
     rec = bump(t, fire, fire + 0.025, fire + 0.22)
@@ -1436,20 +1443,21 @@ def brace_pose(t):
     wob = math.sin((t - fire) * 2 * math.pi * 5.0) * math.exp(-max(0.0, t - fire) * 7.0) * (1.0 if t > fire else 0.0)
     charge = win(t, 0.06, 0.22) * (1.0 - win(t, fire, fire + 0.02))
     jit = math.sin(t * 2 * math.pi * 24.0) * charge
-    body(P, drop=0.115 + 0.01 * jit + 0.03 * rec, pitch=6.0 + 3.0 * charge - 11.0 * rec + 2.5 * wob, side=0.004 * jit,
-         spine=(2.0 - 3.0 * rec, 0, 0), chest=(2.0 - 5.0 * rec, 0, 0))
+    body(P, drop=0.185 + 0.008 * jit + 0.035 * rec, pitch=-5.0 + 1.5 * charge - 7.0 * rec + 2.5 * wob, side=0.004 * jit,
+         spine=(-1.5 - 2.0 * rec, 0, 0), chest=(-1.5 - 4.0 * rec, 0, 0))
     squash(P, 1.0 - 0.03 * charge - 0.08 * kick + 0.04 * wob)
-    leg(P, "L", (0.31, 0.02, ANKLE[2]), yaw=-8.0)
-    leg(P, "R", (-0.31, 0.14, ANKLE[2]), yaw=8.0)
-    arm_ik(P, "L", (0.60, -0.21, FIST_DROP), hand_yaw=10.0)
-    arm_ik(P, "R", (-0.60, -0.21, FIST_DROP), hand_yaw=10.0)
-    P.rot("head", -6.0 - 12.0 * rec + 3.0 * wob, 0, 0)
-    P.rot("jaw", 1.0 - 1.0 * charge + 22.0 * rec, 0, 0)
-    P.rot("brow", 6.0 + 3.0 * charge - 12.0 * rec, 0, 0)
-    eyes(P, pitch=10.0, squash=1.0 - 0.25 * charge - 0.5 * kick)
+    leg(P, "L", (0.420, 0.03, ANKLE[2]), yaw=-16.0, pole_out=0.45)
+    leg(P, "R", (-0.420, 0.11, ANKLE[2]), yaw=16.0, pole_out=0.45)
+    arm_ik(P, "L", (0.665, -0.330, FIST_DROP), hand_yaw=16.0, pole=(0.7, 0.75, 0.1))
+    arm_ik(P, "R", (-0.665, -0.330, FIST_DROP), hand_yaw=16.0, pole=(0.7, 0.75, 0.1))
+    P.rot("head", 3.0 + 1.5 * charge - 10.0 * rec + 3.0 * wob, 0, 0)
+    P.rot("jaw", -1.5 + 1.5 * jit + 22.0 * rec, 0, 0)            # clenched until the shot, then a roar
+    P.rot("brow", 9.0 + 3.0 * charge - 14.0 * rec, 0, 0)
+    eyes(P, pitch=8.0, squash=1.0 - 0.28 * charge - 0.5 * kick)
     level_nest(P, 1.0, tilt=(13.0 + 2.0 * charge - 32.0 * rec + 8.0 * wob, 0.0), back=0.09 * rec, up=-0.03 * rec)
     P.scl("nest", 1.0 + 0.10 * kick, 1.0 - 0.12 * kick + 0.05 * wob, 1.0 + 0.10 * kick)
-    chain(P, hang(swing_x=-1.0 + 8.0 * rec, swing_side=0.0, base=(0.60, 0.44, 0.28, 0.14)))
+    # anchor: the chain runs back taut and the flukes bite the sand behind
+    chain(P, hang(swing_x=34.0 + 4.0 * rec, swing_side=0.0, base=(0.80, 0.70, 0.55, -0.35), lag=(1.0, 1.0, 1.0, 1.0)))
     return P
 
 
@@ -1460,24 +1468,26 @@ def c_brace(t, ph):
 
 @clip("surf", 1.0, loop=True)
 def c_surf(t, ph):
-    """Trenó de Quilha: hull on the sand like a boat, legs folded inside, fists as rudders."""
+    """Trenó de Quilha: the hull planes on its keel like a boat - prow lifted 14 deg, the aft keel is
+    the contact line, legs folded inside, fists trailing behind at the sides as rudders, nest level."""
     P = Pose()
     bob = 0.006 * wv(ph, 4) + 0.004 * wv(ph, 7, 0.3)
-    body(P, drop=0.0, pitch=-5.0 + 1.5 * wv(ph, 2, 0.1), roll=3.0 * wv(ph, 1), spine=(0, 0, 0), chest=(1.0, 0, -1.0 * wv(ph, 1, -0.1)))
+    body(P, drop=0.0, pitch=-11.0 + 1.5 * wv(ph, 2, 0.1), roll=3.0 * wv(ph, 1), spine=(-1.5, 0, 0),
+         chest=(-1.5, 0, -1.0 * wv(ph, 1, -0.1)))
     z0 = lowest(P, HULL_BONES)
-    lift_body(P, -z0 - 0.010 + bob)
+    lift_body(P, -z0 - 0.012 + bob)
     M = SK.fk(P)
     for side, sx in (("L", 1), ("R", -1)):
         hip = SK.head(P, f"thigh_{side}", M)
-        leg(P, side, (0.20 * sx, hip.y - 0.10, hip.z + 0.07), pitch=80.0)
+        leg(P, side, (0.20 * sx, hip.y - 0.06, hip.z + 0.05), pitch=70.0)
     for side, sx, off in (("L", 1, 0.0), ("R", -1, 0.5)):
         dip = 0.5 + 0.5 * wv(ph, 1, off)
-        arm_ik(P, side, (0.78 * sx, 0.12 + 0.05 * dip, FIST_DROP + 0.002 + 0.025 * dip), hand_pitch=0.0, hand_yaw=-25.0,
-               pole=(0.3, 1.0, 0.6))
-    P.rot("head", -5.0 + 1.0 * wv(ph, 2), 0, 1.5 * wv(ph, 1))
+        arm_ik(P, side, (0.66 * sx, 0.26 + 0.05 * dip, FIST_DROP - 0.004 + 0.03 * dip), hand_pitch=18.0, hand_yaw=-20.0,
+               pole=(0.6, 0.3, 1.0))
+    P.rot("head", 2.0 + 1.0 * wv(ph, 2), 0, 1.5 * wv(ph, 1))
     P.rot("jaw", 3.0, 0, 0)
-    P.rot("brow", 3.0, 0, 0)
-    eyes(P, pitch=-2.0, yaw=4.0 * wv(ph, 1, 0.2))
+    P.rot("brow", 2.0, 0, 0)
+    eyes(P, pitch=4.0, yaw=4.0 * wv(ph, 1, 0.2))
     level_nest(P, 1.0, tilt=(1.5 * wv(ph, 2, -0.2), 2.0 * wv(ph, 1, -0.15)))
     chain(P, hang(swing_x=70.0, swing_side=7.0 * wv(ph, 1, -0.3), base=(0.85, 0.8, 0.75, 0.7), lag=(1.0, 1.05, 1.1, 1.12)))
     return P
@@ -1525,8 +1535,8 @@ def c_hurt(t, ph):
     hit = bump(t, 0.0, 0.05, 0.30)
     over = bump(t, 0.18, 0.30, 0.48)
     P = Pose()
-    body(P, drop=0.06 + 0.02 * hit, pitch=15.5 - 24.0 * hit + 5.0 * over, roll=-4.0 * hit, spine=(3.0 - 6.0 * hit, 0, 0),
-         chest=(3.5 - 7.0 * hit, 0, 2.0 * hit))
+    body(P, drop=0.095 + 0.02 * hit, pitch=4.0 - 18.0 * hit + 5.0 * over, roll=-4.0 * hit, spine=(1.0 - 5.0 * hit, 0, 0),
+         chest=(1.0 - 6.0 * hit, 0, 2.0 * hit))
     squash(P, 1.0 + 0.04 * hit - 0.03 * over)
     leg(P, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X, 0.08 + 0.04 * hit, ANKLE[2]))
@@ -1537,11 +1547,11 @@ def c_hurt(t, ph):
         arm_world(Pa, side, (0.72, -0.42, 0.55), (0.40, -0.55, 0.73), hand=(-30.0, 0.0, 0.0))
         Pi = Pose()
         Pi.r, Pi.l, Pi.s = dict(P.r), dict(P.l), dict(P.s)
-        arm_fk(Pi, side, swing=0.0, out=6.0, elbow=6.0)
+        arm_ik(Pi, side, (0.535 * sx, -0.175, FIST_DROP))
         from mathutils import Quaternion
         for bn in (f"upperarm_{side}", f"forearm_{side}", f"hand_{side}"):
             P.r[bn] = Pi.r.get(bn, Quaternion()).slerp(Pa.r.get(bn, Quaternion()), hit)
-    P.rot("head", -11.0 - 14.0 * hit + 6.0 * over, 0, 4.0 * hit)
+    P.rot("head", -2.0 - 14.0 * hit + 6.0 * over, 0, 4.0 * hit)
     P.rot("jaw", 1.5 + 16.0 * bump(t, 0.0, 0.06, 0.3), 0, 0)
     P.rot("brow", -9.0 * hit + 3.0 * over, 0, 0)
     eyes(P, pitch=4.0 * hit, squash=1.0 - 0.85 * bump(t, 0.0, 0.03, 0.22))
