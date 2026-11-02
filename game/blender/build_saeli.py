@@ -49,7 +49,6 @@ if str(LIB) not in sys.path:
     sys.path.insert(0, str(LIB))
 
 import sdfchar  # noqa: E402
-import sdfkit  # noqa: E402
 from bhelpers import log, reset_scene  # noqa: E402
 from charkit import BoneDef, Rig, bake_action  # noqa: E402
 from sdfkit import (Prim, Shape, capsule, cylinder, ellipsoid, hexcol, look_basis,  # noqa: E402
@@ -85,8 +84,7 @@ FIN_LO = hexcol("12707C")      # membranas perto do cubo / raiz das orelhas
 FIN_MID = hexcol("178F98")     # membranas (corpo)
 FIN_HI = hexcol("2BB9B6")      # membranas (perto da borda)
 EDGE = hexcol("6FEDE3")        # borda luminosa
-SOLE = hexcol("A9A6C9")        # solas (lilás acinzentado: não roubam a cena na câmera de trás)
-CHEV = hexcol("4FE3D6")        # chevrons dorsais/nuca (Glass Cyan luminoso: leitura de costas)
+CROWN = hexcol("11707F")       # coroa (escurecimento sutil)
 
 BIG = 1.0e3
 
@@ -115,47 +113,31 @@ SHOULDER_L = V3(0.092, 0.0, 0.508)
 ELBOW_L = V3(0.168, -0.006, 0.420)
 WRIST_L = V3(0.224, -0.020, 0.338)
 HAND_TIP_L = V3(0.248, -0.040, 0.280)
+HUB_L = V3(0.231, -0.010, 0.340)
 HIP_L = V3(0.062, 0.006, 0.300)
 KNEE_L = V3(0.070, -0.012, 0.165)
 ANKLE_L = V3(0.070, 0.010, 0.060)
 TOE_L = V3(0.070, -0.085, 0.020)
-FINGERS = ((0.219, 0.264), (0.239, 0.256), (0.259, 0.264))     # 3 nubs (x, z) por mão, pontas índigo
 HEAD_C = V3(0, -0.025, 0.735)
 HEAD_R = (0.190, 0.162, 0.166)
 EYE_C_L = V3(0.075, -0.146, 0.737)
 EYE_R = 0.052
 EYE_SQ = (0.92, 1.12, 0.85)
 EYE_FWD_L = V3(0.22, -1.0, 0.02)
-# orelhas-barbatana: nascem no lado do crânio atrás da linha dos olhos e varrem para TRÁS
-# (cauda de jato), abertas ~28° para fora e só ~12° para cima -> nada passa do topo do crânio
-FIN_ROOT_L = V3(0.158, 0.018, 0.768)
-FIN_SPLAY = 26.0                 # graus para fora (a partir de +Y)
-FIN_ELEV = 11.0                  # graus para cima
-FIN_ROLL = -20.0                 # giro da lâmina no próprio eixo (- = borda de cima para fora)
-FIN_LEN = 0.340
-FIN_SPLIT = 0.145                # comprimento do 1o osso da orelha
-
-
-def _fin_axis() -> np.ndarray:
-    s, e = math.radians(FIN_SPLAY), math.radians(FIN_ELEV)
-    return V3(math.sin(s) * math.cos(e), math.cos(s) * math.cos(e), math.sin(e))
-
-
-FIN_MID_L = FIN_ROOT_L + FIN_SPLIT * _fin_axis()
-FIN_TIP_L = FIN_ROOT_L + FIN_LEN * _fin_axis()
+FIN_ROOT_L = V3(0.128, 0.005, 0.818)
+FIN_MID_L = V3(0.190, 0.095, 0.875)
+FIN_TIP_L = V3(0.238, 0.212, 0.928)
 TAIL_PTS = [V3(0, 0.080, 0.330), V3(0, 0.170, 0.310), V3(0, 0.255, 0.322), V3(0, 0.330, 0.352)]
-BOARD_LEN = 0.360                # talo 0,045 + folha 0,315 (comprimento:largura ~2,3:1)
-BOARD_DIR = V3(0.0, math.cos(math.radians(16.0)), math.sin(math.radians(16.0)))
-BOARD_TAIL = TAIL_PTS[3] + BOARD_LEN * BOARD_DIR
+BOARD_TAIL = V3(0, 0.647, 0.443)
 
 FAN_OPEN = [14.0, 49.0, 84.0, 119.0, 154.0]     # ângulos das costelas (aberto), a partir de u
-FAN_CLOSED = [3.0, 5.5, 8.0, 10.5, 13.0]        # fechado: lâmina em cunha (>= 2 cm) no dorso do antebraço
-FAN_LEN = 0.250
-FAN_FOLD = 0.56                                  # comprimento relativo das costelas fechadas (~14 cm)
+FAN_CLOSED = [14.0, 15.0, 16.0, 17.0, 18.0]     # fechado: escalonado 1° (sem z-fighting)
+FAN_LEN = 0.21
+FAN_FOLD = 0.50                                  # comprimento relativo das costelas fechadas
 
 
-def fan_axes(sx: float):
-    """(u, v, n) do leque do lado sx. u: punho->cotovelo; v: ~+Y (para trás); n = u x v.
+def fan_basis(sx: float):
+    """(hub, u, v, n) do leque do lado sx. u: punho->cotovelo; v: ~+Y (para trás); n = u x v.
     Girar +phi em volta de n leva u em direção a v (abre o leque)."""
     E = mx(ELBOW_L, sx)
     W = mx(WRIST_L, sx)
@@ -163,18 +145,6 @@ def fan_axes(sx: float):
     Y = V3(0, 1, 0)
     v = nrm(Y - (Y @ u) * u)
     n = np.cross(u, v)
-    return u, v, n
-
-
-# cubo do leque: no dorso/fora do punho (~3 cm do eixo do antebraço), para a lâmina fechada
-# ficar POR FORA do antebraço em vez de enterrada nele
-_U, _V, _N = fan_axes(1.0)
-HUB_L = WRIST_L + 0.008 * _U + 0.026 * _V - 0.014 * _N
-
-
-def fan_basis(sx: float):
-    """(hub, u, v, n) do leque do lado sx."""
-    u, v, n = fan_axes(sx)
     return mx(HUB_L, sx), u, v, n
 
 
@@ -231,18 +201,6 @@ class FShape(Shape):
         super().__init__(*a, **kw)
         self.weight_overrides: list = []     # (prim, bone, soft)
         self.weight_fn = None
-        self.emits: list = []                # (prim, soft, emission): só brilho, sem mudar a cor
-
-    def emit(self, prim: Prim, emission: float, soft: float = 0.006) -> "FShape":
-        self.emits.append((prim, soft, emission))
-        return self
-
-    def emission_at(self, V):
-        E = super().emission_at(V)
-        for prim, soft, em in self.emits:
-            a = smoothstep(soft * 0.5, -soft * 0.5, prim(V))
-            E = np.maximum(E, a * em)
-        return E
 
     def _ext(self):
         pad = max(0.02, 6.0 * self.voxel)
@@ -334,31 +292,6 @@ class FShape(Shape):
                 d[bone] = d.get(bone, 0.0) + ai
                 W[i] = {b: w for b, w in d.items() if w > 0.004}
         return W
-
-
-# ============================================================================= mesh build (wrapper)
-_kit_build_object = sdfkit.build_object
-
-
-def build_object_projected(shape, rig_bones, log=print, decimate=True, ao_field=None, ao_strength=0.55):
-    """sdfkit.build_object + projeção dos vértices DECIMADOS de volta na superfície SDF.
-    A decimação (QEM) põe os vértices colapsados um pouco FORA das superfícies convexas; com isso
-    a pele furava as placas finas (máscara, chevrons, deck) em pontos e dentes de serra."""
-    obj = _kit_build_object(shape, rig_bones, log, decimate, ao_field, ao_strength)
-    if not decimate:
-        return obj
-    # colours/weights were computed at the decimated positions; the projection moves vertices
-    # by a fraction of a voxel, so they stay valid
-    me = obj.data
-    co = np.empty(len(me.vertices) * 3, np.float32)
-    me.vertices.foreach_get("co", co)
-    V = sdfkit.project(shape.field, co.reshape(-1, 3).astype(np.float64), shape.voxel, iters=2)
-    me.vertices.foreach_set("co", V.astype(np.float32).ravel())
-    me.update()
-    return obj
-
-
-sdfkit.build_object = build_object_projected
 
 
 # ============================================================================= custom prims
@@ -466,30 +399,6 @@ def tight(prim: Prim, lo, hi) -> Prim:
     return Prim(prim.fn, lo, hi)
 
 
-class CullRegion:
-    """Entrada para Shape.cull_by que não é uma peça: só uma região (negativo = esconder).
-    Usada para esconder a pele SOB o miolo das placas (máscara, mancha, chevrons, deck), longe da
-    borda: assim a borda do buraco, depois de decimada, fica sempre escondida sob a placa."""
-
-    def __init__(self, prim: Prim, surface=None, tol: float = 0.003):
-        self.prim = prim
-        self.surface = surface          # só perto desta superfície (a que a placa acompanha)
-        self.tol = tol
-
-    def field(self, P):
-        d = self.prim(P)
-        if self.surface is not None:
-            d = np.maximum(d, np.abs(self.surface(P)) - self.tol)
-        return d
-
-
-def border_band(reg: Prim, inner: float = 0.014, outer: float = 0.006) -> Prim:
-    """Faixa em volta da borda de uma região (de 'inner' para dentro até 'outer' para fora)."""
-    c = 0.5 * (outer - inner)
-    h = 0.5 * (outer + inner)
-    return Prim(lambda P: np.abs(reg(P) - c) - h, reg.lo - 0.02, reg.hi + 0.02)
-
-
 def surf_hit(field, origin, direction, t1: float = 0.5, steps: int = 400) -> np.ndarray:
     """Primeiro ponto da superfície ao longo de um raio (marcha + bisseção)."""
     o = V3(origin)
@@ -537,34 +446,28 @@ def eye_ellipsoid(sx: float, grow: float = 0.0) -> Prim:
 
 
 def fin_frame():
-    """Referencial da orelha-barbatana esquerda: origem na raiz, a = eixo (raiz->ponta, para trás),
-    b = largura (positivo = borda de ataque, em cima), n = normal da face (para fora).
-    A lâmina é quase vertical (como a deriva de um jato): de lado e na câmera de trás ela mostra a
-    face; de frente fica bem escorçada e abaixo do topo do crânio."""
-    a = _fin_axis()
-    Z = V3(0, 0, 1)
-    n0 = nrm(np.cross(a, Z))
-    up = nrm(Z - (Z @ a) * a)
-    r = math.radians(FIN_ROLL)
-    n = nrm(math.cos(r) * n0 + math.sin(r) * up)
+    """Referencial da orelha-barbatana esquerda: origem na raiz, a = eixo (raiz->ponta),
+    b = largura (positivo = borda de ataque, de cima), n = normal da face (para cima/fora)."""
+    o = FIN_ROOT_L + V3(-0.008, 0.000, -0.008)
+    a = nrm(FIN_TIP_L - FIN_ROOT_L)
+    nz = V3(0.62, 0.0, 0.78)
+    n = nrm(nz - (nz @ a) * a)
     b = np.cross(n, a)
-    return FIN_ROOT_L.copy(), a, b, n
+    return o, a, b, n
 
 
-FIN_SPINE = 0.013                 # os raios passam da membrana como espinhos
+FIN_LEN = 0.325
 
 
 def fin_outline():
     """Polígono (s ao longo, w de través) + raios + recortes da borda de fuga."""
     L = FIN_LEN
-    poly = [(-0.020, 0.042), (0.055, 0.058), (0.145, 0.055), (0.235, 0.037), (0.298, 0.015), (L, 0.000),
-            (0.292, -0.032), (0.218, -0.058), (0.134, -0.071), (0.050, -0.069), (-0.020, -0.053)]
-    tips = [(L, 0.000), (0.292, -0.032), (0.218, -0.058), (0.110, -0.071)]
-    rays = []
-    for (sx_, sy_), (ex_, ey_) in (((0.0, 0.008), tips[0]), ((0.0, -0.008), tips[1]), ((0.0, -0.022), tips[2])):
-        dx, dy = ex_ - sx_, ey_ - sy_
-        ll = math.hypot(dx, dy)
-        rays.append(((sx_, sy_), (ex_ + dx / ll * FIN_SPINE, ey_ + dy / ll * FIN_SPINE)))
+    poly = [(-0.016, 0.044), (0.09, 0.058), (0.195, 0.047), (0.284, 0.022), (L, 0.002),
+            (0.254, -0.045), (0.172, -0.067), (0.083, -0.074), (-0.016, -0.062)]
+    rays = [((0.0, 0.007), (L - 0.010, 0.003)),
+            ((0.0, -0.011), (0.250, -0.040)),
+            ((0.0, -0.024), (0.169, -0.063))]
+    tips = [(L, 0.002), (0.254, -0.045), (0.172, -0.067), (0.056, -0.076)]
     scallops = []
     for (ax, ay), (bx, by) in zip(tips[:-1], tips[1:]):
         mxp, myp = 0.5 * (ax + bx), 0.5 * (ay + by)
@@ -573,15 +476,15 @@ def fin_outline():
         nx, ny = ey / (2 * c), -ex / (2 * c)
         if ny > 0:
             nx, ny = -nx, -ny
-        sag = 0.009
+        sag = 0.012
         R = (c * c + sag * sag) / (2 * sag)
         scallops.append(((mxp + nx * (R - sag), myp + ny * (R - sag)), R))
     return poly, rays, scallops
 
 
 def fin_warp(x, y):
-    """Leve concha: a ponta curva um pouco para fora e a borda de fuga acompanha."""
-    return 0.10 * y * y * (x / FIN_LEN) + 0.05 * np.maximum(x - 0.15, 0.0) ** 2 - 0.08 * np.minimum(y, 0.0) ** 2
+    """Leve concha: a borda de fuga curva para baixo e a ponta para cima."""
+    return 0.12 * y * y * (x / FIN_LEN) + 0.05 * np.maximum(x - 0.15, 0.0) ** 2 - 0.10 * np.minimum(y, 0.0) ** 2
 
 
 def fin_prims():
@@ -621,49 +524,34 @@ def leaf_frame():
     return o, e1, e2, n
 
 
-LEAF_STEM = 0.045                 # talo que entra na cauda
-LEAF_HW = 0.0675                  # meia-largura máxima da folha (0,315 x 0,135 = 2,3:1)
-_LEAF_A, _LEAF_B = 0.55, 0.95     # base arredondada, ponta afilada
-_LEAF_FMAX = ((_LEAF_A / (_LEAF_A + _LEAF_B)) ** _LEAF_A) * ((_LEAF_B / (_LEAF_A + _LEAF_B)) ** _LEAF_B)
-
-
-def leaf_half_width(s):
-    """Meia-largura da folha em s (0 = base do talo .. BOARD_LEN = ponta)."""
-    t = np.clip((np.asarray(s, dtype=np.float64) - LEAF_STEM) / (BOARD_LEN - LEAF_STEM), 0.0, 1.0)
-    return LEAF_HW * (t ** _LEAF_A) * ((1.0 - t) ** _LEAF_B) / _LEAF_FMAX
-
-
-def _leaf_poly():
-    ss = LEAF_STEM + (BOARD_LEN - LEAF_STEM) * (1.0 - np.cos(np.linspace(0.0, math.pi, 26))) * 0.5
-    hw = leaf_half_width(ss)
-    right = [(float(s_), float(w_)) for s_, w_ in zip(ss, hw)]
-    left = [(float(s_), -float(w_)) for s_, w_ in zip(ss[::-1], hw[::-1])][1:-1]
-    return right + left
-
-
-LEAF_POLY = _leaf_poly()
-LEAF_DISH = 2.6                   # borda virada para cima (~1,2 cm na parte mais larga)
+BOARD_LEN = 0.330
 
 
 def leaf_warp(x, y):
-    """Folha em concha (borda levantada) e nariz levemente erguido."""
-    return 0.50 * np.maximum(x - 0.24, 0.0) ** 2 + LEAF_DISH * y * y
+    """Nariz levemente levantado e borda em concha (prancha)."""
+    return 0.30 * np.maximum(x - 0.22, 0.0) ** 2 + 0.30 * y * y
+
+
+LEAF_CAPS = [((-0.004, 0.0), (0.048, 0.0), 0.022, 0.055), ((0.048, 0.0), (0.138, 0.0), 0.055, 0.090),
+             ((0.138, 0.0), (0.232, 0.0), 0.090, 0.068), ((0.232, 0.0), (BOARD_LEN - 0.006, 0.0), 0.068, 0.006)]
 
 
 def leaf_sdf2d(x, y):
-    blade = sd_polygon(x, y, LEAF_POLY)
-    stem = sd_capsule2(x, y, (-0.006, 0.0), (LEAF_STEM + 0.03, 0.0), 0.0135, 0.0115)
-    return smin(blade, stem, 0.012)
+    d = None
+    for a_, b_, ra, rb in LEAF_CAPS:
+        di = sd_capsule2(x, y, a_, b_, ra, rb)
+        d = di if d is None else smin(d, di, 0.05)
+    return d
 
 
-LEAF_HALF_T = 0.0100
+LEAF_HALF_T = 0.0125
 
 
 def leaf_prim(grow: float = 0.0) -> Prim:
     o, e1, e2, n = leaf_frame()
     L = BOARD_LEN
-    bb = [(-0.04, 0.10), (L + 0.02, 0.10), (L + 0.02, -0.10), (-0.04, -0.10)]
-    return extrude2d(o, e1, e2, lambda x, y: leaf_sdf2d(x, y) - grow, LEAF_HALF_T + grow, 0.0098 + grow, bb, leaf_warp)
+    bb = [(-0.04, 0.11), (L + 0.02, 0.11), (L + 0.02, -0.11), (-0.04, -0.11)]
+    return extrude2d(o, e1, e2, lambda x, y: leaf_sdf2d(x, y) - grow, LEAF_HALF_T + grow, 0.0108 + grow, bb, leaf_warp)
 
 
 def leaf_top_region(inset: float) -> Prim:
@@ -686,16 +574,19 @@ def leaf_point(s_, w_, h=0.0) -> np.ndarray:
     return o + s_ * e1 + w_ * e2 + (z + h) * n
 
 
-FAN_R = FAN_LEN + 0.002           # raio da membrana: UM arco convexo contínuo (nada de recortes)
-
-
-def fan_panel(sx: float, k: int, half_t: float = 0.0045, R: float = FAN_R, pleat: float = 0.0036) -> Prim:
-    """Painel de membrana entre as costelas k e k+1 (0-based) do lado sx: setor de disco fino
-    recortado pelos 2 planos das costelas, borda em arco convexo e prega em tenda (as duas metades
-    do painel são as 2 faixas do leque plissado)."""
+def fan_panel(sx: float, k: int, half_t: float = 0.0046, R: float = FAN_LEN + 0.003, depth: float = 0.020,
+              pleat: float = 0.0042) -> Prim:
+    """Painel de membrana entre as costelas k e k+1 (0-based) do lado sx: disco fino recortado
+    pelos 2 planos das costelas, borda recortada (círculo) e prega (tenda ao longo do ângulo)."""
     hub, u, v, n = fan_basis(sx)
     th0 = math.radians(FAN_OPEN[k])
     th1 = math.radians(FAN_OPEN[k + 1])
+    mid = 0.5 * (th0 + th1)
+    ha = 0.5 * (th1 - th0)
+    c0 = R * math.cos(ha) - R + depth
+    Rs = (c0 * c0 + (R * math.sin(ha)) ** 2) / (2 * c0)
+    D = R - depth + Rs
+    scx, scy = D * math.cos(mid), D * math.sin(mid)
     sgn = 1.0 if k % 2 == 0 else -1.0
     s0, c0_, s1, c1_ = math.sin(th0), math.cos(th0), math.sin(th1), math.cos(th1)
 
@@ -712,7 +603,8 @@ def fan_panel(sx: float, k: int, half_t: float = 0.0045, R: float = FAN_R, pleat
         d_disc = r - R
         d_w0 = a_ * s0 - b_ * c0_
         d_w1 = -a_ * s1 + b_ * c1_
-        d2 = np.maximum(d_disc, np.maximum(d_w0, d_w1))
+        d_sc = Rs - np.hypot(a_ - scx, b_ - scy)
+        d2 = np.maximum(np.maximum(d_disc, np.maximum(d_w0, d_w1)), d_sc)
         rr = half_t * 0.95
         d2r = d2 + rr
         dz = np.abs(h) - half_t + rr
@@ -723,22 +615,6 @@ def fan_panel(sx: float, k: int, half_t: float = 0.0045, R: float = FAN_R, pleat
         pts.append(hub + R * (math.cos(th) * u + math.sin(th) * v))
     pts = np.array(pts)
     return Prim(f, pts.min(axis=0) - 0.02, pts.max(axis=0) + 0.02)
-
-
-def fan_wedge(sx: float, tha: float, thb: float) -> Prim:
-    """Negativo dentro da cunha angular [tha, thb] (graus, no plano do leque) do lado sx
-    (para pintar as faixas do leque plissado)."""
-    hub, u, v, n = fan_basis(sx)
-    a0, a1 = math.radians(tha), math.radians(thb)
-    sa, ca, sb, cb = math.sin(a0), math.cos(a0), math.sin(a1), math.cos(a1)
-
-    def f(P):
-        q = P - hub
-        x_ = q @ u
-        y_ = q @ v
-        d = np.maximum(x_ * sa - y_ * ca, -x_ * sb + y_ * cb)
-        return np.maximum(d, -sx * P[:, 0])
-    return Prim(f, (-1e3,) * 3, (1e3,) * 3)
 
 
 def fan_weight_fn(V):
@@ -783,12 +659,11 @@ def build_head(q: float):
     """Crânio, bochechas de feijão, focinho, nariz, sorriso esculpido, sobrancelhas, pálpebras
     inferiores, bases das orelhas (tudo rígido no osso head) + a placa marfim da máscara-coração
     e as sardas (contas luminosas)."""
-    head = FShape("SaeliHead", "skin", voxel=0.0031 * q, tris=1400, color_soft=0.003, weight_sigma=0.02)
+    head = FShape("SaeliHead", "skin", voxel=0.0031 * q, tris=1440, color_soft=0.003, weight_sigma=0.02)
     head.add(ellipsoid(HEAD_C, HEAD_R), "head", LAGOON, k=0.0)
     head.add(ellipsoid(HEAD_C + V3(0, -0.016, 0.036), (0.180, 0.144, 0.114)), "head", LAGOON, k=0.045)
     head.add_mirrored(ellipsoid((0.094, -0.088, 0.682), (0.085, 0.066, 0.060)), "head", LAGOON, k=0.05)
-    # muzzle: a real snout volume under the nose (breaks the head sphere ~2 cm in profile)
-    head.add(ellipsoid((0.0, -0.160, 0.657), (0.062, 0.048, 0.042)), "head", LAGOON, k=0.028)
+    head.add(ellipsoid((0.0, -0.156, 0.674), (0.047, 0.034, 0.035)), "head", LAGOON, k=0.03)
     for sx in (1.0, -1.0):          # lower lids: the cheeks push up under the eyes
         c, R = eye_basis(sx)
         lid_c = c + R @ V3(0.004 * sx, -0.060, 0.008)
@@ -804,7 +679,7 @@ def build_head(q: float):
         head.carve(sock, k=0.006)
     base = snapshot(head)            # head volume without the small features
     # nose (indigo button on top of the muzzle) and brows (short ridges, inner end lower)
-    nose_p = surf_hit(base, (0.0, -0.30, 0.686), (0, 1, 0))
+    nose_p = surf_hit(base, (0.0, -0.30, 0.692), (0, 1, 0))
     nose = ellipsoid(nose_p + V3(0, 0.0030, 0.002), (0.0195, 0.0125, 0.0135), (-12, 0, 0))
     brows = []
     for sx in (1.0, -1.0):
@@ -818,7 +693,7 @@ def build_head(q: float):
     smile = []
     for i in range(11):
         t = (i / 10.0) * 2.0 - 1.0
-        p = surf_hit(base, (0.030 * t, -0.30, 0.647 + 0.0105 * t * t + 0.0025 * t ** 4), (0, 1, 0))
+        p = surf_hit(base, (0.030 * t, -0.30, 0.652 + 0.0105 * t * t + 0.0025 * t ** 4), (0, 1, 0))
         smile.append(p + field_n(base, p) * 0.0006)
     sm = None
     for i in range(len(smile) - 1):
@@ -830,18 +705,14 @@ def build_head(q: float):
         tip = smile[idx] + V3(0.0055 * sx, 0.0, 0.0060)
         sm = sm.union(round_cone(smile[idx], tip, 0.0026, 0.0024), 0.0015)
     head.detail(ellipsoid((0, -0.150, 0.700), (0.07, 0.06, 0.07)), 0.8)
-    # (no soft crown gradient: it baked into a dirty smudge on the back of the head)
+    head.paint(plane(tuple(HEAD_C + V3(0, 0.035, 0.030)), (0, -0.55, -0.835)), CROWN, soft=0.15)   # countershading
 
     # ---- ivory heart plate (inset face mask)
-    face = FShape("SaeliFace", "skin", voxel=0.0021 * q, tris=1030, color_soft=0.0025, weight_sigma=0.02)
-    lob_c, lob_r, tip_c, tip_r = (0.064, 0.757), 0.076, (0.0, 0.618), 0.011
+    face = FShape("SaeliFace", "skin", voxel=0.0022 * q, tris=940, color_soft=0.0025, weight_sigma=0.02)
+    lob_c, lob_r, tip_c, tip_r = (0.064, 0.757), 0.076, (0.0, 0.626), 0.011
     heart = heart_prim(lobe_c=lob_c, lobe_r=lob_r, tip_c=tip_c, tip_r=tip_r, y_cut=-0.060, k=0.006)
     heart = tight(heart, (-0.16, -0.25, tip_c[1] - tip_r - 0.012), (0.16, -0.055, lob_c[1] + lob_r + 0.012))
-    face.add(plate(base, heart, lift=0.0025, sink=0.0040, k=0.0020), "head", IVORY, k=0.0)
-    face.detail(border_band(heart, 0.004, 0.004), 1.0)
-    face.emit(heart.offset(0.004), 0.12, soft=0.004)      # ivory stays ivory when backlit
-    # the decimated head must not poke through the plate: keep it dense along the mask border
-    head.detail(border_band(heart, 0.014, 0.006), 0.75)
+    face.add(plate(base, heart, lift=0.0019, sink=0.0040, k=0.0016), "head", IVORY, k=0.0)
     for sx in (1.0, -1.0):          # dense ring around the eye openings
         face.detail(Prim(lambda P, e=eye_ellipsoid(sx, grow=0.0036): np.abs(e(P)) - 0.004,
                          eye_ellipsoid(sx).lo - 0.02, eye_ellipsoid(sx).hi + 0.02), 0.9)
@@ -849,28 +720,24 @@ def build_head(q: float):
         c, R = eye_basis(sx)
         lash = eye_ellipsoid(sx, grow=0.0064).clip(plane(tuple(c + V3(0, 0, 0.010)), (0, 0, -1)), 0.014)
         face.paint(lash, LASH, soft=0.0022)
-    feat = FShape("SaeliFeatures", "skin", voxel=0.0015 * q, tris=300, color_soft=0.002, weight_sigma=0.02)
+    feat = FShape("SaeliFeatures", "skin", voxel=0.0015 * q, tris=320, color_soft=0.002, weight_sigma=0.02)
     feat.add(nose, "head", INDIGO, k=0.0)
     for brow in brows:
         feat.add(brow, "head", INDIGO, k=0.0)
     feat.add(sm, "head", MOUTH, k=0.0)
-    # dorsal chevrons continue up the back of the head (follow-camera read): glowing Glass Cyan
-    nape = []
-    for zc, hl, th in ((0.668, 0.058, 0.0125), (0.756, 0.050, 0.0115)):
+    # dorsal chevrons continue up the back of the head (follow-camera read)
+    for zc, hl, th in ((0.672, 0.046, 0.0105), (0.752, 0.040, 0.0095)):
         reg = None
         for sx in (1.0, -1.0):
-            bx = prim_box((0.034 * sx, 0.14, zc), (hl, 0.10, th), (0, 36 * sx, 0), 0.004)
+            bx = prim_box((0.030 * sx, 0.14, zc), (hl, 0.10, th), (0, 36 * sx, 0))
             reg = bx if reg is None else reg.union(bx, 0.0)
-        reg = tight(reg, (-0.11, 0.02, zc - 0.08), (0.11, 0.25, zc + 0.08))
-        face.add(plate(base, reg, lift=0.0024, sink=0.0040, k=0.0030), "head", CHEV, k=0.0)
-        face.emit(reg.offset(0.004), 0.30, soft=0.004)
-        face.detail(border_band(reg, 0.004, 0.004), 1.0)
-        nape.append(reg)
+        reg = tight(reg, (-0.09, 0.02, zc - 0.07), (0.09, 0.25, zc + 0.07))
+        face.add(plate(base, reg, lift=0.0019, sink=0.0040, k=0.0016), "head", INDIGO, k=0.0)
     face.cull_by = [head]
     face.cull_margin = 0.0005
 
     # ---- freckles: glowing beads in a triangle (apex up) = the Glifo de Rumo
-    gems = FShape("SaeliGems", "glow", voxel=0.0016 * q, tris=160, color_soft=0.003, weight_sigma=0.02)
+    gems = FShape("SaeliGems", "glow", voxel=0.0016 * q, tris=200, color_soft=0.003, weight_sigma=0.02)
     for sx in (1.0, -1.0):
         for (fx, fz) in ((0.132, 0.684), (0.118, 0.659), (0.146, 0.659)):
             p = surf_hit(base, (fx * sx, -0.30, fz), (0, 1, 0))
@@ -882,9 +749,7 @@ def build_head(q: float):
     gems.cull_margin = 0.0005
     feat.cull_by = [face, head]
     feat.cull_margin = 0.0005
-    # the head is NOT culled under the plates: a culled hole boundary, once decimated, pokes out of
-    # the plate edge as a sawtooth; the plate simply floats 2.5 mm above the intact head surface
-    head.cull_by = [gems, feat, CullRegion(heart.offset(-0.008), base)] + [CullRegion(r.offset(-0.0045), base) for r in nape]
+    head.cull_by = [face, gems, feat]
     head.cull_margin = 0.0009
     face.cull_by = [head, feat]
     return head, face, gems, feat
@@ -892,24 +757,11 @@ def build_head(q: float):
 
 def torso_parts():
     return [
-        (capsule((0, -0.006, 0.495), (0, -0.016, 0.610), 0.066), "neck", 0.0),
+        (capsule((0, -0.006, 0.495), (0, -0.016, 0.610), 0.056), "neck", 0.0),
         (ellipsoid((0, 0.012, 0.330), (0.115, 0.102, 0.075)), "hips", 0.05),
         (ellipsoid((0, 0.002, 0.398), (0.127, 0.113, 0.090)), "spine", 0.06),
         (ellipsoid((0, -0.006, 0.474), (0.095, 0.086, 0.070)), "chest", 0.06),
-        # shoulder yoke: the big head sits on a sturdy neck/shoulder line, not on a stick
-        (ellipsoid((0, -0.004, 0.516), (0.098, 0.078, 0.046)), "chest", 0.05),
     ]
-
-
-def blaze_prim() -> Prim:
-    """Mancha marfim do peito: gota que afina até uma ponta na virilha (eco da máscara-coração;
-    nada de 'barriga oval de pijama'), projetada ao longo de Y (só a frente)."""
-    rc = round_cone((0.0, 0.0, 0.452), (0.0, 0.0, 0.318), 0.060, 0.007)
-
-    def f(P):
-        Q = np.stack([P[:, 0], np.zeros(len(P)), P[:, 2]], axis=1)
-        return np.maximum(rc(Q), P[:, 1] + 0.02)
-    return Prim(f, (-0.075, -0.2, 0.30), (0.075, -0.02, 0.525))
 
 
 def tail_point(u: float) -> np.ndarray:
@@ -923,9 +775,10 @@ TAIL_R = [0.044, 0.034, 0.027, 0.021]
 
 
 def build_body(q: float):
-    body = FShape("SaeliBody", "skin", voxel=0.0040 * q, tris=2360, color_soft=0.0035, weight_sigma=0.022)
+    body = FShape("SaeliBody", "skin", voxel=0.0040 * q, tris=2450, color_soft=0.0035, weight_sigma=0.022)
     for prim, bone, k in torso_parts():
         body.add(prim, bone, LAGOON, k=k)
+    torso = snapshot(body)
     # arms + mitten hands (finger nubs indigo-tipped)
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
@@ -933,15 +786,17 @@ def build_body(q: float):
         body.add(round_cone(mx(ELBOW_L, sx), mx(WRIST_L, sx), 0.033, 0.030), f"forearm_{s}", LAGOON, k=0.010)
         hand_c = mx((0.239, -0.034, 0.300), sx)
         body.add(ellipsoid(hand_c, (0.040, 0.034, 0.045), (0, 0, -8 * sx)), f"hand_{s}", LAGOON, k=0.016)
-        for fx, fz in FINGERS:
-            body.add(ellipsoid(mx((fx, -0.050, fz), sx), (0.0122, 0.0128, 0.020), (12, 0, 0)), f"hand_{s}", LAGOON, k=0.004)
-    # legs: teal thighs, indigo boots (shin starts below the knee -> crisp crease, no cuff ring)
+        for fx, fz in ((0.221, 0.266), (0.239, 0.258), (0.257, 0.266)):
+            body.add(ellipsoid(mx((fx, -0.050, fz), sx), (0.0135, 0.0135, 0.021), (12, 0, 0)), f"hand_{s}", LAGOON, k=0.006)
+    # legs: teal thighs, indigo boots (shin starts below the knee -> crisp crease) with a cuff
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
         K, A = mx(KNEE_L, sx), mx(ANKLE_L, sx)
         body.add(round_cone(mx(HIP_L, sx), K, 0.052, 0.042), f"thigh_{s}", LAGOON, k=0.045)
         b0 = K + (A - K) * 0.22
         body.add(round_cone(b0, A, 0.0405, 0.034), f"shin_{s}", INDIGO, k=0.008)
+        cuff_c = K + (A - K) * 0.26
+        body.add(torus(cuff_c, 0.0405, 0.0062, look_basis(A - K)), f"shin_{s}", INDIGO, k=0.003)
         body.add(ellipsoid(mx((0.072, -0.030, 0.026), sx), (0.052, 0.092, 0.038)), f"foot_{s}", INDIGO, k=0.026)
         for tx in (0.050, 0.072, 0.094):
             body.add(ellipsoid(mx((tx, -0.114, 0.022), sx), (0.0175, 0.022, 0.0185)), f"foot_{s}", INDIGO, k=0.008)
@@ -955,72 +810,59 @@ def build_body(q: float):
         rr = TAIL_R[i] + (TAIL_R[i + 1] - TAIL_R[i]) * (u_ - i)
         axis = TAIL_PTS[i + 1] - TAIL_PTS[i]
         body.add(torus(c, rr, 0.0058, look_basis(axis)), bone, INDIGO, k=0.002)
-    skin = snapshot(body)            # real skin surface (torso + limbs + tail blends): base of the marks
-    body.add(leaf_prim(), "board", IVORY, k=0.020)
-    keel = round_cone(leaf_point(0.050, 0.0, -0.0085), leaf_point(0.300, 0.0, -0.0080), 0.0062, 0.0042)
+    body.add(leaf_prim(), "board", IVORY, k=0.026)
+    keel = round_cone(leaf_point(0.03, 0.0, -0.011), leaf_point(0.28, 0.0, -0.0095), 0.0068, 0.0045)
     body.add(keel, "board", IVORY, k=0.006)
     body.clip(plane((0, 0, 0.0), (0, 0, -1)), k=0.0)       # flat soles
     # soft paints
     for sx in (1.0, -1.0):
         body.paint(ellipsoid(mx((0.210, 0.012, 0.372), sx), (0.028, 0.028, 0.058), (0, -34 * sx, 0)), ABYSS, soft=0.02)
         body.paint(ellipsoid(mx((0.220, -0.040, 0.288), sx), (0.020, 0.034, 0.038), (0, 0, -8 * sx)), IVORY, soft=0.008)
-        for fx, fz in FINGERS:
-            body.paint(sphere(mx((fx, -0.056, fz - 0.014), sx), 0.0115), INDIGO, soft=0.004)
-    body.paint(plane((0, 0, 0.0025), (0, 0, 1)), SOLE, soft=0.002)                            # soles
+        for fx, fz in ((0.221, 0.266), (0.239, 0.258), (0.257, 0.266)):
+            body.paint(sphere(mx((fx, -0.054, fz - 0.012), sx), 0.0140), INDIGO, soft=0.005)
+    body.paint(plane((0, 0, 0.0025), (0, 0, 1)), IVORY, soft=0.002)                           # soles
     for sx in (1.0, -1.0):
         body.detail(sphere(mx((0.238, -0.040, 0.290), sx), 0.05), 0.35)
 
-    # ---- raised marks: ivory chest blaze, glowing dorsal chevrons, indigo board deck
-    marks = FShape("SaeliMarks", "skin", voxel=0.0024 * q, tris=600, color_soft=0.003, weight_sigma=0.03)
-    blaze = blaze_prim()
-    marks.add(plate(skin, blaze, 0.0024, 0.0045, 0.0020), "spine", IVORY, k=0.0)
-    marks.emit(blaze.offset(0.004), 0.12, soft=0.004)
-    chevrons = []
+    # ---- raised marks: ivory belly plate, indigo dorsal chevrons, indigo board deck
+    marks = FShape("SaeliMarks", "skin", voxel=0.0026 * q, tris=340, color_soft=0.003, weight_sigma=0.03)
+    belly = ellipsoid((0, -0.088, 0.402), (0.074, 0.070, 0.104))
+    marks.add(plate(torso, tight(belly, (-0.09, -0.2, 0.28), (0.09, -0.02, 0.52)), 0.0017, 0.0045, 0.0016),
+              "spine", IVORY, k=0.0)
     for z, bone in ((0.372, "hips"), (0.420, "spine"), (0.468, "chest")):
         reg = None
         for sx in (1.0, -1.0):
-            bx = prim_box((0.030 * sx, 0.105, z), (0.048, 0.060, 0.0110), (0, 35 * sx, 0), 0.004)
+            bx = prim_box((0.025 * sx, 0.105, z), (0.037, 0.050, 0.0088), (0, 35 * sx, 0))
             reg = bx if reg is None else reg.union(bx, 0.0)
-        reg = tight(reg, (-0.095, 0.02, z - 0.07), (0.095, 0.2, z + 0.07))
-        marks.add(plate(skin, reg, 0.0024, 0.0045, 0.0030), bone, CHEV, k=0.0)
-        chevrons.append(reg)
-        marks.emit(reg.offset(0.004), 0.30, soft=0.004)
-    deck = FShape("SaeliDeck", "skin", voxel=0.0026 * q, tris=220, color_soft=0.003, weight_sigma=0.03)
-    deck_reg = leaf_top_region(0.0095)
-    deck.add(plate(leaf_prim(), deck_reg, 0.0020, 0.0050, 0.0016), "board", INDIGO, k=0.0)
+        reg = tight(reg, (-0.075, 0.02, z - 0.06), (0.075, 0.2, z + 0.06))
+        marks.add(plate(torso, reg, 0.0017, 0.0045, 0.0016), bone, INDIGO, k=0.0)
+    deck = FShape("SaeliDeck", "skin", voxel=0.0028 * q, tris=200, color_soft=0.003, weight_sigma=0.03)
+    deck.add(plate(leaf_prim(), leaf_top_region(0.0065), 0.0016, 0.0050, 0.0016), "board", INDIGO, k=0.0)
     for sh in (marks, deck):
         sh.cull_by = [body]
         sh.cull_margin = 0.0005
-    for reg in [blaze] + chevrons:
-        marks.detail(border_band(reg, 0.004, 0.004), 1.0)
-        body.detail(border_band(reg, 0.012, 0.004), 0.6)
-    deck.detail(border_band(deck_reg, 0.004, 0.004), 1.0)
-    body.detail(border_band(deck_reg, 0.012, 0.006), 0.6)
-    body.cull_by = ([CullRegion(r.offset(-0.0045), skin) for r in [blaze] + chevrons]
-                    + [CullRegion(deck_reg.offset(-0.0045), leaf_prim())])
+    body.cull_by = [marks, deck]
     body.cull_margin = 0.0009
     return body, marks, deck
 
 
 def board_veins():
-    """Nervura central luminosa (>= 1,2 cm, em relevo) + 4 pares de nervuras a ~45° (sobre o deck)."""
-    h = LEAF_HALF_T + 0.0018
+    """Nervuras luminosas da prancha (sobre o deck)."""
+    h = LEAF_HALF_T + 0.0016
     out = []
-    ss = np.linspace(0.030, BOARD_LEN - 0.028, 8)
-    pts = [leaf_point(s_, 0.0, h) for s_ in ss]
-    rr = np.linspace(0.0066, 0.0042, 8)
+    pts = [leaf_point(s_, 0.0, h) for s_ in np.linspace(0.02, 0.285, 6)]
+    rr = np.linspace(0.0046, 0.0040, 6)
     mid = None
-    for i in range(len(pts) - 1):
+    for i in range(5):
         seg = round_cone(pts[i], pts[i + 1], rr[i], rr[i + 1])
         mid = seg if mid is None else mid.union(seg, 0.002)
     out.append(mid)
-    for s0 in (0.095, 0.150, 0.205, 0.258):
-        we = 0.74 * float(leaf_half_width(s0 + 0.035))
+    for s0, w1 in ((0.075, 0.050), (0.137, 0.061), (0.199, 0.049)):
         for sg in (1.0, -1.0):
             p0 = leaf_point(s0, 0.0, h)
-            pm = leaf_point(s0 + 0.52 * we, sg * 0.50 * we, h)
-            p1 = leaf_point(s0 + 0.95 * we, sg * we, h)
-            out.append(round_cone(p0, pm, 0.0042, 0.0039).union(round_cone(pm, p1, 0.0039, 0.0034), 0.002))
+            pm = leaf_point(s0 + 0.028, sg * w1 * 0.55, h)
+            p1 = leaf_point(s0 + 0.050, sg * w1, h)
+            out.append(round_cone(p0, pm, 0.0041, 0.0040).union(round_cone(pm, p1, 0.0040, 0.0040), 0.002))
     return out
 
 
@@ -1037,36 +879,37 @@ def build_shapes():
     shapes = [head, face, gems, feat, body, marks, deck, veins]
 
     # ------------------------------------------------------------------ fan ribs (skin, ivory)
-    ribs = FShape("SaeliRibs", "skin", voxel=0.0024 * q, tris=440, color_soft=0.003, weight_sigma=0.010)
+    ribs = FShape("SaeliRibs", "skin", voxel=0.0026 * q, tris=420, color_soft=0.003, weight_sigma=0.010)
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
         hub, u, v, n = fan_basis(sx)
         for k in range(5):
             d = rib_dir(sx, FAN_OPEN[k])
-            r0, r1 = (0.0108, 0.0064) if k in (0, 4) else (0.0094, 0.0056)     # guard sticks a bit heavier
-            # tips flush with the membrane arc (0.6 cm inside): no claws on the silhouette
-            ribs.add(round_cone(hub + d * 0.012, hub + d * (FAN_LEN - 0.006), r0, r1), f"fan_{s}_{k + 1}", BONE, k=0.0)
+            ribs.add(round_cone(hub + d * 0.010, hub + d * (FAN_LEN - 0.002), 0.0098, 0.0052), f"fan_{s}_{k + 1}", BONE, k=0.0)
     shapes.append(ribs)
 
-    # ------------------------------------------------------------------ metal (bracelet + fan hub)
-    metal = FShape("SaeliMetal", "metal", voxel=0.0026 * q, tris=360, color_soft=0.003, weight_sigma=0.010)
+    # ------------------------------------------------------------------ metal
+    metal = FShape("SaeliMetal", "metal", voxel=0.0026 * q, tris=440, color_soft=0.003, weight_sigma=0.010)
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
         hub, u, v, n = fan_basis(sx)
         Rn = look_basis(n)
-        metal.add(cylinder(hub, 0.0265, 0.0110, Rn, rounding=0.0055), f"forearm_{s}", BRASS, k=0.0)
+        metal.add(cylinder(hub, 0.0255, 0.0108, Rn, rounding=0.0055), f"forearm_{s}", BRASS, k=0.0)
         cuff_c = mx(WRIST_L, sx) + (mx(ELBOW_L, sx) - mx(WRIST_L, sx)) * 0.22
         metal.add(torus(cuff_c, 0.0290, 0.0064, look_basis(u)), f"forearm_{s}", BRASS, k=0.0)
         for side in (1.0, -1.0):
-            metal.carve(torus(hub + n * side * 0.0110, 0.0178, 0.0026, Rn), k=0.0015, color=BRASS_D)
-            metal.paint(sphere(hub + n * side * 0.0110, 0.0098), GLOW, soft=0.003, emission=0.9)
+            metal.carve(torus(hub + n * side * 0.0108, 0.0172, 0.0026, Rn), k=0.0015, color=BRASS_D)
+            metal.paint(sphere(hub + n * side * 0.0108, 0.0095), GLOW, soft=0.003, emission=0.9)
+        for k in range(5):
+            d = rib_dir(sx, FAN_OPEN[k])
+            metal.add(sphere(hub + d * (FAN_LEN + 0.001), 0.0098), f"fan_{s}_{k + 1}", BRASS, k=0.0)
     shapes.append(metal)
 
     # ------------------------------------------------------------------ ear fins (glow)
     fins = FShape("SaeliFins", "glow", voxel=0.0024 * q, tris=560, color_soft=0.004, weight_sigma=0.03)
-    frays = FShape("SaeliFinRays", "skin", voxel=0.0022 * q, tris=280, color_soft=0.003, weight_sigma=0.03)
+    frays = FShape("SaeliFinRays", "skin", voxel=0.0022 * q, tris=300, color_soft=0.003, weight_sigma=0.03)
     o, a, mem, rays = fin_prims()
-    split = o + a * FIN_SPLIT
+    split = o + a * 0.135
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
         h1 = mem.clip(plane(tuple(split), tuple(a)))
@@ -1084,38 +927,33 @@ def build_shapes():
     for sx in (1.0, -1.0):
         root = mx(o, sx)
         fins.paint(outside_sphere(root, 0.050, sx), FIN_LO, soft=0.06, emission=0.03)
-        fins.paint(outside_sphere(root, 0.145, sx), FIN_MID, soft=0.08, emission=0.08)
-        fins.paint(outside_sphere(root, 0.228, sx), FIN_HI, soft=0.05, emission=0.18)
-        fins.paint(outside_sphere(root, 0.288, sx), EDGE, soft=0.02, emission=0.45)
+        fins.paint(outside_sphere(root, 0.150, sx), FIN_MID, soft=0.08, emission=0.08)
+        fins.paint(outside_sphere(root, 0.230, sx), FIN_HI, soft=0.05, emission=0.18)
+        fins.paint(outside_sphere(root, 0.280, sx), EDGE, soft=0.02, emission=0.45)
     fins.cull_by = [frays]
     fins.cull_margin = 0.0008
     shapes += [fins, frays]
 
     # ------------------------------------------------------------------ fan membranes (glow)
-    # folding-fan read: 8 radial pleat stripes per fan (2 per panel, alternating #178F98/#2BB9B6),
-    # a darker hub zone and a 1.5 cm bright edge band on ONE convex arc
-    fans = FShape("SaeliFans", "glow", voxel=0.0030 * q, tris=880, color_soft=0.003, weight_sigma=0.02)
+    fans = FShape("SaeliFans", "glow", voxel=0.0026 * q, tris=860, color_soft=0.004, weight_sigma=0.02)
     for sx in (1.0, -1.0):
         s = "L" if sx > 0 else "R"
         for k in range(4):
-            fans.add(fan_panel(sx, k), f"fan_{s}_{k + 1}", FIN_MID, k=0.0)
+            fans.add(fan_panel(sx, k), f"fan_{s}_{k + 1}", DEEPCYAN, k=0.0)
     for sx in (1.0, -1.0):
         hub = mx(HUB_L, sx)
-        for k in range(4):
-            mid = 0.5 * (FAN_OPEN[k] + FAN_OPEN[k + 1])
-            fans.paint(fan_wedge(sx, mid, FAN_OPEN[k + 1] + 0.5), FIN_HI, soft=0.0022)
-        fans.paint(Prim(lambda P, c=hub: np.linalg.norm(P - c, axis=1) - 0.050, hub - 0.06, hub + 0.06),
-                   FIN_LO, soft=0.035)
-        fans.paint(outside_sphere(hub, FAN_R - 0.015, sx), EDGE, soft=0.003, emission=0.45)
-        fans.emit(everywhere(), 0.12, soft=0.01)
+        fans.paint(everywhere(), FIN_LO, soft=0.01, emission=0.05)
+        fans.paint(outside_sphere(hub, 0.110, sx), FIN_MID, soft=0.09, emission=0.10)
+        fans.paint(outside_sphere(hub, 0.175, sx), FIN_HI, soft=0.05, emission=0.16)
+        fans.paint(outside_sphere(hub, FAN_LEN - 0.010, sx), EDGE, soft=0.012, emission=0.45)
     fans.weight_fn = fan_weight_fn
     shapes.append(fans)
     return shapes
 
 
-def prim_box(c, half, rot, rounding: float = 0.0):
+def prim_box(c, half, rot):
     from sdfkit import box
-    return box(c, half, rot, rounding)
+    return box(c, half, rot)
 
 
 def build_eyes(bones):
@@ -1534,48 +1372,7 @@ def board_world(fwd: Vector, up: Vector) -> Matrix:
 
 
 # ============================================================================= clips
-F1 = 1.0 / 30.0
-
-
-def fan_pop(t: float, t0: float, amt: float = 1.0, t1: float | None = None, close: float = 6 * F1) -> float:
-    """Abertura do leque no ritmo do conceito: abre em t0 (2 quadros até 108%, assenta em 3) e,
-    se t1, fecha mais devagar ('close' s, ~5-6 quadros)."""
-    if t < t0:
-        v = 0.0
-    elif t < t0 + 2 * F1:
-        v = 1.08 * ease_out((t - t0) / (2 * F1), 2.0)
-    elif t < t0 + 5 * F1:
-        v = 1.08 - 0.08 * smooth((t - t0 - 2 * F1) / (3 * F1))
-    else:
-        v = 1.0
-    if t1 is not None and t > t1:
-        v *= 1.0 - smooth((t - t1) / close)
-    return amt * v
-
-
-def blend_bones(P: "Pose", P2: "Pose", bones, w: float):
-    """Mistura (slerp) as rotações locais de 'bones' de P em direção a P2."""
-    for b in bones:
-        P.rot[b] = P.rot.get(b, Quaternion()).slerp(P2.rot.get(b, Quaternion()), w)
-    P._dirty()
-
-
-def clone_pose(P: "Pose") -> "Pose":
-    P2 = Pose(K)
-    P2.rot = dict(P.rot)
-    P2.loc = dict(P.loc)
-    P2.scl = dict(P.scl)
-    return P2
-
-
-# tail at rest: a gentle S (down, level, up, the leaf tipping back down) instead of a stiff handle
-TAIL_S = (-15.5, 3.5, 14.0)
-BOARD_S = -14.0
-
-
 def c_idle(t, ph):
-    """3 s: respira, olha em volta; mão na cintura enquanto olha para a esquerda (orelhas atentas);
-    'fwip!' com o leque direito enquanto olha para a direita; duas batidas da prancha."""
     P = Pose(K)
     br = cw(ph * 2.0)                       # 2 breaths per loop
     look = spline(t, [(0, 0), (0.45, 0), (0.80, 26), (1.30, 24), (1.62, -20), (2.15, -18), (2.55, 0), (3.0, 0)], True)
@@ -1586,30 +1383,21 @@ def c_idle(t, ph):
     spine(P, sp=(0.6 * br, 0, look * 0.10), ch=(0.8 * br, -tilt * 0.15, look * 0.15),
           nk=(0, tilt * 0.3, look * 0.25), hd=(nod - 1.0 * br, tilt * 0.7, look * 0.5))
     stand_feet(P)
-    # right fan snap ("fwip!" = ta-da): arm flicks out, fan pops open facing forward, closes slowly
-    fo = fan_pop(t, 1.70, 0.80, t1=2.02, close=7 * F1)
-    snap = smooth((t - 1.60) / 0.12) * (1.0 - smooth((t - 2.02) / 0.30))
-    hip_w = smooth((t - 0.50) / 0.30) * (1.0 - smooth((t - 1.40) / 0.32))
+    # fan fidget: flick open (overshoot) and snap shut
+    fo = spline(t, [(0, 0), (1.62, 0), (1.74, 0.46), (1.82, 0.36), (2.02, 0.38), (2.12, 0.0), (3.0, 0)])
+    lift_arm = spline(t, [(0, 0), (1.55, 0), (1.74, 12), (2.02, 10), (2.25, 0), (3.0, 0)])
     for s in "LR":
         sx = sxs(s)
-        sn = snap if s == "R" else 0.0
-        arm(P, s, swing=-4 + 1.5 * br - 16 * sn, out=2 + 1.0 * br + 30 * sn, twist=-6, flex=22 + 2 * br + 26 * sn,
-            hand=(4, 0, -6 + 14 * sn))
-        if sn > 1e-3:
-            fan_level(P, s, (-0.35, -1.0, 0.35), amount=sn)
-        fan(P, s, fo if s == "R" else 0.0, flutter=2.0 * fo * wv(t * 8) if s == "R" else 0.0)
-    if hip_w > 1e-3:                       # left hand on the hip (IK pose, slerp-blended)
-        P2 = clone_pose(P)
-        reach(P2, "L", P.point("hips", (0.158, 0.012, 0.428)), hips_q(P) @ Vector((1.0, 0.45, -0.15)))
-        P2.aim("hand_L", hips_q(P) @ Vector((-0.10, 0.20, -1.0)))
-        blend_bones(P, P2, ("upperarm_L", "forearm_L", "hand_L"), hip_w)
-    perk = spline(t, [(0, 0), (0.70, 0), (0.86, 9), (1.25, 7), (1.45, 1), (2.15, 3), (2.55, 0), (3.0, 0)], True)
-    curious = spline(t, [(0, 0), (1.55, 0), (1.70, 8), (2.0, 7), (2.3, 0), (3.0, 0)])
-    ears(P, lift=perk + 2 * br, flare=6 + 4 * snap, tip=1.5 * cw(ph * 2, 0.15), diff=curious)
+        arm(P, s, swing=-4 + 1.5 * br, out=2 + lift_arm + 1.0 * br, twist=-6, flex=22 + 2 * br + lift_arm * 0.8,
+            hand=(4, 0, -6))
+        fan(P, s, fo, flutter=2.0 * fo * wv(t * 8))
+    perk = spline(t, [(0, 0), (0.80, 10), (1.30, 8), (1.62, 2), (2.15, 4), (2.55, 0), (3.0, 0)], True)
+    curious = spline(t, [(0, 0), (1.45, 0), (1.62, 14), (2.0, 12), (2.3, 0), (3.0, 0)])
+    ears(P, lift=perk + 2 * br, flare=8 + 3 * fo, tip=1.5 * cw(ph * 2, 0.15), diff=curious)
     # two board taps on the sand
     tap = spline(t, [(0, 0), (2.25, 0), (2.36, 1.0), (2.46, 0.25), (2.58, 1.0), (2.72, 0.0), (3.0, 0)])
-    tail(P, lift=(TAIL_S[0] + 3 * br - 18 * tap, TAIL_S[1], TAIL_S[2] + 4 * tap),
-         sway=(3 * wv(ph), 4 * wv(ph, -0.1), 4 * wv(ph, -0.2)), board=(BOARD_S - 16 * tap, 0, 0))
+    tail(P, lift=(-12 + 3 * br - 28 * tap, 2, 4 + 6 * tap), sway=(3 * wv(ph), 4 * wv(ph, -0.1), 4 * wv(ph, -0.2)),
+         board=(-4 - 22 * tap, 0, 0))
     return P.export()
 
 
@@ -1674,12 +1462,12 @@ def loco(t, ph, walk: bool):
         fan(P, s, 0.0)
     if walk:
         ears(P, lift=2 + 3 * math.cos(TAU * 2 * (ph - 0.12)), flare=8, tip=2 * math.cos(TAU * 2 * (ph - 0.2)))
-        tail(P, lift=(TAIL_S[0] + 3 * math.cos(TAU * 2 * (ph - 0.1)), TAIL_S[1], TAIL_S[2]),
+        tail(P, lift=(-14 + 3 * math.cos(TAU * 2 * (ph - 0.1)), 0, 2),
              sway=(8 * wv(ph, -0.08), 7 * wv(ph, -0.18), 6 * wv(ph, -0.28)),
-             board=(BOARD_S + 3 * math.cos(TAU * 2 * (ph - 0.3)), 0, 4 * wv(ph, -0.35)))
+             board=(-8 + 3 * math.cos(TAU * 2 * (ph - 0.3)), 0, 4 * wv(ph, -0.35)))
     else:
         ears(P, lift=-10 + 4 * math.cos(TAU * 2 * (ph - 0.15)), flare=10, tip=-6 + 3 * math.cos(TAU * 2 * (ph - 0.25)))
-        tail(P, lift=(-15 + 5 * math.cos(TAU * 2 * (ph - 0.12)), 2 + 4 * math.cos(TAU * 2 * (ph - 0.22)), 8),
+        tail(P, lift=(-12 + 5 * math.cos(TAU * 2 * (ph - 0.12)), -2 + 4 * math.cos(TAU * 2 * (ph - 0.22)), -2),
              sway=(4 * wv(ph, -0.06), 4 * wv(ph, -0.16), 4 * wv(ph, -0.26)),
              board=(-12 + 6 * math.cos(TAU * 2 * (ph - 0.32)), 0, 3 * wv(ph, -0.3)))
     return P.export()
@@ -1699,7 +1487,7 @@ def c_jump(t, ph):
     hz = spline(t, list(zip(T, [-0.006, -0.032, -0.040, 0.012, 0.030, 0.035])))
     pit = spline(t, list(zip(T, [2, 9, 11, 2, -4, 2])))
     body(P, pitch=pit, pivot=(0, 0.01, 0.30), off=(0, 0, hz))
-    sq = spline(t, list(zip(T, [1.0, 0.93, 0.90, 1.12, 1.06, 1.0])))
+    sq = spline(t, list(zip(T, [1.0, 0.94, 0.92, 1.09, 1.05, 1.0])))
     P.scale("spine", (1.0 / math.sqrt(sq), sq, 1.0 / math.sqrt(sq)))
     spine(P, sp=(spline(t, list(zip(T, [0, 6, 8, -4, -3, 2]))), 0, 0), ch=(spline(t, list(zip(T, [0, 4, 6, -5, -2, 2]))), 0, 0),
           hd=(spline(t, list(zip(T, [0, -4, -6, -10, -6, 0]))), 0, 0))
@@ -1716,7 +1504,7 @@ def c_jump(t, ph):
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(6, 0, -6))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [0, -12, -16, 12, 10, 6]))), flare=spline(t, list(zip(T, [2, 0, 0, 6, 8, 6]))),
+    ears(P, lift=spline(t, list(zip(T, [0, -12, -16, 18, 14, 8]))), flare=spline(t, list(zip(T, [2, 0, 0, 6, 8, 6]))),
          tip=spline(t, list(zip(T, [0, -6, -8, 10, 6, 2]))))
     tail(P, lift=(spline(t, list(zip(T, [-4, -14, -26, -10, 10, 14]))), spline(t, list(zip(T, [4, -6, -12, 6, 10, 8]))), 6),
          board=(spline(t, list(zip(T, [4, -10, -22, 8, 14, 8]))), 0, 0))
@@ -1734,7 +1522,7 @@ def fall_pose(P, t, ph, fo=0.30):
             hand=(8, 0, -8))
         fan_level(P, s, (0, 0.3, 1), amount=0.4)
         fan(P, s, fo + 0.03 * wv(ph * 2, o), flutter=2.0 * wv(ph * 4, o))
-    ears(P, lift=9 + 3 * wv(ph * 2), flare=6, tip=5 + 3 * wv(ph * 2, 0.15))
+    ears(P, lift=14 + 4 * wv(ph * 2), flare=6, tip=6 + 4 * wv(ph * 2, 0.15))
     tail(P, lift=(18 + 4 * wv(ph, -0.1), 8 + 4 * wv(ph, -0.2), 6 + 3 * wv(ph, -0.3)),
          sway=(4 * wv(ph, 0.1), 4 * wv(ph, 0.0), 3 * wv(ph, -0.1)), board=(10 + 6 * wv(ph, -0.35), 0, 0))
 
@@ -1760,11 +1548,11 @@ def c_land(t, ph):
     sw = spline(t, list(zip(T, [-20, -12, -2, -4, -5, -4])))
     out = spline(t, list(zip(T, [60, 34, 18, 8, 3, 2])))
     fl = spline(t, list(zip(T, [32, 40, 36, 26, 22, 22])))
-    fo = spline(t, list(zip(T, [0.30, 0.24, 0.14, 0.04, 0.0, 0.0])))
+    fo = spline(t, list(zip(T, [0.30, 0.10, 0.0, 0.0, 0.0, 0.0])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(6, 0, -6))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [9, -10, -18, -6, 4, 0]))), flare=2, tip=spline(t, list(zip(T, [5, -8, -10, 2, 2, 0]))))
+    ears(P, lift=spline(t, list(zip(T, [14, -10, -18, -6, 4, 0]))), flare=2, tip=spline(t, list(zip(T, [6, -8, -10, 2, 2, 0]))))
     tail(P, lift=(spline(t, list(zip(T, [18, -8, -16, -10, -4, -6]))), spline(t, list(zip(T, [8, 0, -6, 2, 4, 4]))), 6),
          board=(spline(t, list(zip(T, [10, -8, -14, 0, 6, 4]))), 0, 0))
     return P.export()
@@ -1787,13 +1575,13 @@ def c_double_jump(t, ph):
     sw = spline(t, list(zip(T, [-40, -60, -10, -55, -55, -24])))
     out = spline(t, list(zip(T, [70, 118, 30, 18, 20, 66])))
     fl = spline(t, list(zip(T, [30, 14, 18, 86, 86, 32])))
-    fo = spline(t, list(zip(T, [0.3, 1.08, 1.0, 0.55, 0.15, 0.30])))
+    fo = spline(t, list(zip(T, [0.3, 1.08, 0.96, 0.15, 0.12, 0.30])))
     lv = spline(t, list(zip(T, [0.4, 0.8, 0.8, 0.0, 0.0, 0.4])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-8, flex=fl, hand=(8, 0, -8))
         fan_level(P, s, (0, 0.3, 1), amount=lv)
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [9, 13, 4, -24, -22, 9]))), flare=spline(t, list(zip(T, [6, 12, 4, -4, -4, 6]))),
+    ears(P, lift=spline(t, list(zip(T, [12, 20, 4, -24, -22, 12]))), flare=spline(t, list(zip(T, [6, 12, 4, -4, -4, 6]))),
          tip=spline(t, list(zip(T, [6, 10, -6, -12, -10, 6]))))
     tail(P, lift=(spline(t, list(zip(T, [16, 10, -10, -40, -36, 16]))), spline(t, list(zip(T, [8, 6, -10, -30, -28, 8]))),
                   spline(t, list(zip(T, [6, 4, -6, -20, -18, 6])))),
@@ -1802,55 +1590,44 @@ def c_double_jump(t, ph):
 
 
 def c_glide(t, ph):
-    """Planar, lido da câmera de perseguição como uma pipa/X: braços varridos ~10° para trás com
-    diedro de ~22°, leques 100% abertos com a face virada para cima e para trás (~30° do nível),
-    pernas juntas estendidas para trás (quadril ~20°, joelhos ~24°), cauda e prancha retas atrás
-    como leme (deck para cima). Inclinação lateral ±6°, tremor de 6 Hz na costela 5."""
     P = Pose(K)
     bank = 6.0 * wv(ph)
-    body(P, pitch=32 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.05))
-    spine(P, sp=(0, -bank * 0.2, 0), ch=(-5, -bank * 0.3, 0), nk=(-8, 0, 0), hd=(-22, -bank * 0.4, bank * 0.3))
+    body(P, pitch=26 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.03))
+    spine(P, sp=(2, -bank * 0.2, 0), ch=(-4, -bank * 0.3, 0), nk=(-6, 0, 0), hd=(-18, -bank * 0.4, bank * 0.3))
     for s in "LR":
         sx = sxs(s)
-        dihedral = 22.0 + bank * sx * 0.5
-        arm(P, s, swing=10 + 1.5 * wv(ph, 0.3), out=49 + dihedral, twist=0, flex=6, hand=(0, 0, -4))
-        fan_level(P, s, (0.0, 0.50, 0.866))
+        dihedral = 6.0 + bank * sx * 0.6
+        arm(P, s, swing=-8 + 1.5 * wv(ph, 0.3), out=49 + dihedral, twist=0, flex=6, hand=(0, 0, -4))
+        fan_level(P, s, (0.0, 0.20, 1.0))
         fan(P, s, 1.0 + 0.02 * wv(ph, 0.2), flutter=3.0 * wv(ph * 7), wobble=4.5 * wv(ph * 7, 0.25))
     for s, o_ in (("L", 0.0), ("R", 0.5)):
-        foot(P, s, (-0.022, 0.120 + 0.006 * wv(ph, o_), 0.036 + 0.006 * wv(ph, o_ + 0.25)), pitch=125, yaw=0, rel=True)
-    ears(P, lift=-16 + 2 * wv(ph * 2), flare=-2, tip=-6 + 3 * wv(ph * 3, 0.2))
-    tail(P, lift=(-27.5, -20.5 + wv(ph, -0.1), -14), sway=(-bank * 0.6, -bank * 0.8, -bank), board=(6, -bank * 1.2, 0))
+        foot(P, s, (0.006, 0.15, 0.11 + 0.008 * wv(ph, o_)), pitch=58, yaw=4, rel=True)
+    ears(P, lift=-18 + 2 * wv(ph * 2), flare=-4, tip=-8 + 3 * wv(ph * 3, 0.2))
+    tail(P, lift=(-24, 0 + wv(ph, -0.1), -2), sway=(-bank * 0.6, -bank * 0.8, -bank), board=(-14, -bank * 1.2, 0))
     return P.export()
 
+
 def c_spin(t, ph):
-    """Rodopio 720°: o plano do 'rotor' (braços + leques abertos) inclina ~24° para a frente (longe da
-    câmera de trás, que então vê o disco) e cada leque tem passo de hélice (~18°)."""
     P = Pose(K)
     a = -14.0 * smooth(t / 0.033) if t < 0.033 else 720.0 * ease_out((t - 0.033) / 0.31, 2.4) - 14.0 * (1.0 - smooth((t - 0.033) / 0.06))
     T = [0.0, 0.033, 0.10, 0.25, 0.34, 0.40]
-    hop = spline(t, list(zip(T, [0.0, -0.012, 0.040, 0.045, 0.010, 0.0])))
+    hop = spline(t, list(zip(T, [0.0, -0.012, 0.035, 0.040, 0.008, 0.0])))
+    body(P, yaw=a, pitch=spline(t, list(zip(T, [2, 6, 2, 2, 4, 2]))), pivot=(0, 0, 0.0), off=(0, 0, hop))
+    spine(P, ch=(0, 0, 0), hd=(-4, 0, -spline(t, list(zip(T, [0, 0, 10, 10, 4, 0])))))
     tk = spline(t, list(zip(T, [0.0, 0.2, 1.0, 1.0, 0.3, 0.0])))
-    lean = 24.0 * tk
-    q_body = qw(x=lean) @ qw(z=a) @ qw(x=spline(t, list(zip(T, [2, 6, 2, 2, 4, 2]))))
-    P.root(q_body, (0.0, 0.0, 0.40), (0.0, 0.0, hop + 0.02 * tk))
-    spine(P, ch=(0, 0, 0), hd=(-4 - 10 * tk, 0, -spline(t, list(zip(T, [0, 0, 10, 10, 4, 0])))))
     for s in "LR":
         foot(P, s, (0.004 + 0.006 * tk, 0.01 * tk, 0.05 * tk), pitch=20 * tk, yaw=6, rel=True)
-    T2 = [0.0, 0.033, 0.067, 0.133, 0.25, 0.34, 0.40]
-    out = spline(t, list(zip(T2, [2, 26, 52, 58, 58, 26, 2])))
-    fo = spline(t, list(zip(T2, [0.0, 0.55, 1.08, 1.0, 1.0, 0.30, 0.0])))
+    out = spline(t, list(zip(T, [2, 22, 50, 52, 24, 2])))
+    fo = spline(t, list(zip(T, [0.0, 0.3, 1.06, 1.0, 0.25, 0.0])))
     for s in "LR":
-        sx = sxs(s)
         arm(P, s, swing=-8, out=out, twist=-10, flex=spline(t, list(zip(T, [22, 18, 6, 6, 16, 22]))), hand=(4, 0, -6))
-        beta = math.radians(18.0)
-        nb = Vector((0.0, -sx * math.sin(beta), math.cos(beta)))
-        fan_level(P, s, tuple(q_body @ nb), amount=smooth(fo))
+        fan_level(P, s, (0, 0, 1), amount=smooth(fo))
         fan(P, s, fo)
-    ears(P, lift=spline(t, list(zip(T, [0, 4, 8, 8, 4, 0]))), flare=spline(t, list(zip(T, [2, 8, 22, 22, 10, 2]))))
-    tail(P, lift=(spline(t, list(zip(T, [TAIL_S[0], -12, -6, -6, -10, TAIL_S[0]]))), TAIL_S[1] * (1 - tk), TAIL_S[2] * (1 - tk)),
-         sway=(spline(t, list(zip(T, [0, -6, -14, -14, -6, 0]))), -10 * tk, -8 * tk),
-         board=(BOARD_S * (1 - tk) + 6 * tk, 0, 0))
+    ears(P, lift=spline(t, list(zip(T, [0, 4, 12, 12, 6, 0]))), flare=spline(t, list(zip(T, [2, 8, 22, 22, 10, 2]))))
+    tail(P, lift=(spline(t, list(zip(T, [-12, -10, -6, -6, -10, -12]))), 2, 2),
+         sway=(spline(t, list(zip(T, [0, -6, -14, -14, -6, 0]))), -10 * tk, -8 * tk), board=(6 * tk, 0, 0))
     return P.export()
+
 
 def c_surf(t, ph):
     """'Cometa': deitada de barriga na prancha-folha (que se desenrola: x1,4), peito erguido, cabeça
@@ -1865,12 +1642,9 @@ def c_surf(t, ph):
           hd=(-30 + 2.0 * wv(ph * 2, 0.3), -roll * 0.5, 2.5 * wv(ph, 0.2)))
     belly = P.point("spine", (0.0, 0.002, 0.398))
     tail(P, lift=(-40, -55, -50), sway=(0, 0, 0))
-    # the tail leaves over her LEFT hip and tucks under the board (no crease between the thighs
-    # from the chase cam); the leaf unfurls ~15% wider than her shoulders so its rim shows
-    P.aim("tail_1", Vector((0.78, 0.30, -0.55)))
-    ccd(P, ["tail_2", "tail_3"], Vector((0.030, belly.y + 0.215, 0.040)))
+    ccd(P, ["tail_1", "tail_2", "tail_3"], Vector((0.0, belly.y + 0.205, 0.040)))
     P.set_world_rot("board", board_world(Vector((0, -1.0, 0.02)), Vector((roll * 0.004, 0, 1))))
-    P.scale("board", (2.15, 1.40, 1.25))
+    P.scale("board", (1.75, 1.42, 1.30))
     # legs streaming back, soles up, little flutter kick
     for s, o_ in (("L", 0.0), ("R", 0.5)):
         k = wv(ph * 2, o_)
@@ -1886,9 +1660,6 @@ def c_surf(t, ph):
         fan(P, s, 0.24 + 0.04 * wv(ph * 2, 0.1), flutter=2.5 * wv(ph * 4), wobble=3.0 * wv(ph * 4, 0.25))
     ears(P, lift=-28 + 3 * wv(ph * 2, 0.1), flare=-4, tip=-12 + 4 * wv(ph * 3, 0.25))
     return P.export()
-
-
-RIDE_SAIL_GAP = 0.075
 
 
 def c_ride(t, ph):
@@ -1909,17 +1680,9 @@ def c_ride(t, ph):
         reach(P, s, (0.085 * sx, -0.212, 0.262 + lean), (sx * 0.9, 0.35, -0.6))
         P.turn_world(f"hand_{s}", qw(x=62, z=-sx * 18))
         fan(P, s, 0.0)
-    ears(P, lift=4 + 5 * (abs(look) / 38.0), flare=4, tip=2 * wv(ph * 2), diff=look * 0.12)
-    # tail up over the back rail; the leaf stands CENTRED behind her spine as a small sail: top below
-    # the ear-fin roots (never a third 'ear' from the front), leaning ~12° back, deck to the follow cam
-    tilt = math.radians(12.0 + 1.5 * wv(ph * 2, 0.4))
-    fwd = Vector((0.0, math.sin(tilt), math.cos(tilt)))
-    top_z = P.point("head", tuple(FIN_ROOT_L)).z - 0.012
-    back = P.point("chest", (0.0, 0.105, 0.470))
-    base = Vector((0.0, back.y + RIDE_SAIL_GAP, top_z - BOARD_LEN * math.cos(tilt)))
-    tail(P, lift=(30, 20, 10), sway=(0, 0, 0))
-    ccd(P, ["tail_1", "tail_2", "tail_3"], base)
-    P.set_world_rot("board", board_world(fwd, Vector((0.0, math.cos(tilt), -math.sin(tilt)))))
+    ears(P, lift=6 + 6 * (abs(look) / 38.0), flare=4, tip=2 * wv(ph * 2), diff=look * 0.15)
+    tail(P, lift=(70, 12, 8 + 2 * wv(ph * 2, 0.2)), sway=(look * 0.05, look * 0.06, look * 0.06),
+         board=(4 + 2 * wv(ph * 2, 0.4), 0, 0), roll=(55, 55, 55))
     return P.export()
 
 
@@ -1956,15 +1719,14 @@ def c_celebrate(t, ph):
     sw = spline(t, list(zip(T, [-4, 20, -150, -120, -20, -10, -10, -12, -160, -150, -4])))
     out = spline(t, list(zip(T, [2, 12, 40, 50, 30, 74, 74, 30, 40, 44, 2])))
     fl = spline(t, list(zip(T, [22, 30, 10, 14, 30, 8, 8, 26, 6, 8, 22])))
-    fo = max(fan_pop(t, 0.16, 1.0, t1=0.40, close=5 * F1), fan_pop(t, 0.58, 1.0, t1=0.97, close=4 * F1),
-             fan_pop(t, 1.09, 1.0, t1=1.36, close=6 * F1))
+    fo = spline(t, list(zip(T, [0.0, 0.0, 1.08, 0.95, 0.2, 1.0, 1.0, 0.0, 1.1, 1.0, 0.0])))
     lv = spline(t, list(zip(T, [0, 0, 0.3, 0.3, 0, 1.0, 1.0, 0, 0.2, 0.2, 0])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-8, flex=fl, hand=(6, 0, -8))
         if lv > 0.01:
             fan_level(P, s, (0, 0, 1), amount=lv)
         fan(P, s, fo, flutter=2.0 * fo * wv(t * 9))
-    ears(P, lift=spline(t, list(zip(T, [0, -8, 15, 12, -6, 8, 8, 0, 16, 14, 0]))),
+    ears(P, lift=spline(t, list(zip(T, [0, -8, 22, 16, -6, 10, 10, 0, 24, 20, 0]))),
          flare=spline(t, list(zip(T, [2, 0, 12, 10, 2, 16, 16, 4, 14, 12, 2]))))
     wag = math.sin(TAU * t * 4.0) * spline(t, list(zip(T, [0, 0, 0, 0, 0, 0, 0, 0.6, 1.0, 1.0, 0])))
     tail(P, lift=(spline(t, list(zip(T, [-6, -16, 16, 10, -10, 8, 8, -4, 20, 18, -6]))), 6, 8),
@@ -1987,7 +1749,7 @@ def c_hurt(t, ph):
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-6, flex=fl, hand=(10, 0, -8))
         fan(P, s, 0.0)
-    ears(P, lift=spline(t, list(zip(T, [0, 6, -20, -28, -24]))), flare=spline(t, list(zip(T, [2, 10, -4, -8, -6]))),
+    ears(P, lift=spline(t, list(zip(T, [0, 10, -20, -28, -24]))), flare=spline(t, list(zip(T, [2, 10, -4, -8, -6]))),
          tip=spline(t, list(zip(T, [0, 8, -10, -14, -12]))))
     tail(P, lift=(spline(t, list(zip(T, [-6, 14, -10, -24, -20]))), spline(t, list(zip(T, [4, 10, -6, -12, -10]))), 6),
          board=(spline(t, list(zip(T, [4, 16, -6, -14, -10]))), 0, 0))

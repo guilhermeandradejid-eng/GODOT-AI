@@ -35,19 +35,16 @@ OUT_GLB = ROOT / "game" / "assets" / "characters" / "hulvar.glb"
 OUT_BLEND = ROOT / "game" / "blender" / "hulvar.blend"
 
 # ----------------------------------------------------------------------------- palette
-# Value plan: a LIGHT sea-glass hull with DARK indigo fittings (visor, stem/keel, jaw, plates, limbs),
-# ivory only on the porthole "oculi", the deck and the nest. In the game light the old teal-blue glaze
-# rendered as cobalt at the same value as the indigo plates; this keeps a >2.5:1 hull:plate ratio.
-HULL_LO = hexcol("3F7FA8")      # esmalte vidro-do-mar (baixo)
-HULL_HI = hexcol("6FAAC6")      # esmalte vidro-do-mar (alto)
-KEEL = hexcol("2B3A87")         # Night Indigo — roda de proa (stem) + quilha
-INDIGO = hexcol("343C96")       # Indigo Glaze — viseira, mandíbula, placas, antebraços, punhos, canelas
-INDIGO_HI = hexcol("4650B0")    # brilho de cima do esmalte índigo
-LIMB = hexcol("3A4699")         # braço e coxa: índigo um degrau mais claro (lê a articulação)
-IVORY = hexcol("F5ECD7")        # Shell Ivory — óculos dos olhos, convés, cesto, solas
-IVORY_SH = hexcol("E3D5B8")
+HULL_LO = hexcol("2C5E86")      # esmalte azul-petróleo (baixo)
+HULL_HI = hexcol("3C78A0")      # esmalte azul-petróleo (alto)
+KEEL = hexcol("2B3A87")         # Night Indigo — quilha
+INDIGO = hexcol("343C96")       # Indigo Glaze — placas, mandíbula, punhos, viseira
+INDIGO_SH = hexcol("2A3180")
+IVORY = hexcol("F5ECD7")        # Shell Ivory — máscara, convés, solas
+IVORY_SH = hexcol("E6D9BC")
 BRASS = hexcol("D4A33F")
 BRASS_HI = hexcol("F2CF72")
+BRASS_SH = hexcol("A9792A")
 GLASS = hexcol("4FE3D6")        # Glass Cyan
 GLOW = hexcol("8FFFF2")         # brilho
 MOON = hexcol("CFD6E6")         # Moonstone — âncora
@@ -55,66 +52,37 @@ MOON_SH = hexcol("9AA6C4")
 MOUTH = hexcol("141A3F")
 SOCKET = hexcol("1C2458")
 
-# ----------------------------------------------------------------------------- hull geometry (a boat on legs)
-# Side: sheer deck rising to a raked stem, forefoot curving into the keel, raked transom.
-# Front: V bow with a crisp stem ridge, flat-ish flanks, deadrise bottom narrowing to the keel.
-# Plan: pointed bow, straight flanks, square stern.
-BODY_C, BODY_R, BODY_N = (0.0, -0.10, 0.92), (0.43, 0.75, 0.60), 4.0
-STEM_P = (0.0, -0.548, 0.900)      # a point of the stem (apex of the bow V)
-BOW_ENTRY = 52.0                   # half-angle of the bow in plan view (deg)
-BOW_RAKE = 0.30                    # stem rake dy/dz: the bow leans forward at the top
-KEEL_Z = 0.370                     # bottom of the deadrise V
-DEADRISE = 22.0                    # bottom V in the front view (deg)
-STERN_Y = 0.460
-STERN_N = (0.0, 1.0, -0.18)        # raked transom
-DECK_Z0, DECK_Y0, DECK_A, DECK_B = 1.185, 0.03, 0.34, 0.10   # deck: z0 + A (y - y0)^2 + B x^2 -> sheer
-STEM_PROUD, STEM_HW = 0.026, 0.0225                        # cutwater ridge: 2.6 cm proud, 4.5 cm wide
-VISOR_OFF = 0.022                  # visor stands 2.2 cm off the bow (no brim)
-NEST_C = (0.0, 0.220, 1.190)       # nest floor centre (Saeli's feet); 7 cm aft of the deck centre
-SHOULDER = (0.360, -0.030, 1.010)
-ELBOW = (0.490, -0.060, 0.700)
-WRIST = (0.535, -0.125, 0.350)
-FIST_C = (0.537, -0.163, 0.190)                   # fist box centre (bottom at z ~0.06: gorilla-long arms)
-PORT_YS = (-0.010, 0.100, 0.210, 0.320)           # row of side portholes
-PORT_Z = 0.860
-PORT_R = 0.034
-
-
-def _bow_normal(sx):
-    a = math.radians(BOW_ENTRY)
-    n = np.array([math.cos(a) * sx, -math.sin(a), -BOW_RAKE * math.sin(a)])
-    return n / np.linalg.norm(n)
-
-
-BOW_NL, BOW_NR = tuple(_bow_normal(1.0)), tuple(_bow_normal(-1.0))
-
-
-def bow_face_y(x, z):
-    """y of the bow V plane at (x, z) (sharp, without the stem rounding)."""
-    n = _bow_normal(1.0)
-    return STEM_P[1] + (n[0] * abs(x) + n[2] * (z - STEM_P[2])) / -n[1]
-
-
+# ----------------------------------------------------------------------------- hull geometry
+EYE_C = np.array([0.150, -0.352, 1.032])          # left eye centre (+X)
 EYE_R = 0.088
-EYE_X, EYE_Z = 0.150, 1.050
-EYE_FWD = np.array([0.30, -1.0, -0.05])
-EYE_C = np.array([EYE_X, bow_face_y(EYE_X, EYE_Z) + 0.046, EYE_Z])   # left eye centre (+X), 4.6 cm in the bow
+EYE_FWD = np.array([0.30, -1.0, 0.02])            # rims roughly follow the V bow face
 RIM_MAJOR = 0.098
-
-
-def deck_z(x, y):
-    u = y - DECK_Y0
-    return DECK_Z0 + DECK_A * u * u + DECK_B * x * x
+DECK = dict(c=(0.0, 0.06, 2.69), r=(2.6, 1.915, 1.50))   # big ellipsoid carved from the top -> deck with sheer
+BOW_P = (0.0, -0.505, 1.00)                       # stem point for the bow V planes
+_bn = np.array([0.60, -0.78, -0.17])              # -z component: the stem rakes forward at the top
+BOW_NL = tuple(_bn / np.linalg.norm(_bn))
+BOW_NR = (-BOW_NL[0], BOW_NL[1], BOW_NL[2])
+STERN_Y = 0.455
+STERN_N = (0.0, 1.0, -0.16)
+NEST_C = (0.0, 0.150, 1.190)                      # nest floor centre (Saeli's feet)
+SHOULDER = (0.360, -0.020, 1.040)
+ELBOW = (0.485, -0.052, 0.735)
+WRIST = (0.530, -0.118, 0.425)
+FIST_C = (0.532, -0.156, 0.265)                   # fist box centre (bottom at z ~0.14)
+PORT_YS = (0.110, 0.225, 0.340)                   # row of side portholes
+PORT_Z = 0.885
+PORT_R = 0.030
 
 
 def deck_prim():
-    """Half-space above the deck surface (negative above): carving it leaves a sheered deck."""
-    def f(P):
-        u = P[:, 1] - DECK_Y0
-        zd = DECK_Z0 + DECK_A * u * u + DECK_B * P[:, 0] ** 2
-        g = np.sqrt(1.0 + (2.0 * DECK_A * u) ** 2 + (2.0 * DECK_B * P[:, 0]) ** 2)
-        return (zd - P[:, 2]) / g
-    return K.Prim(f, (-1e3,) * 3, (1e3,) * 3)
+    return ellipsoid(DECK["c"], DECK["r"])
+
+
+def deck_z(x, y):
+    """Deck surface height (bottom of the carving ellipsoid) at (x, y)."""
+    c, r = DECK["c"], DECK["r"]
+    u = 1.0 - (x / r[0]) ** 2 - ((y - c[1]) / r[1]) ** 2
+    return c[2] - r[2] * math.sqrt(max(u, 1e-9))
 
 
 def superellipsoid(c, r, n=2.6):
@@ -123,18 +91,14 @@ def superellipsoid(c, r, n=2.6):
     r = np.asarray(r, float)
     rmin = float(r.min())
 
-    if n == 4.0:                      # fast path: powers by squaring
-        def f(P):
-            q = (P - c) / r
-            q = q * q
-            k = np.sqrt(np.sqrt((q * q).sum(axis=1)))
-            return (k - 1.0) * rmin
-    else:
-        def f(P):
-            q = np.abs((P - c) / r)
-            k = np.power(np.power(q, n).sum(axis=1), 1.0 / n)
-            return (k - 1.0) * rmin
+    def f(P):
+        q = np.abs((P - c) / r)
+        k = np.power(np.power(q, n).sum(axis=1), 1.0 / n)
+        return (k - 1.0) * rmin
     return K.Prim(f, c - r, c + r)
+
+
+HULL_STYLE = "super"
 
 
 def memo(prim):
@@ -154,17 +118,6 @@ def memo(prim):
 
 def bounded(prim, lo, hi):
     return K.Prim(prim.fn, lo, hi)
-
-
-def slab(axis, lo, hi, k=0.0):
-    """lo < P[axis] < hi as an SDF."""
-    n = [0.0, 0.0, 0.0]
-    n[axis] = 1.0
-    p_hi = [0.0, 0.0, 0.0]
-    p_hi[axis] = hi
-    p_lo = [0.0, 0.0, 0.0]
-    p_lo[axis] = lo
-    return plane(tuple(p_hi), tuple(n)).clip(plane(tuple(p_lo), tuple(-a for a in n)), k)
 
 
 def capsule_chain(points, r):
@@ -187,18 +140,17 @@ def capsule_chain(points, r):
 
 
 def boat_body():
-    """The hull: a rounded box cut into a boat (V bow with a crisp stem, deadrise bottom,
-    rounded forefoot, keel rising aft, raked transom). The deck is carved later (sheer)."""
-    b = superellipsoid(BODY_C, BODY_R, BODY_N)
-    bow = plane(STEM_P, BOW_NL).clip(plane(STEM_P, BOW_NR), 0.030)          # V bow, crisp stem
-    b = b.clip(bow, 0.085)                                                  # rounded bow shoulders
-    sb, cb = math.sin(math.radians(DEADRISE)), math.cos(math.radians(DEADRISE))
-    vee = plane((0, 0, KEEL_Z), (sb, 0, -cb)).clip(plane((0, 0, KEEL_Z), (-sb, 0, -cb)), 0.05)
-    b = b.clip(vee, 0.10)                                                   # deadrise, round bilge
-    b = b.clip(plane((0, -0.36, 0.56), (0, -0.62, -0.78)), 0.14)            # forefoot
-    b = b.clip(plane((0, 0.30, 0.40), (0, 0.50, -0.866)), 0.10)             # the keel rises aft (run)
-    b = b.clip(plane((0, STERN_Y, 0.90), STERN_N), 0.06)                    # transom
-    return bounded(b, (-0.44, -0.76, 0.34), (0.44, 0.56, 1.44))
+    """The hull as a boat: long chubby blob, U section tapering to the keel, raked V bow,
+    raked forefoot and a flat transom."""
+    if HULL_STYLE == "box":
+        b = box((0, -0.025, 0.835), (0.428, 0.500, 0.435), rounding=0.28)
+    else:
+        b = superellipsoid((0, -0.025, 0.840), (0.440, 0.525, 0.445), 2.7)
+    b = b.clip(cylinder((0, 0, 1.08), 0.690, 2.0, (90, 0, 0)), 0.08)           # U section
+    b = b.clip(plane(BOW_P, BOW_NL), 0.07).clip(plane(BOW_P, BOW_NR), 0.07)      # V bow
+    b = b.clip(plane((0, -0.40, 0.57), (0, -0.60, -0.80)), 0.12)                # forefoot
+    b = b.clip(plane((0, STERN_Y, 0.90), STERN_N), 0.05)                        # transom
+    return b
 
 
 HEAD_Y, HEAD_Z, CHEST_Z, HIPS_Z = -0.24, 0.90, 0.98, 0.70
@@ -226,69 +178,41 @@ def hull_core_parts():
 
 
 def hull_core():
-    """Hull without the deck carve (used for bands, plates and placement)."""
+    """Hull without deck carve (used for rails, bands and placement)."""
     return hull_core_parts()[0]
 
 
-def stem_band(proud=STEM_PROUD, hw=STEM_HW):
-    """Cutwater ridge: the hull offset outward, kept in a thin slab around the centre line."""
-    return hull_core().offset(proud).clip(slab(0, -hw, hw, 0.0), 0.010)
-
-
-def eye_frame(sx):
-    c = EYE_C * np.array([sx, 1, 1])
-    f = EYE_FWD * np.array([sx, 1, 1])
-    f = f / np.linalg.norm(f)
-    side = np.cross(np.array([0, 0, 1.0]), f)
-    side /= np.linalg.norm(side)
-    if side[0] * sx < 0:
-        side = -side                  # points outward
-    up = np.cross(f, side)
-    if up[2] < 0:
-        up = -up
-    return c, f, side, up
-
-
-def rim_axis(sx):
-    """Porthole rim axis: halfway between the eye's gaze and the bow face normal (sits flatter)."""
-    f = eye_frame(sx)[1]
-    n = np.array(BOW_NL if sx > 0 else BOW_NR)
-    a = f * 0.55 + n * 0.45
-    return a / np.linalg.norm(a)
-
-
 def visor_prim():
-    """Prow visor: the bow's top band under the gunwale, arcing over both porthole eyes
-    (gull wing), only VISOR_OFF proud of the bow (no cap brim) and split by the stem."""
-    core = hull_core()
-    v = core.offset(VISOR_OFF)
-    v = v.clip(plane((0, -0.25, 0), (0, 1, 0)), 0.045)                      # bow only, tapers away aft
-    nl = np.array([0.0, 0.30, -1.0])
-    v = v.clip(plane((0, -0.50, 1.150), tuple(nl / np.linalg.norm(nl))), 0.040)   # lower edge rises aft
-    v = v.cut(deck_prim().offset(0.010), 0.006)                             # top: under the rail
+    """Prow visor: the top band of the bow rising from the gunwale line, overhanging the
+    eyes, with a gull-wing lower edge (arcs over both eyes)."""
+    v = hull_core().offset(0.032)
+    # prow tip: the visor runs forward into a pointed, raked prow over the face
+    tip = ellipsoid((0, -0.470, 1.192), (0.200, 0.190, 0.068), (-10, 0, 0))
+    tp = (0.0, -0.648, 1.20)
+    tn = np.array([0.56, -0.80, -0.20])
+    tn /= np.linalg.norm(tn)
+    tip = tip.clip(plane(tp, tuple(tn)), 0.03).clip(plane(tp, (-tn[0], tn[1], tn[2])), 0.03)
+    v = v.union(tip, 0.06)
+    v = v.clip(plane((0, -0.16, 0), (0, 1, 0)), 0.03)
+    v = v.clip(plane((0, 0, 1.105), (0, 0, -1)), 0.018)
+    sw = np.array([0.0, 0.42, -1.0])
+    v = v.clip(plane((0, -0.32, 1.125), tuple(sw / np.linalg.norm(sw))), 0.02)   # tapers as it sweeps back
+    for sx in (1, -1):                                                              # no "sideburns" by the rims
+        ns = np.array([0.55 * sx, 0.0, -1.0])
+        v = v.clip(plane((0.22 * sx, 0, 1.108), tuple(ns / np.linalg.norm(ns))), 0.02)
+    v = v.cut(deck_prim().offset(-0.003), 0.010)
     cuts = None
     for sx in (1, -1):
         c, f, side, up = eye_frame(sx)
-        rc = c + f * 0.052
-        cs = cylinder(tuple(rc + up * 0.006), RIM_MAJOR + 0.044, 0.40, look_basis(rim_axis(sx)))
+        cs = cylinder(tuple(c + up * 0.004), RIM_MAJOR + 0.040, 0.40, look_basis(f))
         cuts = cs if cuts is None else cuts.union(cs, 0.05)
-    v = v.cut(cuts, 0.040)                                                   # gull wing over the eyes
-    v = v.cut(slab(0, -0.016, 0.016), 0.006)                                 # the stem runs through
-    return bounded(v, (-0.47, -0.76, 1.08), (0.47, -0.20, 1.40))
+    v = v.cut(cuts, 0.018)
+    return K.Prim(v.fn, (-0.48, -0.70, 1.05), (0.48, -0.10, 1.32))
 
 
-def jaw_prim():
-    """Underbite jaw: a bumper band around the lower bow, 2 cm proud, rounded chin."""
-    core = hull_core()
-    j = core.offset(0.020)
-    j = j.clip(plane((0, 0, 0.902), (0, 0, 1)), 0.010)                       # top edge = mouth line
-    nb = np.array([0.0, 0.30, -1.0])
-    j = j.clip(plane((0, -0.50, 0.772), tuple(nb / np.linalg.norm(nb))), 0.035)   # chin, rising aft
-    j = j.clip(plane((0, -0.335, 0), (0, 1, 0)), 0.05)                       # wraps the front only
-    ridge = core.offset(0.032).clip(slab(0, -STEM_HW, STEM_HW, 0.0), 0.008)  # stem continues over the jaw
-    ridge = ridge.clip(plane((0, 0, 0.900), (0, 0, 1)), 0.008).clip(plane((0, 0, 0.770), (0, 0, -1)), 0.02)
-    j = j.union(ridge, 0.006)
-    return bounded(j, (-0.34, -0.66, 0.70), (0.34, -0.25, 0.93))
+def outline_core():
+    """Hull + visor: the outline the gunwale rail follows."""
+    return hull_core().union(visor_prim(), 0.0)
 
 
 def surface_point(field, origin, direction, r0=0.0, r1=1.2, iters=40):
@@ -321,42 +245,23 @@ def field_normal(field, p, eps=0.002):
     return g / (np.linalg.norm(g) + 1e-12)
 
 
-def rail_prim(r=0.019, inset=0.007, lift=0.003):
-    """Gunwale rail: a round tube riding the deck edge, measured from the hull field at the rail
-    height (narrow band: points far above/below the rail only get a vertical bound)."""
-    cf = hull_core().fn
-
-    def f(P):
-        zr = deck_z(P[:, 0], P[:, 1]) + lift
-        dz = P[:, 2] - zr
-        out = np.abs(dz) - r
-        near = np.nonzero(np.abs(dz) < r + 0.03)[0]
-        if len(near):
-            Q = P[near].copy()
-            Q[:, 2] = zr[near]
-            dh = cf(Q) + inset
-            out[near] = np.sqrt(dh * dh + dz[near] ** 2) - r
-        return out
-    return K.Prim(f, (-0.47, -0.78, 1.14), (0.47, 0.58, 1.43))
-
-
-def gunwale_loop(n=64):
+def gunwale_loop(n=60):
     """Points along the deck edge (hull side meets the deck surface), closed loop; i=0 at the bow."""
-    core = hull_core()
+    core = outline_core()
     pts = []
     for i in range(n):
         th = 2 * math.pi * i / n
         dx, dy = math.sin(th), -math.cos(th)
-        a, b = 0.05, 0.85
+        a, b = 0.05, 0.80
         for _ in range(40):
             m = 0.5 * (a + b)
-            x, y = dx * m, 0.0 + dy * m
+            x, y = dx * m, 0.02 + dy * m
             z = deck_z(x, y)
             if core(np.array([[x, y, z]]))[0] > 0.0:
                 b = m
             else:
                 a = m
-        x, y = dx * a, 0.0 + dy * a
+        x, y = dx * a, 0.02 + dy * a
         pts.append(np.array([x, y, deck_z(x, y)]))
     return pts
 
@@ -368,12 +273,27 @@ def S(name, mat, voxel, tris, q, **kw):
 
 def lens_xz(cx, half_w, z_top, z_bottom):
     """Shield outline in XZ (vesica of two Y-axis cylinders) clipped flat on top: an infinite prism along Y."""
+    # two circles of radius R centred at x=+-a, height zc: half-width at zc = R - a, bottom tip at zc - sqrt(R^2 - a^2)
     a = 0.20
     R = half_w + a
     zc = z_bottom + math.sqrt(R * R - a * a)
     ca = cylinder((cx + a, 0.0, zc), R, 3.0, (90, 0, 0))
     cb = cylinder((cx - a, 0.0, zc), R, 3.0, (90, 0, 0))
     return ca.clip(cb).clip(plane((0, 0, z_top), (0, 0, 1)))
+
+
+def eye_frame(sx):
+    c = EYE_C * np.array([sx, 1, 1])
+    f = EYE_FWD * np.array([sx, 1, 1])
+    f = f / np.linalg.norm(f)
+    side = np.cross(np.array([0, 0, 1.0]), f)
+    side /= np.linalg.norm(side)
+    if side[0] * sx < 0:
+        side = -side                  # points outward
+    up = np.cross(f, side)
+    if up[2] < 0:
+        up = -up
+    return c, f, side, up
 
 
 def build_shapes(q: float = 1.0):
@@ -387,21 +307,17 @@ def build_shapes(q: float = 1.0):
     rim_c = {sx: eyes[sx][0] + eyes[sx][1] * 0.052 for sx in (1, -1)}
 
     # ---------------------------------------------------------------- hull (stone)
-    hull = S("HulvarHull", "stone", 0.0066, 2800, q, color_soft=0.006, weight_sigma=0.05)
+    hull = S("HulvarHull", "stone", 0.0062, 2330, q, color_soft=0.006, weight_sigma=0.05)
     hull.add(parts["chest"], "chest", HULL_HI, k=0.0)
     hull.add(parts["spine"], "spine", HULL_LO, k=0.0)
     hull.add(parts["hips"], "hips", HULL_LO, k=0.0)
     hull.add(parts["head"], "head", HULL_HI, k=0.0)
-    # cutwater: stem ridge down the bow (head) -> under the jaw -> keel band to the groin
-    band = stem_band()
-    stem = bounded(band.clip(plane((0, 0, 0.905), (0, 0, -1)), 0.0).clip(plane((0, -0.30, 0), (0, 1, 0)), 0.0),
-                   (-0.03, -0.76, 0.88), (0.03, -0.28, 1.42))
-    keel = band.clip(plane((0, 0, 0.785), (0, 0, 1)), 0.0).clip(plane((0, 0.20, 0), (0, 1, 0)), 0.05)
-    keel_hi = bounded(keel.clip(plane((0, 0, HIPS_Z), (0, 0, -1)), 0.0), (-0.03, -0.62, 0.66), (0.03, -0.20, 0.80))
-    keel_lo = bounded(keel.clip(plane((0, 0, HIPS_Z), (0, 0, 1)), 0.0), (-0.03, -0.45, 0.31), (0.03, 0.24, 0.74))
-    hull.add(stem, "head", KEEL, k=0.004)
-    hull.add(keel_hi, "spine", KEEL, k=0.004)
-    hull.add(keel_lo, "hips", KEEL, k=0.004)
+    hull.carve(deck, 0.025)
+    # keel band: raised stripe from under the chin to the groin
+    keel = core.offset(0.017).clip(plane((0.040, 0, 0), (1, 0, 0)), 0.012).clip(plane((-0.040, 0, 0), (-1, 0, 0)), 0.012)
+    keel = keel.clip(plane((0, 0, 0.835), (0, 0, 1)), 0.03).clip(plane((0, 0.17, 0), (0, 1, 0)), 0.04)
+    keel = bounded(keel, (-0.06, -0.60, 0.33), (0.06, 0.20, 0.86))
+    hull.add(keel, "spine", KEEL, k=0.004)
     # side portholes (glow lens sits inside)
     port_c = []
     for sx in (1, -1):
@@ -411,131 +327,111 @@ def build_shapes(q: float = 1.0):
             port_c.append((p, n, sx))
             hull.carve(sphere(tuple(p + n * 0.008), PORT_R + 0.004), 0.005, SOCKET)
     info["ports"] = port_c
-    # mouth: a dark 1.5 cm slit between the face and the jaw (the throat glow sits at its back)
-    slit = core.offset(-0.012).shell(0.034).clip(slab(2, 0.904, 0.920, 0.004), 0.0)
-    slit = bounded(slit.clip(slab(0, -0.235, 0.235, 0.01), 0.0).clip(plane((0, -0.33, 0), (0, 1, 0)), 0.0),
-                   (-0.25, -0.62, 0.89), (0.25, -0.30, 0.93))
-    hull.carve(slit, 0.003, MOUTH)
-    hull.carve(deck, 0.025)
-    # stem head: the stem rises a hand above the bow tip (prow fin, brass cap)
-    tip_y = bow_face_y(0.0, 1.36)
-    stem_head = round_cone((0, tip_y + 0.045, 1.30), (0, tip_y - 0.018, 1.392), 0.024, 0.017)
-    hull.add(stem_head, "head", KEEL, k=0.012)
-    info["stem_tip"] = np.array([0.0, tip_y - 0.020, 1.397])
+    # mouth: dark slot between the face plate and the jaw
+    hull.carve(box((0, -0.470, 0.912), (0.170, 0.10, 0.015), rounding=0.013), 0.006, MOUTH)
     # livery
-    hull.paint(plane((0, 0, 0.86), (0, 0, 1)), HULL_LO, soft=0.30)              # vertical glaze gradient
-    hull.paint(deck.offset(0.008).cut(deck.offset(-0.014)), IVORY, soft=0.006)   # ivory deck (a thin layer)
-    hull.paint(stem_head.offset(0.002), KEEL, soft=0.004)
-    jaw_bed = core.offset(0.03).clip(slab(2, 0.78, 0.905), 0.0).clip(plane((0, -0.36, 0), (0, 1, 0)), 0.0)
-    hull.paint(jaw_bed, MOUTH, soft=0.008)                                       # mouth inside, seen when the jaw drops
-    for sx in (1, -1):                                                           # eye sockets
+    hull.paint(plane((0, 0, 0.84), (0, 0, 1)), HULL_LO, soft=0.24)              # vertical glaze gradient
+    hull.paint(deck.offset(0.008), IVORY, soft=0.006)                            # ivory deck
+    # eye sockets (after the face plate so they stay dark)
+    for sx in (1, -1):
         c = eyes[sx][0]
         hull.carve(sphere(tuple(c), EYE_R + 0.006), 0.010, SOCKET)
         hull.paint(sphere(tuple(c), EYE_R + 0.010), SOCKET, soft=0.004)
-    hull.detail(ellipsoid((0, -0.54, 1.10), (0.34, 0.20, 0.32)), 0.55)
+    hull.detail(ellipsoid((0, -0.42, 1.02), (0.32, 0.15, 0.18)), 0.6)
     shapes.append(hull)
     info["hull"] = hull
 
-    # ---------------------------------------------------------------- ivory oculi (stone): raised inlays round the eyes
-    face = S("HulvarFace", "stone", 0.0030, 300, q, color_soft=0.004, weight_sigma=0.02)
-    outline = None
-    for sx in (1, -1):
-        n = np.array(BOW_NL if sx > 0 else BOW_NR)
-        e = ellipsoid(tuple(rim_c[sx] + np.array([0.014 * sx, 0.0, -0.008])), (0.192, 0.172, 0.22), look_basis(n))
-        outline = e if outline is None else outline.union(e, 0.06)
-    outline = outline.union(box((0, -0.50, 0.975), (0.25, 0.25, 0.06), rounding=0.05), 0.06)   # cheeks to the mouth
+    # ---------------------------------------------------------------- ivory face plate (stone): a raised inlay, crisp edge
+    face = S("HulvarFace", "stone", 0.0032, 300, q, color_soft=0.004, weight_sigma=0.02)
+    outline = ellipsoid(tuple(rim_c[1]), (0.152, 0.2, 0.142)).union(ellipsoid(tuple(rim_c[-1]), (0.152, 0.2, 0.142)), 0.06)
+    outline = outline.union(ellipsoid((0, -0.46, 0.992), (0.13, 0.2, 0.078)), 0.05)
+    smile = cylinder((0, -0.40, 1.40), 0.478, 0.6, (90, 0, 0))           # bottom edge curves up at the corners
+    outline = outline.clip(smile, 0.02).clip(plane((0, -0.25, 0), (0, 1, 0)), 0.0)
     fp = core.offset(0.0075).clip(outline, 0.004)
-    fp = fp.clip(plane((0, 0, 0.925), (0, 0, -1)), 0.004)                        # above the mouth
     for sx in (1, -1):
         fp = fp.cut(sphere(tuple(eyes[sx][0]), EYE_R + 0.010), 0.004)
-    fp = bounded(fp, (-0.33, -0.65, 0.90), (0.33, -0.30, 1.23))
+    fp = bounded(fp, (-0.36, -0.62, 0.86), (0.36, -0.20, 1.22))
     face.add(fp, "head", IVORY, k=0.0)
-    face.paint(sphere((0, 0, 0), 5.0), IVORY, soft=0.01, emission=0.12)         # stays ivory when backlit
-    face.paint(plane((0, 0, 0.98), (0, 0, 1)), IVORY_SH, soft=0.05)
+    face.paint(plane((0, 0, 0.95), (0, 0, 1)), IVORY_SH, soft=0.05)
     shapes.append(face)
 
-    # ---------------------------------------------------------------- prow visor (stone, rigid on brow)
-    brow = S("HulvarBrow", "stone", 0.0040, 300, q, color_soft=0.004, weight_sigma=0.02)
+    # ---------------------------------------------------------------- prow visor + bowsprit fin (stone, rigid on brow)
+    brow = S("HulvarBrow", "stone", 0.0038, 380, q, color_soft=0.004, weight_sigma=0.02)
     brow.add(visor_prim(), "brow", INDIGO, k=0.0)
-    brow.paint(plane((0, 0, 1.235), (0, 0, -1)), INDIGO_HI, soft=0.03)
+    fin = blade([(0, -0.540, 1.236), (0, -0.600, 1.268), (0, -0.650, 1.300), (0, -0.676, 1.318)],
+                [0.040, 0.032, 0.022, 0.012], flat=0.60, normal=(1, 0, 0))
+    brow.add(fin, "brow", INDIGO, k=0.030)
+    brow.paint(plane((0, 0, 1.19), (0, 0, -1)), hexcol("4650B0"), soft=0.03)
+    brow.paint(deck.offset(0.010).clip(plane((0, -0.62, 0), (0, -1, 0))), IVORY, soft=0.006)   # its top is deck
+    brow.paint(sphere((0, -0.676, 1.318), 0.026), BRASS, soft=0.008)
     shapes.append(brow)
 
     # ---------------------------------------------------------------- jaw (stone, rigid on jaw)
-    jaw = S("HulvarJaw", "stone", 0.0040, 260, q, color_soft=0.004, weight_sigma=0.02)
-    jaw.add(jaw_prim(), "jaw", INDIGO, k=0.0)
-    jaw.paint(plane((0, 0, 0.880), (0, 0, -1)), INDIGO_HI, soft=0.02)
-    jaw.paint(slab(0, -STEM_HW - 0.002, STEM_HW + 0.002).cut(core.offset(0.0205)), KEEL, soft=0.004)
+    jaw = S("HulvarJaw", "stone", 0.0045, 240, q, color_soft=0.004, weight_sigma=0.02)
+    j = ellipsoid((0, -0.352, 0.848), (0.226, 0.140, 0.098), (8, 0, 0))
+    jp = (0.0, -0.530, 0.86)
+    j = j.clip(plane(jp, (0.55, -0.835, 0.0)), 0.07).clip(plane(jp, (-0.55, -0.835, 0.0)), 0.07)
+    j = j.clip(plane((0, 0, 0.904), (0, 0, 1)), 0.016)
+    jaw.add(j, "jaw", INDIGO, k=0.0)
+    jaw.paint(plane((0, 0, 0.885), (0, 0, -1)), hexcol("4650B0"), soft=0.02)
     shapes.append(jaw)
 
-    # ---------------------------------------------------------------- arms (stone): DK forearms, pinched elbow
+    # ---------------------------------------------------------------- arms (stone)
     for sx, side in ((1, "L"), (-1, "R")):
-        arm = S(f"HulvarArm_{side}", "stone", 0.0056, 590, q, color_soft=0.006, weight_sigma=0.035)
+        arm = S(f"HulvarArm_{side}", "stone", 0.0058, 620, q, color_soft=0.006, weight_sigma=0.035)
         X = lambda p: (p[0] * sx, p[1], p[2])  # noqa: E731
-        sh_, el_, wr_ = np.array(SHOULDER), np.array(ELBOW), np.array(WRIST)
-        arm.add(round_cone(X(sh_), X(el_), 0.104, 0.074), f"upperarm_{side}", LIMB, k=0.0)
-        arm.add(round_cone(X(el_), X(wr_), 0.078, 0.126), f"forearm_{side}", INDIGO, k=0.028)
+        sh_, el_, wr_ = SHOULDER, ELBOW, WRIST
+        arm.add(round_cone(X(sh_), X(el_), 0.110, 0.088), f"upperarm_{side}", HULL_HI, k=0.0)
+        arm.add(round_cone(X(el_), X(wr_), 0.088, 0.118), f"forearm_{side}", INDIGO, k=0.03)
         fc = np.array(FIST_C)
-        arm.add(box(X(fc), (0.140, 0.130, 0.128), rounding=0.072), f"hand_{side}", INDIGO, k=0.03)
+        arm.add(box(X(fc), (0.136, 0.126, 0.126), rounding=0.088), f"hand_{side}", INDIGO, k=0.03)
         for x in (-0.074, -0.014, 0.046):
-            arm.add(sphere(X(fc + np.array([x, -0.104, -0.050])), 0.042), f"hand_{side}", INDIGO, k=0.022)
-        arm.add(capsule(X(fc + np.array([-0.122, -0.055, 0.057])), X(fc + np.array([-0.110, -0.108, -0.007])), 0.040), f"hand_{side}", INDIGO, k=0.02)
+            arm.add(sphere(X(fc + np.array([x, -0.100, -0.053])), 0.045), f"hand_{side}", INDIGO, k=0.028)
+        arm.add(capsule(X(fc + np.array([-0.120, -0.055, 0.057])), X(fc + np.array([-0.108, -0.108, -0.007])), 0.040), f"hand_{side}", INDIGO, k=0.02)
         shapes.append(arm)
 
     # ---------------------------------------------------------------- legs (stone)
-    legs = S("HulvarLegs", "stone", 0.0058, 480, q, color_soft=0.006, weight_sigma=0.03)
-    legs.add_mirrored(round_cone((0.190, 0.100, 0.560), (0.210, 0.070, 0.300), 0.124, 0.104), "thigh_L", LIMB, k=0.0)
-    legs.add_mirrored(round_cone((0.210, 0.070, 0.300), (0.210, 0.080, 0.130), 0.104, 0.114), "shin_L", INDIGO, k=0.03)
+    legs = S("HulvarLegs", "stone", 0.0058, 520, q, color_soft=0.006, weight_sigma=0.03)
+    legs.add_mirrored(round_cone((0.190, 0.100, 0.560), (0.210, 0.070, 0.300), 0.126, 0.110), "thigh_L", HULL_LO, k=0.0)
+    legs.add_mirrored(round_cone((0.210, 0.070, 0.300), (0.210, 0.080, 0.130), 0.110, 0.112), "shin_L", INDIGO, k=0.03)
     legs.add_mirrored(cylinder((0.210, 0.035, 0.068), 0.146, 0.068, rounding=0.045), "foot_L", INDIGO, k=0.035)
     legs.clip(plane((0, 0, 0.0), (0, 0, -1)), 0.0)
     legs.paint(plane((0, 0, 0.026), (0, 0, 1)), IVORY, soft=0.006)
     shapes.append(legs)
 
     # ---------------------------------------------------------------- plates: shoulder plates + transom shield (stone)
-    plates = S("HulvarPlates", "stone", 0.0042, 250, q, color_soft=0.006, weight_sigma=0.03)
+    plates = S("HulvarPlates", "stone", 0.0045, 260, q, color_soft=0.006, weight_sigma=0.03)
     for sx, side in ((1, "L"), (-1, "R")):
         sp = surface_point(core, (0.20 * sx, -0.02, 1.10), (sx, 0, 0.55))
         pl = core.offset(0.026).clip(sphere(tuple(sp), 0.165), 0.02).clip(plane((0, 0, 0.93), (0, 0, -1)), 0.02)
-        pl = pl.cut(deck.offset(0.012), 0.003)                                   # hard top under the rail
-        plates.add(pl.offset(-0.008), "chest", INDIGO, k=0.0)
-        plates.add(pl, f"upperarm_{side}", INDIGO, k=0.0)                       # ~57% follows the arm
-    plates.paint(plane((0, 0, 1.12), (0, 0, -1)), INDIGO_HI, soft=0.05)
+        pl = pl.cut(deck.offset(0.012), 0.01)
+        plates.add(pl, "chest", INDIGO, k=0.0)
+        plates.add(pl.offset(-0.012), f"upperarm_{side}", INDIGO, k=0.0)
+    plates.paint(plane((0, 0, 1.12), (0, 0, -1)), hexcol("4650B0"), soft=0.05)
     shapes.append(plates)
-    stern_plate = S("HulvarStern", "stone", 0.0042, 210, q, color_soft=0.006, weight_sigma=0.03)
-    sh = lens_xz(0.0, 0.300, 1.170, 0.600)
+    stern_plate = S("HulvarStern", "stone", 0.0042, 220, q, color_soft=0.006, weight_sigma=0.03)
+    sh = lens_xz(0.0, 0.300, 1.150, 0.600)
     sp_n = np.array(STERN_N) / np.linalg.norm(STERN_N)
     stern = core.offset(0.016).clip(sh, 0.012).clip(plane((0, STERN_Y - 0.03, 0.90), tuple(-sp_n)), 0.006)
-    stern = bounded(stern, (-0.34, 0.36, 0.55), (0.34, 0.56, 1.22))
+    stern = bounded(stern, (-0.34, 0.36, 0.55), (0.34, 0.54, 1.20))
     stern_plate.add(stern, "chest", INDIGO, k=0.0)
-    stern_plate.paint(plane((0, 0, 1.12), (0, 0, -1)), INDIGO_HI, soft=0.06)
+    stern_plate.paint(plane((0, 0, 1.10), (0, 0, -1)), hexcol("4650B0"), soft=0.06)
     shapes.append(stern_plate)
-    stern_c = surface_point(stern, (0, STERN_Y - 0.005, 0.94), (0, 1, 0))
+    stern_c = surface_point(stern, (0, STERN_Y - 0.005, 0.925), (0, 1, 0))
     info["stern_c"] = stern_c
 
-    # ---------------------------------------------------------------- crow's nest (stone, rigid on nest): ivory staves
+    # ---------------------------------------------------------------- nest tub (stone, rigid on nest)
     nx, ny, nz = NEST_C
-    nest = S("HulvarNest", "stone", 0.0040, 360, q, color_soft=0.004, weight_sigma=0.02)
-    nest.add(cone((nx, ny, 1.235), 0.170, 0.206, 0.092, rounding=0.018), "nest", IVORY, k=0.0)
-    nest.carve(cone((nx, ny, nz + 0.110), 0.140, 0.176, 0.110), 0.010, SOCKET)
-    slits = []
-    for a_deg in (180.0, 128.0, -128.0):                                         # lantern slits (back and sides)
-        a = math.radians(a_deg)
-        d = np.array([math.sin(a), -math.cos(a), 0.0])
-        c = np.array([nx, ny, 1.289]) + d * 0.19
-        rot = look_basis(d)
-        nest.carve(box(tuple(c), (0.011, 0.029, 0.06), rot, rounding=0.009), 0.004, SOCKET)
-        slits.append((c, d))
-    info["slits"] = slits
-    nest.paint(cone((nx, ny, nz + 0.110), 0.150, 0.186, 0.116), SOCKET, soft=0.008)
-    for i in range(12):                                                          # stave seams
-        a = math.radians(15 + 30 * i)
-        d = np.array([math.sin(a), -math.cos(a), 0.0])
-        nest.paint(box(tuple(np.array([nx, ny, 1.27]) + d * 0.20), (0.0035, 0.10, 0.05), look_basis(d)), IVORY_SH, soft=0.003)
-    nest.paint(plane((0, 0, 1.215), (0, 0, 1)), IVORY_SH, soft=0.03)
+    nest = S("HulvarNest", "stone", 0.0042, 360, q, color_soft=0.005, weight_sigma=0.02)
+    nest.add(cone((nx, ny, 1.235), 0.168, 0.214, 0.092, rounding=0.022), "nest", HULL_HI, k=0.0)
+    nest.carve(cone((nx, ny, nz + 0.110), 0.136, 0.180, 0.110), 0.012, SOCKET)
+    nest.paint(cone((nx, ny, nz + 0.110), 0.146, 0.190, 0.116), SOCKET, soft=0.008)
+    nest.paint(plane((0, 0, 1.20), (0, 0, 1)), HULL_LO, soft=0.04)
     shapes.append(nest)
     lip_z = 1.235 + 0.092
 
     # ---------------------------------------------------------------- anchor (stone)
-    anc = S("HulvarAnchor", "stone", 0.0038, 290, q, color_soft=0.006, weight_sigma=0.02)
+    anc = S("HulvarAnchor", "stone", 0.0038, 320, q, color_soft=0.006, weight_sigma=0.02)
     anc.add(capsule((0, 0.690, 0.430), (0, 0.712, 0.245), 0.030), "anchor", MOON, k=0.0)
     arc = torus((0, 0.712, 0.372), 0.166, 0.034, (90, 0, 0)).clip(plane((0, 0, 0.345), (0, 0, 1)), 0.02)
     anc.add(arc, "anchor", MOON, k=0.03)
@@ -548,61 +444,61 @@ def build_shapes(q: float = 1.0):
     shapes.append(anc)
 
     # ---------------------------------------------------------------- brass (metal)
-    rail = S("HulvarGunwale", "metal", 0.0036, 320, q, color_soft=0.004, weight_sigma=0.05)
-    rp = rail_prim()
-    rail.add(bounded(rp.clip(plane((0, HEAD_Y + 0.04, 0), (0, 1, 0)), 0.0), (-0.47, -0.78, 1.16), (0.47, HEAD_Y + 0.05, 1.43)),
-             "head", BRASS, k=0.0)
-    rail.add(bounded(rp.clip(plane((0, HEAD_Y - 0.04, 0), (0, -1, 0)), 0.0), (-0.47, HEAD_Y - 0.05, 1.14), (0.47, 0.58, 1.31)),
-             "chest", BRASS, k=0.0)
-    rail.paint(plane((0, 0, 1.30), (0, 0, -1)), BRASS_HI, soft=0.03)
+    rail = S("HulvarGunwale", "metal", 0.0036, 360, q, color_soft=0.004, weight_sigma=0.05)
+    loop = gunwale_loop(64)
+    oc = outline_core()
+    pts = []
+    for p in loop:
+        n = field_normal(oc, p)
+        nh = np.array([n[0], n[1], 0.0])
+        nh /= np.linalg.norm(nh) + 1e-9
+        pts.append(p - nh * 0.007 + np.array([0, 0, 0.003]))
+    m = len(pts)
+    rail.add(capsule_chain([pts[i % m] for i in range(-6, 7)], 0.019), "brow", BRASS, k=0.0)
+    rail.add(capsule_chain([pts[i] for i in range(6, 33)], 0.019), "chest", BRASS, k=0.0)
+    rail.add(capsule_chain([pts[i % m] for i in range(32, 59)], 0.019), "chest", BRASS, k=0.0)
     shapes.append(rail)
+    info["rail"] = pts
 
-    face_brass = S("HulvarEyeRims", "metal", 0.0030, 240, q, color_soft=0.004, weight_sigma=0.02)
+    face_brass = S("HulvarEyeRims", "metal", 0.0032, 320, q, color_soft=0.004, weight_sigma=0.02)
     for sx in (1, -1):
-        face_brass.add(torus(tuple(rim_c[sx]), RIM_MAJOR, 0.019, look_basis(rim_axis(sx))), "head", BRASS, k=0.0)
-    face_brass.paint(plane((0, 0, 1.09), (0, 0, -1)), BRASS_HI, soft=0.03)
+        c, f, side, up = eyes[sx]
+        face_brass.add(torus(tuple(rim_c[sx]), RIM_MAJOR, 0.022, look_basis(f)), "head", BRASS, k=0.0)
+    face_brass.paint(plane((0, 0, 1.08), (0, 0, -1)), BRASS_HI, soft=0.03)
     shapes.append(face_brass)
 
-    cap = S("HulvarStemCap", "metal", 0.0028, 40, q, color_soft=0.004, weight_sigma=0.02)
-    cap.add(sphere(tuple(info["stem_tip"]), 0.022), "head", BRASS_HI, k=0.0)
-    shapes.append(cap)
-
-    tusks = S("HulvarTusks", "metal", 0.0028, 80, q, color_soft=0.004, weight_sigma=0.02)
+    tusks = S("HulvarTusks", "metal", 0.0030, 120, q, color_soft=0.004, weight_sigma=0.02)
     for sx in (1, -1):
-        x0 = 0.232 * sx
-        b0 = np.array([x0, bow_face_y(x0, 0.885) - 0.026, 0.870])
-        rot = (0.0, -12.0 * sx, 0.0)                                             # tilted 12 deg outward
-        up = K.euler(*rot) @ np.array([0, 0, 1.0])
-        tusks.add(cylinder(tuple(b0 + up * 0.026), 0.0155, 0.026, rot, rounding=0.007), "jaw", BRASS, k=0.0)
-        tusks.add(cylinder(tuple(b0 + up * 0.052), 0.0205, 0.007, rot, rounding=0.0055), "jaw", BRASS_HI, k=0.010)
+        b0 = np.array([0.116 * sx, -0.448, 0.896])
+        tusks.add(cylinder(tuple(b0 + np.array([0, 0, 0.032])), 0.022, 0.032, rounding=0.010), "jaw", BRASS, k=0.0)
+        tusks.add(cylinder(tuple(b0 + np.array([0, 0, 0.068])), 0.030, 0.010, rounding=0.008), "jaw", BRASS_HI, k=0.012)
     shapes.append(tusks)
 
-    side_brass = S("HulvarPortRims", "metal", 0.0024, 340, q, color_soft=0.004, weight_sigma=0.02)
+    side_brass = S("HulvarPortRims", "metal", 0.0024, 400, q, color_soft=0.004, weight_sigma=0.02)
     for p, n, sx in port_c:
-        side_brass.add(torus(tuple(p + n * 0.004), PORT_R + 0.004, 0.0115, look_basis(n)), "spine", BRASS, k=0.0)
+        side_brass.add(torus(tuple(p + n * 0.004), PORT_R + 0.004, 0.0105, look_basis(n)), "spine", BRASS, k=0.0)
     shapes.append(side_brass)
 
     for sx, side in ((1, "L"), (-1, "R")):
-        ab = S(f"HulvarCuff_{side}", "metal", 0.0032, 85, q, color_soft=0.004, weight_sigma=0.02)
+        ab = S(f"HulvarCuff_{side}", "metal", 0.0032, 110, q, color_soft=0.004, weight_sigma=0.02)
         el = np.array(ELBOW) * np.array([sx, 1, 1])
         wr = np.array(WRIST) * np.array([sx, 1, 1])
         fd = (wr - el) / np.linalg.norm(wr - el)
-        ab.add(torus(tuple(wr - fd * 0.014), 0.128, 0.021, look_basis(fd)), f"forearm_{side}", BRASS, k=0.0)
+        ab.add(torus(tuple(wr - fd * 0.016), 0.120, 0.022, look_basis(fd)), f"forearm_{side}", BRASS, k=0.0)
         shapes.append(ab)
 
-    nb = S("HulvarNestRail", "metal", 0.0034, 330, q, color_soft=0.004, weight_sigma=0.02)
-    nb.add(torus((nx, ny, lip_z), 0.200, 0.019), "nest", BRASS, k=0.0)
-    nb.add(torus((nx, ny, 1.247), 0.198, 0.013), "nest", BRASS, k=0.0)               # low hoop
+    nb = S("HulvarNestRail", "metal", 0.0032, 330, q, color_soft=0.004, weight_sigma=0.02)
+    nb.add(torus((nx, ny, lip_z), 0.200, 0.020), "nest", BRASS, k=0.0)
     top_z = lip_z + 0.057
-    nb.add(torus((nx, ny, top_z), 0.206, 0.021), "nest", BRASS, k=0.0)              # heavier top rail
+    nb.add(torus((nx, ny, top_z), 0.206, 0.016), "nest", BRASS, k=0.0)
     for i in range(6):
         a = math.radians(30 + 60 * i)
         px, py = nx + math.sin(a) * 0.203, ny - math.cos(a) * 0.203
         nb.add(capsule((px, py, lip_z), (px, py, top_z), 0.012), "nest", BRASS, k=0.008)
-    nb.paint(plane((0, 0, top_z + 0.008), (0, 0, -1)), BRASS_HI, soft=0.01)
+    nb.paint(plane((0, 0, top_z + 0.006), (0, 0, -1)), BRASS_HI, soft=0.01)
     shapes.append(nb)
 
-    ch = S("HulvarChain", "metal", 0.0032, 210, q, color_soft=0.004, weight_sigma=0.012)
+    ch = S("HulvarChain", "metal", 0.0032, 240, q, color_soft=0.004, weight_sigma=0.012)
     hawse = surface_point(core, (0, 0.30, 0.680), (0, 1, 0))
     ch.add(torus(tuple(hawse + np.array([0, 0.008, 0])), 0.040, 0.014, look_basis((0, 1, 0))), "hips", BRASS, k=0.0)
     links = [((0, 0.440, 0.650), (0, 0.894, -0.447), "chain_1", 0),
@@ -620,13 +516,13 @@ def build_shapes(q: float = 1.0):
     shapes.append(ch)
 
     # ---------------------------------------------------------------- glow pieces
-    ports = S("HulvarPortGlow", "glow", 0.0026, 110, q, color_soft=0.004, weight_sigma=0.02)
+    ports = S("HulvarPortGlow", "glow", 0.0028, 100, q, color_soft=0.004, weight_sigma=0.02)
     for p, n, sx in port_c:
         ports.add(ellipsoid(tuple(p - n * 0.006), (PORT_R * 0.92, PORT_R * 0.92, 0.012), look_basis(n)), "spine", GLOW, k=0.0)
     ports.paint(sphere((0, 0, 0), 5.0), GLOW, soft=0.01, emission=1.0)
     shapes.append(ports)
 
-    glyph = S("HulvarGlyph", "glow", 0.0024, 230, q, color_soft=0.004, weight_sigma=0.02)
+    glyph = S("HulvarGlyph", "glow", 0.0024, 280, q, color_soft=0.004, weight_sigma=0.02)
     gc = stern_c
     gn = field_normal(stern, gc)
     glyph.add(torus(tuple(gc - gn * 0.001), 0.098, 0.011, look_basis(gn)), "chest", GLOW, k=0.0)
@@ -642,14 +538,12 @@ def build_shapes(q: float = 1.0):
     gtop.paint(sphere((0, 0, 0), 5.0), GLOW, soft=0.01, emission=1.0)
     shapes.append(gtop)
 
-    nglow = S("HulvarNestGlow", "glow", 0.0034, 80, q, color_soft=0.004, weight_sigma=0.02)
-    nglow.add(cylinder((nx, ny, nz + 0.003), 0.134, 0.010, rounding=0.006), "nest", GLOW, k=0.0)
-    for c, d in slits:                                                           # lantern light in the slits
-        nglow.add(box(tuple(c - d * 0.012), (0.0085, 0.026, 0.006), look_basis(d), rounding=0.004), "nest", GLOW, k=0.0)
+    nglow = S("HulvarNestGlow", "glow", 0.0034, 50, q, color_soft=0.004, weight_sigma=0.02)
+    nglow.add(cylinder((nx, ny, nz + 0.003), 0.132, 0.010, rounding=0.006), "nest", GLOW, k=0.0)
     nglow.paint(sphere((0, 0, 0), 5.0), GLOW, soft=0.01, emission=1.0)
     shapes.append(nglow)
 
-    rune = S("HulvarRune", "glow", 0.0030, 64, q, color_soft=0.003, weight_sigma=0.02)
+    rune = S("HulvarRune", "glow", 0.0030, 70, q, color_soft=0.003, weight_sigma=0.02)
     for sy in (1, -1):
         y = 0.712 + sy * 0.036
         rune.add(torus((0, y, 0.215), 0.022, 0.0055, look_basis((0, 1, 0))), "anchor", GLOW, k=0.0)
@@ -657,11 +551,8 @@ def build_shapes(q: float = 1.0):
     rune.paint(sphere((0, 0, 0), 5.0), GLOW, soft=0.01, emission=1.0)
     shapes.append(rune)
 
-    throat = S("HulvarThroat", "glow", 0.0030, 50, q, color_soft=0.004, weight_sigma=0.02)
-    tl = core.offset(-0.038).shell(0.006).clip(slab(2, 0.906, 0.918, 0.0), 0.0)
-    tl = bounded(tl.clip(slab(0, -0.19, 0.19, 0.01), 0.0).clip(plane((0, -0.36, 0), (0, 1, 0)), 0.0),
-                 (-0.21, -0.60, 0.90), (0.21, -0.33, 0.925))
-    throat.add(tl, "head", GLASS, k=0.0)
+    throat = S("HulvarThroat", "glow", 0.0040, 40, q, color_soft=0.004, weight_sigma=0.02)
+    throat.add(ellipsoid((0, -0.395, 0.905), (0.11, 0.03, 0.030)), "head", GLASS, k=0.0)
     throat.paint(sphere((0, 0, 0), 5.0), GLASS, soft=0.01, emission=0.6)
     shapes.append(throat)
 
@@ -674,11 +565,8 @@ def build_shapes(q: float = 1.0):
         zc = 1.0 - 2.0 * (i + 0.5) / n
         rr = math.sqrt(max(0.0, 1.0 - zc * zc))
         d = np.array([math.cos(ga * i) * rr, math.sin(ga * i) * rr, zc])
-        pnt = surface_point(core_k, (0.0, -0.06, 0.82), d)
+        pnt = surface_point(core_k, (0.0, -0.02, 0.82), d)
         x, y, z = pnt
-        if z > deck_z(x, y) + 0.01:
-            pnt = np.array([x, y, deck_z(x, y)])
-            z = pnt[2]
         if y < HEAD_Y and z > HEAD_Z:
             bn = "head"
         elif z > CHEST_Z:
@@ -696,28 +584,27 @@ def build_shapes(q: float = 1.0):
         for a in range(8):
             aa = 2 * math.pi * a / 8
             probe.append((np.array([0.21 * sx + 0.14 * math.cos(aa), 0.035 + 0.14 * math.sin(aa), 0.0]), f"foot_{side}"))
-    for x in (-0.20, 0.0, 0.20):
-        probe.append((np.array([x, bow_face_y(x, 0.78) - 0.02, 0.775]), "jaw"))
+    for x in (-0.16, 0.0, 0.16):
+        probe.append((np.array([x, -0.45, 0.775]), "jaw"))
     for x in (-0.20, -0.10, 0.0, 0.10, 0.20):
         probe.append((np.array([x, 0.712, 0.215 - 0.04 * (1 - abs(x) / 0.2)]), "anchor"))
     probe.append((np.array([0.0, 0.712, 0.170]), "anchor"))
-    for x in (0.0, 0.22, -0.22):
-        probe.append((np.array([x, bow_face_y(x, 1.20) - VISOR_OFF, 1.20]), "brow"))
-    probe.append((info["stem_tip"], "head"))
+    for pnt in ((0.0, -0.676, 1.318), (0.0, -0.64, 1.20), (0.22, -0.52, 1.16), (-0.22, -0.52, 1.16), (0.0, -0.58, 1.13)):
+        probe.append((np.array(pnt), "brow"))
     for sx in (1, -1):
-        probe.append((np.array([0.15 * sx, bow_face_y(0.15, 1.05), 1.05]), "head"))
-        probe.append((np.array([0.15 * sx, bow_face_y(0.15, 0.94), 0.94]), "head"))
+        probe.append((np.array([0.15 * sx, -0.47, 1.03]), "head"))
+        probe.append((np.array([0.15 * sx, -0.46, 0.93]), "head"))
     info["probe"] = probe
     hull.cull_by = [stern_plate, face]            # both rigid on bones that also drive those hull regions
     hull.cull_margin = 0.004
-    for shp, margin in ((face, 0.010), (stern_plate, 0.012), (brow, 0.028), (jaw, 0.045), (plates, 0.035),
+    for shp, margin in ((face, 0.010), (stern_plate, 0.012), (brow, 0.030), (jaw, 0.050), (plates, 0.035),
                         (face_brass, 0.010), (side_brass, 0.008), (rail, 0.020)):
         shp.cull_by = [hull]
         shp.cull_margin = margin
     glyph.cull_by = [stern_plate]
     gtop.cull_by = [stern_plate]
     tusks.cull_by = [jaw]
-    tusks.cull_margin = 0.006
+    tusks.cull_margin = 0.008
     info["eyes"] = [(eyes[1][0], "L"), (eyes[-1][0], "R")]
     return shapes, info
 
@@ -730,7 +617,7 @@ def bone_table():
         ("spine", (0, 0.050, 0.700), (0, 0.000, 0.920), "hips", True),
         ("chest", (0, 0.000, 0.920), (0, -0.040, 1.150), "spine", True),
         ("head", (0, -0.100, 0.980), (0, -0.400, 1.020), "chest", True),
-        ("brow", (0, -0.470, 1.215), (0, -0.620, 1.255), "head", True),
+        ("brow", (0, -0.300, 1.185), (0, -0.440, 1.195), "head", True),
         ("jaw", (0, -0.240, 0.930), (0, -0.440, 0.880), "head", True),
         ("eye_L", tuple(EYE_C), tuple(EYE_C + EYE_FWD / np.linalg.norm(EYE_FWD) * 0.07), "head", True),
         ("eye_R", tuple(EYE_C * [-1, 1, 1]), tuple(EYE_C * [-1, 1, 1] + EYE_FWD * [-1, 1, 1] / np.linalg.norm(EYE_FWD) * 0.07), "head", True),
@@ -760,35 +647,24 @@ def make_rig():
 
 
 # ----------------------------------------------------------------------------- assembly
-AO_STRENGTH = {"stone": 0.15, "metal": 0.15, "glow": 0.0, "glyph": 0.0}
-MOVING = ("HulvarArm", "HulvarCuff", "HulvarLegs", "HulvarAnchor", "HulvarChain", "HulvarRune")
+AO_STRENGTH = {"stone": 0.28, "metal": 0.18, "glow": 0.0, "glyph": 0.0}
 
 
 def assemble(name, rig, shapes, extras, log):
-    """sdfchar.assemble with per-material AO strength, a wider AO reach and per-group occluders:
-    limbs and the anchor only occlude themselves (no baked dark patches on the hull where an arm
-    happens to hang in the rest pose), the hull group occludes itself."""
-    import functools
+    """sdfchar.assemble with per-material AO strength and per-piece timing."""
     import bpy
     import sdfchar
     from bhelpers import select_only
     rig_obj = rig.build(name)
     bones = [b for b in rig.order if rig.bones[b].deform]
-    body_group = [sh for sh in shapes if not sh.name.startswith(MOVING)]
-    body_field = sdfchar.union_field(body_group)
-    orig_ao = K.sdf_ao
-    K.sdf_ao = functools.partial(orig_ao, reach=0.20, steps=6, strength=2.2)
+    ao_field = sdfchar.union_field(shapes)
     objs = []
-    try:
-        for sh in shapes:
-            t = time.time()
-            ao_field = sh.field if sh.name.startswith(MOVING) else body_field
-            o = K.build_object(sh, bones, log=log, ao_field=ao_field, ao_strength=AO_STRENGTH.get(sh.material, 0.4))
-            sdfchar._assign_material(o, sh.material)
-            objs.append(o)
-            log(f"    {sh.name}: {time.time() - t:.1f}s")
-    finally:
-        K.sdf_ao = orig_ao
+    for sh in shapes:
+        t = time.time()
+        o = K.build_object(sh, bones, log=log, ao_field=ao_field, ao_strength=AO_STRENGTH.get(sh.material, 0.4))
+        sdfchar._assign_material(o, sh.material)
+        objs.append(o)
+        log(f"    {sh.name}: {time.time() - t:.1f}s")
     objs.extend(extras)
     select_only(objs)
     bpy.context.view_layer.objects.active = objs[0]
@@ -818,7 +694,6 @@ def assemble(name, rig, shapes, extras, log):
 # level and the chain hanging in world space.
 FPS = 30
 CLIPS = {}            # name -> (length_s, fn, loop)
-BROW_K = 0.45         # visor tilt scale (the clips' brow angles were tuned for a small brow)
 
 
 def clip(name, length, loop=False):
@@ -894,8 +769,6 @@ class Pose:
 
     def rot(self, bone, rx=0.0, ry=0.0, rz=0.0):
         from mathutils import Euler
-        if bone == "brow":            # the visor is one big rigid piece: keep its tilt small
-            rx, ry, rz = rx * BROW_K, ry * BROW_K, rz * BROW_K
         q = Euler((math.radians(rx), math.radians(ry), math.radians(rz)), "XYZ").to_quaternion()
         self.r[bone] = self.r.get(bone, self.Q()) @ q
         return self
@@ -1028,8 +901,7 @@ def rotz(deg):
 
 SK = None             # Skel, set in bake_all
 ANKLE = (0.210, 0.080, 0.120)
-FIST_HALF = 0.128
-FIST_DROP = WRIST[2] - (FIST_C[2] - FIST_HALF) - 0.004   # wrist height when the fist rests flat on the sand
+FIST_DROP = WRIST[2] - (FIST_C[2] - 0.126) - 0.004   # wrist height when the fist rests flat on the sand
 
 
 def body(P, drop=0.0, pitch=0.0, roll=0.0, yaw=0.0, fwd=0.0, side=0.0, spine=(0, 0, 0), chest=(0, 0, 0)):
@@ -1205,12 +1077,12 @@ FOOT_X = 0.225
 def idle_pose(ph, glance=True):
     P = Pose()
     b = wv(ph, 2)                                            # two slow breaths per loop
-    body(P, drop=0.095 - 0.006 * b, pitch=4.0 + 0.6 * b, roll=0.9 * wv(ph, 1, 0.1), yaw=1.5 * wv(ph, 1, 0.3),
-         spine=(1.0, 0.0, 0.0), chest=(1.0 - 1.0 * b, 0.0, 0.0))
+    body(P, drop=0.072 - 0.006 * b, pitch=15.5 + 0.8 * b, roll=0.9 * wv(ph, 1, 0.1), yaw=1.5 * wv(ph, 1, 0.3),
+         spine=(3.0, 0.0, 0.0), chest=(3.5 - 1.2 * b, 0.0, 0.0))
     breathe(P, b)
     g = bump(ph, 0.30, 0.40, 0.56) if glance else 0.0         # glances up at the nest
     sideways = spline(ph, [(0.0, 0.0), (0.12, 7.0), (0.24, 0.0), (0.62, -6.0), (0.78, -1.0), (1.0, 0.0)], 1.0) if glance else 0.0
-    P.rot("head", -2.0 - 8.0 * g + 1.0 * b, 0.6 * sideways, 0.0)
+    P.rot("head", -11.0 - 9.0 * g + 1.0 * b, 0.6 * sideways, 0.0)
     eyes(P, yaw=1.6 * sideways, pitch=-4.0 + 22.0 * g)
     ch = bump(ph, 0.66, 0.70, 0.84) if glance else 0.0      # rumbling chuckle
     P.rot("jaw", 1.5 + ch * (4.0 + 3.0 * math.sin(ph * 2 * math.pi * 14.0)), 0.0, 0.0)
@@ -1218,8 +1090,8 @@ def idle_pose(ph, glance=True):
     leg(P, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X, 0.08, ANKLE[2]))
     tap = bump(ph, 0.84, 0.88, 0.94) if glance else 0.0     # left knuckles drum once
-    arm_ik(P, "L", (0.535, -0.175, FIST_DROP + 0.05 * tap), hand_pitch=-6.0 * tap)
-    arm_ik(P, "R", (-0.535, -0.175, FIST_DROP))
+    arm_ik(P, "L", (0.530, -0.275, FIST_DROP - 0.010 + 0.05 * tap), hand_pitch=-6.0 * tap)
+    arm_ik(P, "R", (-0.530, -0.275, FIST_DROP - 0.010))
     level_nest(P, 1.0, tilt=(1.2 * wv(ph, 2, -0.12), 0.0))
     chain(P, hang(swing_x=3.0 + 2.0 * wv(ph, 1, -0.1), swing_side=6.0 * wv(ph, 1, -0.2)))
     return P
@@ -1235,18 +1107,18 @@ def c_walk(t, ph):
     P = Pose()
     S, Y0, c, lift = 0.185, 0.07, 0.56, 0.075
     bob = 0.5 - 0.5 * math.cos(4 * math.pi * (ph - 0.05))   # 0 at contacts, 1 at passing
-    body(P, drop=0.050 - 0.026 * bob, pitch=3.5 + 1.5 * bob, roll=-4.0 * wv(ph, 1, -0.03), yaw=-5.0 * math.cos(2 * math.pi * ph),
-         side=0.028 * wv(ph, 1, -0.03), spine=(0.5, 2.0 * math.cos(2 * math.pi * ph), 1.2 * wv(ph, 1, -0.10)),
-         chest=(1.0, 2.5 * math.cos(2 * math.pi * (ph - 0.05)), 1.0 * wv(ph, 1, -0.16)))
+    body(P, drop=0.050 - 0.026 * bob, pitch=8.0 + 1.5 * bob, roll=-4.0 * wv(ph, 1, -0.03), yaw=-5.0 * math.cos(2 * math.pi * ph),
+         side=0.028 * wv(ph, 1, -0.03), spine=(1.0, 2.0 * math.cos(2 * math.pi * ph), 1.2 * wv(ph, 1, -0.10)),
+         chest=(1.5, 2.5 * math.cos(2 * math.pi * (ph - 0.05)), 1.0 * wv(ph, 1, -0.16)))
     for side, sx, c0 in (("L", 1, 0.0), ("R", -1, 0.5)):
         y, z, planted = gait(ph, c0, (c0 + c) % 1.0, Y0 - S, Y0 + S, lift)
         pitch = 0.0 if planted else -14.0 * (z / lift)
         leg(P, side, (FOOT_X * sx, y, ANKLE[2] + z), pitch=pitch)
     for side, sx, off in (("L", 1, 0.5), ("R", -1, 0.0)):
         sw = 24.0 * math.cos(2 * math.pi * (ph - off - 0.07))
-        arm_fk(P, side, swing=sw, out=9.0, twist=-4.0, elbow=20.0 + 12.0 * max(0.0, sw) / 24.0,
-               wrist=(-8.0 - 8.0 * max(0.0, -sw) / 24.0, 0.0, 0.0))
-    P.rot("head", -2.0 + 2.0 * bob, 1.5 * math.cos(2 * math.pi * ph), 1.5 * wv(ph, 1, -0.05))
+        arm_fk(P, side, swing=sw, out=7.0, twist=-4.0, elbow=10.0 + 9.0 * max(0.0, sw) / 24.0,
+               wrist=(-6.0 - 8.0 * max(0.0, -sw) / 24.0, 0.0, 0.0))
+    P.rot("head", -6.0 + 2.0 * bob, 1.5 * math.cos(2 * math.pi * ph), 1.5 * wv(ph, 1, -0.05))
     P.rot("jaw", 2.0 + 2.5 * (1.0 - bob), 0.0, 0.0)
     eyes(P, pitch=-2.0)
     level_nest(P, 0.85, tilt=(2.0 * math.cos(4 * math.pi * (ph - 0.15)), 0.0))
@@ -1274,8 +1146,7 @@ def c_run(t, ph):
     P.rot("jaw", 6.0 + 4.0 * hi, 0.0, 0.0)
     P.rot("brow", 4.0, 0.0, 0.0)
     eyes(P, pitch=4.0)
-    nod = sum(bump((ph - c0) % 1.0, 0.0, 0.035, 0.12) for c0 in (0.0, 0.11))   # nods on each fist plant
-    level_nest(P, 1.0, tilt=(3.0 * wv(ph, 2, -0.18) + 4.0 * nod, 0.0), up=-0.012 * nod)   # counter-rotated
+    level_nest(P, 1.0, tilt=(3.0 * wv(ph, 2, -0.18), 0.0))   # counter-rotated: stays upright
     chain(P, hang(swing_x=38.0 + 10.0 * wv(ph, 2, -0.2), swing_side=6.0 * wv(ph, 1, -0.25), lag=(1.0, 1.15, 1.3, 1.4)))
     return P
 
@@ -1302,13 +1173,13 @@ def c_jump(t, ph):
     sq = bump(t, 0.0, 0.055, 0.13)              # 2-frame squat, push-off
     air = win(t, 0.07, 0.24)
     P0 = Pose()
-    body(P0, drop=0.095 + 0.07 * sq, pitch=4.0 + 8.0 * sq, spine=(1, 0, 0), chest=(1, 0, 0))
+    body(P0, drop=0.06 + 0.07 * sq, pitch=12.0 + 6.0 * sq, spine=(3, 0, 0), chest=(3, 0, 0))
     squash(P0, 1.0 - 0.07 * sq + 0.08 * bump(t, 0.06, 0.12, 0.22))
     leg(P0, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P0, "R", (-FOOT_X, 0.08, ANKLE[2]))
     for side, sx in (("L", 1), ("R", -1)):
-        arm_ik(P0, side, (0.535 * sx, -0.175 + 0.04 * sq, FIST_DROP))
-    P0.rot("head", -2.0, 0, 0)
+        arm_ik(P0, side, (0.53 * sx, -0.26 + 0.06 * sq, FIST_DROP + 0.01))
+    P0.rot("head", -10.0, 0, 0)
     P0.rot("jaw", 2.0 + 6.0 * sq, 0, 0)
     eyes(P0, pitch=6.0 * sq)
     level_nest(P0, 1.0, back=0.0, up=-0.025 * sq)
@@ -1345,14 +1216,14 @@ def c_land(t, ph):
     hit = bump(t, 0.0, 0.035, 0.20)
     reb = bump(t, 0.10, 0.17, 0.32)
     P = Pose()
-    body(P, drop=0.095 + 0.10 * hit - 0.035 * reb, pitch=4.0 + 11.0 * hit - 3.0 * reb, spine=(1.0 + 3.0 * hit, 0, 0),
-         chest=(1.0 + 4.0 * hit, 0, 0))
+    body(P, drop=0.062 + 0.10 * hit - 0.035 * reb, pitch=15.5 + 9.0 * hit - 3.0 * reb, spine=(3.0 + 3.0 * hit, 0, 0),
+         chest=(3.5 + 4.0 * hit, 0, 0))
     squash(P, 1.0 - 0.09 * hit + 0.04 * reb)
     leg(P, "L", (FOOT_X + 0.02 * hit, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X - 0.02 * hit, 0.08, ANKLE[2]))
     for side, sx in (("L", 1), ("R", -1)):
-        arm_ik(P, side, (0.56 * sx, -0.19 - 0.06 * hit, FIST_DROP + 0.024 * reb))
-    P.rot("head", -2.0 + 8.0 * hit - 4.0 * reb, 0, 0)
+        arm_ik(P, side, (0.56 * sx, -0.28 - 0.04 * hit, FIST_DROP + 0.024 * reb))
+    P.rot("head", -11.0 + 8.0 * hit - 4.0 * reb, 0, 0)
     P.rot("jaw", 1.5 + 13.0 * bump(t, 0.02, 0.07, 0.22), 0, 0)
     P.rot("brow", 1.5 + 5.0 * hit, 0, 0)
     eyes(P, pitch=-4.0, squash=1.0 - 0.45 * bump(t, 0.0, 0.04, 0.14))
@@ -1411,19 +1282,16 @@ def c_ram(t, ph):
     go = win(t, 0.05, 0.12) * (1.0 - win(t, 0.32, 0.48))
     shake = math.sin(t * 2 * math.pi * 18.0) * go * (1.0 - win(t, 0.25, 0.32))
     P = Pose()
-    imp = bump(t, 0.10, 0.135, 0.20)                           # impact accent: 2-frame squash along the bow
-    body(P, drop=0.09 + 0.04 * go, pitch=4.0 - 8.0 * ant + 24.0 * go + 1.2 * shake, fwd=0.05 * go + 0.03 * imp,
-         spine=(1.0 + 4.0 * go, 0, 0), chest=(1.0 + 4.0 * go, 0, 0))
+    body(P, drop=0.06 + 0.04 * go, pitch=15.5 - 10.0 * ant + 18.0 * go + 1.2 * shake, fwd=0.05 * go, spine=(3.0 + 4.0 * go, 0, 0),
+         chest=(3.5 + 4.0 * go, 0, 0))
     squash(P, 1.0 + 0.05 * go)
-    P.scl("spine", 1.0 + 0.05 * imp, 1.0 + 0.04 * imp, 1.0 - 0.11 * imp)
-    P.scl("chest", 1.0 / (1.0 + 0.05 * imp), 1.0 / (1.0 + 0.04 * imp), 1.0 / (1.0 - 0.11 * imp))
     leg(P, "L", (FOOT_X, lerp(0.08, -0.16, go), ANKLE[2]))
     leg(P, "R", (-FOOT_X, lerp(0.08, 0.34, go), ANKLE[2] + toe_lift(28.0 * go)), pitch=28.0 * go)
     for side, sx in (("L", 1), ("R", -1)):
         sw = lerp(-8.0 * ant, -62.0, go)
         arm_fk(P, side, swing=sw, out=lerp(8.0, 22.0, go), twist=-10.0 * go, elbow=lerp(12.0, 4.0, go), wrist=(18.0 * go, 0.0, 0.0))
     idle = idle_pose(0.0)
-    P.rot("head", -2.0 + 16.0 * go - 6.0 * ant, 0, 0)
+    P.rot("head", -11.0 + 26.0 * go + 6.0 * ant * -1.0, 0, 0)
     P.rot("jaw", 1.5 - 1.5 * go, 0, 0)
     P.rot("brow", 1.5 + 9.0 * go, 0, 0)
     eyes(P, pitch=8.0 * go, squash=1.0 - 0.18 * go)
@@ -1434,8 +1302,6 @@ def c_ram(t, ph):
 
 
 def brace_pose(t):
-    """Canhão do Ninho: wide low stance leaning back, fists planted far forward and wide, jaw
-    clenched, anchor dug into the sand behind; the shot (recoil + nest kick) at t = 0.25 s."""
     P = Pose()
     fire = 0.25
     rec = bump(t, fire, fire + 0.025, fire + 0.22)
@@ -1443,21 +1309,20 @@ def brace_pose(t):
     wob = math.sin((t - fire) * 2 * math.pi * 5.0) * math.exp(-max(0.0, t - fire) * 7.0) * (1.0 if t > fire else 0.0)
     charge = win(t, 0.06, 0.22) * (1.0 - win(t, fire, fire + 0.02))
     jit = math.sin(t * 2 * math.pi * 24.0) * charge
-    body(P, drop=0.185 + 0.008 * jit + 0.035 * rec, pitch=-5.0 + 1.5 * charge - 7.0 * rec + 2.5 * wob, side=0.004 * jit,
-         spine=(-1.5 - 2.0 * rec, 0, 0), chest=(-1.5 - 4.0 * rec, 0, 0))
+    body(P, drop=0.115 + 0.01 * jit + 0.03 * rec, pitch=6.0 + 3.0 * charge - 11.0 * rec + 2.5 * wob, side=0.004 * jit,
+         spine=(2.0 - 3.0 * rec, 0, 0), chest=(2.0 - 5.0 * rec, 0, 0))
     squash(P, 1.0 - 0.03 * charge - 0.08 * kick + 0.04 * wob)
-    leg(P, "L", (0.420, 0.03, ANKLE[2]), yaw=-16.0, pole_out=0.45)
-    leg(P, "R", (-0.420, 0.11, ANKLE[2]), yaw=16.0, pole_out=0.45)
-    arm_ik(P, "L", (0.665, -0.330, FIST_DROP), hand_yaw=16.0, pole=(0.7, 0.75, 0.1))
-    arm_ik(P, "R", (-0.665, -0.330, FIST_DROP), hand_yaw=16.0, pole=(0.7, 0.75, 0.1))
-    P.rot("head", 3.0 + 1.5 * charge - 10.0 * rec + 3.0 * wob, 0, 0)
-    P.rot("jaw", -1.5 + 1.5 * jit + 22.0 * rec, 0, 0)            # clenched until the shot, then a roar
-    P.rot("brow", 9.0 + 3.0 * charge - 14.0 * rec, 0, 0)
-    eyes(P, pitch=8.0, squash=1.0 - 0.28 * charge - 0.5 * kick)
+    leg(P, "L", (0.31, 0.02, ANKLE[2]), yaw=-8.0)
+    leg(P, "R", (-0.31, 0.14, ANKLE[2]), yaw=8.0)
+    arm_ik(P, "L", (0.60, -0.21, FIST_DROP), hand_yaw=10.0)
+    arm_ik(P, "R", (-0.60, -0.21, FIST_DROP), hand_yaw=10.0)
+    P.rot("head", -6.0 - 12.0 * rec + 3.0 * wob, 0, 0)
+    P.rot("jaw", 1.0 - 1.0 * charge + 22.0 * rec, 0, 0)
+    P.rot("brow", 6.0 + 3.0 * charge - 12.0 * rec, 0, 0)
+    eyes(P, pitch=10.0, squash=1.0 - 0.25 * charge - 0.5 * kick)
     level_nest(P, 1.0, tilt=(13.0 + 2.0 * charge - 32.0 * rec + 8.0 * wob, 0.0), back=0.09 * rec, up=-0.03 * rec)
     P.scl("nest", 1.0 + 0.10 * kick, 1.0 - 0.12 * kick + 0.05 * wob, 1.0 + 0.10 * kick)
-    # anchor: the chain runs back taut and the flukes bite the sand behind
-    chain(P, hang(swing_x=34.0 + 4.0 * rec, swing_side=0.0, base=(0.80, 0.70, 0.55, -0.35), lag=(1.0, 1.0, 1.0, 1.0)))
+    chain(P, hang(swing_x=-1.0 + 8.0 * rec, swing_side=0.0, base=(0.60, 0.44, 0.28, 0.14)))
     return P
 
 
@@ -1468,26 +1333,24 @@ def c_brace(t, ph):
 
 @clip("surf", 1.0, loop=True)
 def c_surf(t, ph):
-    """Trenó de Quilha: the hull planes on its keel like a boat - prow lifted 14 deg, the aft keel is
-    the contact line, legs folded inside, fists trailing behind at the sides as rudders, nest level."""
+    """Trenó de Quilha: hull on the sand like a boat, legs folded inside, fists as rudders."""
     P = Pose()
     bob = 0.006 * wv(ph, 4) + 0.004 * wv(ph, 7, 0.3)
-    body(P, drop=0.0, pitch=-11.0 + 1.5 * wv(ph, 2, 0.1), roll=3.0 * wv(ph, 1), spine=(-1.5, 0, 0),
-         chest=(-1.5, 0, -1.0 * wv(ph, 1, -0.1)))
+    body(P, drop=0.0, pitch=-5.0 + 1.5 * wv(ph, 2, 0.1), roll=3.0 * wv(ph, 1), spine=(0, 0, 0), chest=(1.0, 0, -1.0 * wv(ph, 1, -0.1)))
     z0 = lowest(P, HULL_BONES)
-    lift_body(P, -z0 - 0.012 + bob)
+    lift_body(P, -z0 - 0.010 + bob)
     M = SK.fk(P)
     for side, sx in (("L", 1), ("R", -1)):
         hip = SK.head(P, f"thigh_{side}", M)
-        leg(P, side, (0.20 * sx, hip.y - 0.06, hip.z + 0.05), pitch=70.0)
+        leg(P, side, (0.20 * sx, hip.y - 0.10, hip.z + 0.07), pitch=80.0)
     for side, sx, off in (("L", 1, 0.0), ("R", -1, 0.5)):
         dip = 0.5 + 0.5 * wv(ph, 1, off)
-        arm_ik(P, side, (0.66 * sx, 0.26 + 0.05 * dip, FIST_DROP - 0.004 + 0.03 * dip), hand_pitch=18.0, hand_yaw=-20.0,
-               pole=(0.6, 0.3, 1.0))
-    P.rot("head", 2.0 + 1.0 * wv(ph, 2), 0, 1.5 * wv(ph, 1))
+        arm_ik(P, side, (0.78 * sx, 0.12 + 0.05 * dip, FIST_DROP + 0.002 + 0.025 * dip), hand_pitch=0.0, hand_yaw=-25.0,
+               pole=(0.3, 1.0, 0.6))
+    P.rot("head", -5.0 + 1.0 * wv(ph, 2), 0, 1.5 * wv(ph, 1))
     P.rot("jaw", 3.0, 0, 0)
-    P.rot("brow", 2.0, 0, 0)
-    eyes(P, pitch=4.0, yaw=4.0 * wv(ph, 1, 0.2))
+    P.rot("brow", 3.0, 0, 0)
+    eyes(P, pitch=-2.0, yaw=4.0 * wv(ph, 1, 0.2))
     level_nest(P, 1.0, tilt=(1.5 * wv(ph, 2, -0.2), 2.0 * wv(ph, 1, -0.15)))
     chain(P, hang(swing_x=70.0, swing_side=7.0 * wv(ph, 1, -0.3), base=(0.85, 0.8, 0.75, 0.7), lag=(1.0, 1.05, 1.1, 1.12)))
     return P
@@ -1535,8 +1398,8 @@ def c_hurt(t, ph):
     hit = bump(t, 0.0, 0.05, 0.30)
     over = bump(t, 0.18, 0.30, 0.48)
     P = Pose()
-    body(P, drop=0.095 + 0.02 * hit, pitch=4.0 - 18.0 * hit + 5.0 * over, roll=-4.0 * hit, spine=(1.0 - 5.0 * hit, 0, 0),
-         chest=(1.0 - 6.0 * hit, 0, 2.0 * hit))
+    body(P, drop=0.06 + 0.02 * hit, pitch=15.5 - 24.0 * hit + 5.0 * over, roll=-4.0 * hit, spine=(3.0 - 6.0 * hit, 0, 0),
+         chest=(3.5 - 7.0 * hit, 0, 2.0 * hit))
     squash(P, 1.0 + 0.04 * hit - 0.03 * over)
     leg(P, "L", (FOOT_X, 0.08, ANKLE[2]))
     leg(P, "R", (-FOOT_X, 0.08 + 0.04 * hit, ANKLE[2]))
@@ -1547,11 +1410,11 @@ def c_hurt(t, ph):
         arm_world(Pa, side, (0.72, -0.42, 0.55), (0.40, -0.55, 0.73), hand=(-30.0, 0.0, 0.0))
         Pi = Pose()
         Pi.r, Pi.l, Pi.s = dict(P.r), dict(P.l), dict(P.s)
-        arm_ik(Pi, side, (0.535 * sx, -0.175, FIST_DROP))
+        arm_fk(Pi, side, swing=0.0, out=6.0, elbow=6.0)
         from mathutils import Quaternion
         for bn in (f"upperarm_{side}", f"forearm_{side}", f"hand_{side}"):
             P.r[bn] = Pi.r.get(bn, Quaternion()).slerp(Pa.r.get(bn, Quaternion()), hit)
-    P.rot("head", -2.0 - 14.0 * hit + 6.0 * over, 0, 4.0 * hit)
+    P.rot("head", -11.0 - 14.0 * hit + 6.0 * over, 0, 4.0 * hit)
     P.rot("jaw", 1.5 + 16.0 * bump(t, 0.0, 0.06, 0.3), 0, 0)
     P.rot("brow", -9.0 * hit + 3.0 * over, 0, 0)
     eyes(P, pitch=4.0 * hit, squash=1.0 - 0.85 * bump(t, 0.0, 0.03, 0.22))
@@ -1659,7 +1522,7 @@ def main(argv):
         from mathutils import Matrix
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.0)
         bmesh.ops.transform(bm, matrix=Matrix.Diagonal((0.048, 0.048, 0.062, 1.0)), verts=bm.verts)
-        bmesh.ops.translate(bm, vec=(NEST_C[0], NEST_C[1] - 0.05, 1.215), verts=bm.verts)
+        bmesh.ops.translate(bm, vec=(0.0, 0.10, 1.215), verts=bm.verts)
     extras.append(sdfchar.hard_object("HulvarCrystal", crystal, "nest", bones, (0.62, 1.0, 0.96, 0.0), "glow"))
     rig_obj, body = assemble("Hulvar", rig, shapes, extras, log)
     log(f"mesh built in {time.time() - t0:.1f}s")
