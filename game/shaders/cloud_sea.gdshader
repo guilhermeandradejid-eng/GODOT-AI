@@ -21,11 +21,8 @@ uniform float brightness = 1.0;
 
 varying vec3 w_pos;
 
-float dens(vec2 p, float t) {
-	float a = texture(cloud_noise, p + drift * t).r;
-	float b = texture(cloud_noise, p * 2.7 - drift * t * 1.6).g;
-	float c = texture(cloud_noise, p * 0.31 + drift * t * 0.4).a;
-	return a * 0.6 + b * 0.25 + c * 0.45;
+float base_dens(vec2 p, float t) {
+	return texture(cloud_noise, p + drift * t).r;
 }
 
 void vertex() {
@@ -35,21 +32,25 @@ void vertex() {
 void fragment() {
 	float t = TIME;
 	vec2 p = w_pos.xz * scale;
-	float e = 0.004;
-	float h = dens(p, t);
-	float hx = dens(p + vec2(e, 0.0), t);
-	float hz = dens(p + vec2(0.0, e), t);
-	vec3 n = normalize(vec3((h - hx) * 16.0, 1.0, (h - hz) * 16.0));
+	// 4 texture reads: base octave + its gradient, detail, large-scale weather
+	float e = 0.025;
+	float b0 = base_dens(p, t);
+	float bx = base_dens(p + vec2(e, 0.0), t);
+	float bz = base_dens(p + vec2(0.0, e), t);
+	vec2 dw = texture(cloud_noise, p * 0.3 + drift * t * 0.4).ga;
+	float detail = texture(cloud_noise, p * 2.7 - drift * t * 1.6).g;
+	float h = b0 * 0.62 + detail * 0.22 + dw.y * 0.4;
+	vec3 n = normalize(vec3((b0 - bx) * 5.0, 1.0, (b0 - bz) * 5.0));
 	vec3 sd = normalize(sun_dir);
 	float ndl = clamp(dot(n, sd) * 0.5 + 0.5, 0.0, 1.0);
-	vec3 col = mix(shadow_color, mid_color, smoothstep(0.15, 0.6, ndl));
-	col = mix(col, lit_color, smoothstep(0.55, 0.95, ndl) * smoothstep(0.35, 0.8, h));
-	// silver lining when looking towards the sun
+	float puff = smoothstep(0.25, 0.85, h);
+	vec3 col = mix(shadow_color, mid_color, smoothstep(0.2, 0.62, ndl));
+	col = mix(col, lit_color, smoothstep(0.5, 0.85, ndl) * puff);
+	// silver lining when looking towards the sun, deeper valleys between puffs
 	vec3 view_w = normalize(CAMERA_POSITION_WORLD - w_pos);
 	float back = pow(clamp(dot(-view_w, sd), 0.0, 1.0), 6.0);
-	col += rim_color * back * (1.0 - smoothstep(0.3, 0.8, h)) * 0.9;
-	// deeper valleys between puffs
-	col *= 0.72 + 0.42 * smoothstep(0.2, 0.8, h);
+	col += rim_color * back * (1.0 - puff) * 0.8;
+	col *= 0.66 + 0.5 * puff;
 	float dist = length(CAMERA_POSITION_WORLD - w_pos);
 	col = mix(col, far_color, smoothstep(far_fade * 0.3, far_fade, dist) * 0.85);
 	ALBEDO = col * brightness;

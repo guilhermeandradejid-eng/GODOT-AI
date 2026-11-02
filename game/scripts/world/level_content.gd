@@ -103,10 +103,12 @@ func _props() -> void:
 		node.rotation.y = deg_to_rad(float(e.get("rot", 0.0)))
 		var sc := float(e.get("scale", 1.0))
 		node.scale = Vector3.ONE * sc
+		for m in PropLib.meshes(node):
+			m.visibility_range_end = 230.0 if not t.begins_with("rock") else 160.0
+			m.visibility_range_end_margin = 20.0
+			m.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		if t.begins_with("palm"):
 			_palm_collision(node)
-			for m in PropLib.meshes(node):
-				m.visibility_range_end = 240.0
 		elif t.begins_with("rock"):
 			PropLib.add_collision(node, "convex")
 		else:
@@ -390,7 +392,7 @@ func _grass_fields() -> void:
 	var seed_v := 1
 	for info in level.builder.islands.values():
 		for mi in SoproLevelBuilder._meshes(info["node"]):
-			var g := Decor.grass_field(mi, 2600, seed_v)
+			var g := Decor.grass_field(mi, 1800, seed_v)
 			seed_v += 1
 			if g != null:
 				mi.add_child(g)
@@ -400,8 +402,8 @@ func _grass_fields() -> void:
 func set_quality(q: int) -> void:
 	_quality = q
 	for g in _grass:
-		g.multimesh.visible_instance_count = int(g.multimesh.instance_count * [0.35, 0.65, 1.0][q])
-		g.visibility_range_end = [45.0, 70.0, 95.0][q]
+		g.multimesh.visible_instance_count = int(g.multimesh.instance_count * [0.3, 0.6, 1.0][q])
+		g.visibility_range_end = [40.0, 60.0, 90.0][q]
 	if _motes != null:
 		_motes.amount = [50, 100, 140][q]
 

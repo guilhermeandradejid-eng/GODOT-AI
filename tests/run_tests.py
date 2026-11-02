@@ -5,8 +5,9 @@
     GODOT_BIN=/path/to/godot python3 tests/run_tests.py --render   # + shader/render test (display or xvfb-run)
 
 Checks: project import (no script errors), every command family through the
-headless CLI, the prompt interpreter, the command schema snapshot and the MCP
-server handshake. Exit code 0 = all good.
+headless CLI, the prompt interpreter, the command schema snapshot, the MCP
+server handshake and the SOPRO game (automated playtest + LAN co-op between two
+instances; `--game-only` runs just those). Exit code 0 = all good.
 """
 from __future__ import annotations
 
@@ -424,11 +425,35 @@ def test_render(client: VibeClient) -> None:
         check(p.exists() and p.stat().st_size > 2000, f"screenshot {style}", p)
 
 
+def test_game(godot: str) -> None:
+    """SOPRO (game/): automated playtest of every mechanic + LAN co-op between two instances."""
+    print("[jogo SOPRO]")
+    proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "res://game/tools/playtest.tscn"],
+                          capture_output=True, text=True, timeout=900)
+    out = proc.stdout + proc.stderr
+    oks = [l for l in out.splitlines() if l.strip().startswith("ok ")]
+    bad = [l.strip() for l in out.splitlines() if l.strip().startswith("FAIL") or "SCRIPT ERROR" in l]
+    check(proc.returncode == 0 and not bad and len(oks) >= 40, f"playtest do jogo ({len(oks)} verificações)", bad[:6])
+    host = subprocess.Popen([godot, "--headless", "--path", str(ROOT), "res://game/tools/nettest.tscn", "--", "--host"],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    time.sleep(3)
+    client = subprocess.run([godot, "--headless", "--path", str(ROOT), "res://game/tools/nettest.tscn", "--", "--client"],
+                            capture_output=True, text=True, timeout=180)
+    try:
+        host_out, _ = host.communicate(timeout=180)
+    except subprocess.TimeoutExpired:
+        host.kill()
+        host_out = ""
+    check(host.returncode == 0 and client.returncode == 0, "co-op em rede (host + cliente)",
+          [l for l in (host_out + client.stdout).splitlines() if "FAIL" in l][:4])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--render", action="store_true", help="also render every style (needs a display or xvfb-run)")
     ap.add_argument("--editor", action="store_true", help="also start the editor and test the live HTTP bridge")
     ap.add_argument("--skip-import", action="store_true")
+    ap.add_argument("--game-only", action="store_true", help="only the SOPRO game tests")
     a = ap.parse_args()
     godot = find_godot(None)
     print("godot:", godot)
@@ -440,6 +465,10 @@ def main() -> int:
     anims_before = set(anim_dir.glob("*")) if anim_dir.exists() else set()
     if not a.skip_import:
         test_import(godot)
+    if a.game_only:
+        test_game(godot)
+        print(f"\n{PASSES} passed, {len(FAILS)} failed")
+        return 1 if FAILS else 0
     test_commands(client)
     test_environment(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_env.tscn", mode="headless", timeout=900))
     test_world_build(VibeClient(ROOT, godot=godot, scene="res://tests/tmp/test_world.tscn", mode="headless", timeout=900))
@@ -449,6 +478,7 @@ def main() -> int:
     test_kimodo(lambda scene: VibeClient(ROOT, godot=godot, scene=scene, mode="headless", timeout=900))
     test_schema(godot)
     test_mcp()
+    test_game(godot)
     if a.render:
         test_render(client)
     if a.editor:

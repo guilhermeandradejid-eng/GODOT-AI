@@ -15,6 +15,22 @@
 As texturas foram reempacotadas em WebP no formato esperado pelos shaders
 (`albedo_height`: RGB = cor, A = altura; `normal_rough`: RGB = normal, A = rugosidade).
 
+### SOPRO (game/)
+
+| Arquivo(s) | Origem | Licença |
+|---|---|---|
+| `game/assets/fonts/Fredoka.ttf` | [Fredoka](https://github.com/hafontia/Fredoka-One) — Milena Brandão & Hafontia (via google/fonts) | SIL OFL 1.1 (`game/assets/fonts/OFL.txt`) |
+| Personagens, ilhas e props (`game/assets/characters`, `world`, `props`, `game/blender/*.blend`) | Gerados por `game/blender/*.py` | CC0 1.0 |
+| Texturas (`game/assets/textures/*`, ícones) | Geradas por `game/tools/gen_textures.py` / render do jogo | CC0 1.0 |
+| Efeitos sonoros e músicas (`game/assets/audio/*`) | Sintetizados por `game/tools/gen_audio.py` | CC0 1.0 |
+| `cloud_noise.png`, `water_normal.png` | Reaproveitados da própria Vibe Suite (acima) | CC0 1.0 |
+
+Técnicas reimplementadas nos shaders do jogo: brilho de areia por microfacetas e "ocean
+specular" (John Edwards, *Sand Rendering in Journey*, GDC 2013 — palestra), iluminação toon com rim
+(FlexibleToonShaderGD, MIT), contorno por casco invertido (técnica clássica), cáusticas e espuma por
+profundidade, céu em meia resolução (documentação do Godot), raios de sol radiais em espaço de tela
+(*GPU Gems 3*, cap. 13 — Mitchell).
+
 ## Técnicas adaptadas (código reescrito, créditos nos cabeçalhos dos shaders)
 
 | Técnica | Projeto de referência | Licença |

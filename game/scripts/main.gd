@@ -22,6 +22,38 @@ func _ready() -> void:
 	level.postfx.set_fade(1.0)
 	var tw := create_tween()
 	tw.tween_method(level.postfx.set_fade, 1.0, 0.0, 2.2).set_delay(0.2)
+	if "--selftest" in OS.get_cmdline_user_args():
+		_selftest.call_deferred()
+
+
+## Autoteste para builds exportados (tools/build_android.py --check).
+func _selftest() -> void:
+	for i in 240:
+		await get_tree().physics_frame
+		if level.content != null and level.content.get("lume_field") != null:
+			break
+	var problems: Array[String] = []
+	if Sfx.count() < 30:
+		problems.append("efeitos sonoros: %d" % Sfx.count())
+	if not ResourceLoader.exists("res://game/assets/audio/music/lencois.ogg"):
+		problems.append("música ausente")
+	var field = level.content.get("lume_field") if level.content != null else null
+	if field == null or field.points.size() < 100:
+		problems.append("lumes não montados")
+	if Game.heroes.size() != 2:
+		problems.append("heróis: %d" % Game.heroes.size())
+	if get_tree().get_nodes_in_group(&"enemies").size() < 5:
+		problems.append("Breus ausentes")
+	if level.content == null or level.content.find_child("TorreDoSino", true, false) == null:
+		problems.append("torre ausente")
+	if load("res://game/scripts/net/sopro_net.gd") == null:
+		problems.append("rede ausente")
+	for h in Game.heroes:
+		if h.visual == null or h.visual.anim == null or h.visual.anim.get_animation_list().size() < 9:
+			problems.append("animações de %s" % h.hero_id)
+	print("SELFTEST ", "OK" if problems.is_empty() else "FALHOU: " + ", ".join(problems),
+		" (sfx=%d, lumes=%d)" % [Sfx.count(), field.points.size() if field != null else 0])
+	get_tree().quit(0 if problems.is_empty() else 1)
 
 
 func _build_ui() -> void:
@@ -50,11 +82,11 @@ func _build_ui() -> void:
 	_main_panel = VBoxContainer.new()
 	_main_panel.set_anchors_preset(Control.PRESET_LEFT_WIDE)
 	_main_panel.offset_left = 70
-	_main_panel.offset_top = 60
+	_main_panel.offset_top = 36
 	_main_panel.offset_right = 560
-	_main_panel.add_theme_constant_override("separation", 12)
+	_main_panel.add_theme_constant_override("separation", 9)
 	_root.add_child(_main_panel)
-	var title := SoproTheme.label("SOPRO", 124, Color(1.0, 0.97, 0.92), 700)
+	var title := SoproTheme.label("SOPRO", 108, Color(1.0, 0.97, 0.92), 700)
 	title.add_theme_color_override("font_outline_color", Color(0.55, 0.3, 0.45, 0.55))
 	title.add_theme_constant_override("outline_size", 18)
 	title.add_theme_color_override("font_shadow_color", Color(0.4, 0.15, 0.35, 0.35))
@@ -65,7 +97,7 @@ func _build_ui() -> void:
 	sub.add_theme_constant_override("outline_size", 8)
 	_main_panel.add_child(sub)
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 18)
+	spacer.custom_minimum_size = Vector2(0, 8)
 	_main_panel.add_child(spacer)
 	_button("Jogar", func(): _start(Game.Mode.SOLO), true)
 	_button("Co-op local (2 jogadores)", _coop_local_panel)
@@ -82,6 +114,8 @@ func _build_ui() -> void:
 	hint.position = Vector2(-520, -54)
 	hint.size = Vector2(1040, 30)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.38, 0.6))
+	hint.add_theme_constant_override("outline_size", 6)
 	if not Game.touch_enabled:
 		hint.text = "WASD andar • Espaço pular (segure para planar) • J ação • K/E dupla • Tab trocar • botão direito do mouse gira a câmera"
 	_root.add_child(hint)
@@ -90,7 +124,7 @@ func _build_ui() -> void:
 func _button(text: String, cb: Callable, focus := false) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(380, 62)
+	b.custom_minimum_size = Vector2(380, 54)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	b.pressed.connect(func():
 		Sfx.play("ui_click")
@@ -167,6 +201,17 @@ func _net_panel() -> void:
 	col.add_child(find)
 	var list := VBoxContainer.new()
 	col.add_child(list)
+	var row := HBoxContainer.new()
+	var ip_edit := LineEdit.new()
+	ip_edit.placeholder_text = "ou digite o IP (ex.: 192.168.0.12)"
+	ip_edit.custom_minimum_size = Vector2(330, 52)
+	ip_edit.add_theme_font_override("font", SoproTheme.font(500))
+	ip_edit.add_theme_font_size_override("font_size", 20)
+	row.add_child(ip_edit)
+	var go := Button.new()
+	go.text = "Entrar"
+	row.add_child(go)
+	col.add_child(row)
 	col.add_child(status)
 	var back := Button.new()
 	back.text = "Voltar"
@@ -182,6 +227,13 @@ func _net_panel() -> void:
 	find.pressed.connect(func():
 		status.text = "Procurando salas na rede..."
 		_net.call("discover"))
+	go.pressed.connect(func():
+		var ip := ip_edit.text.strip_edges()
+		if ip.is_valid_ip_address():
+			status.text = "Conectando a %s..." % ip
+			_net.call("join", ip)
+		else:
+			status.text = "IP inválido")
 	_net.connect("hosts_changed", func(hosts: Array):
 		for c in list.get_children():
 			c.queue_free()

@@ -49,6 +49,8 @@ func _ready() -> void:
 		var es := SphereMesh.new()
 		es.radius = 0.11 * size
 		es.height = 0.2 * size
+		es.radial_segments = 12
+		es.rings = 6
 		e.mesh = es
 		var em := StandardMaterial3D.new()
 		em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -57,17 +59,21 @@ func _ready() -> void:
 		em.emission = Color(1.0, 0.8, 0.4)
 		em.emission_energy_multiplier = 1.5
 		e.material_override = em
+		e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		e.position = Vector3(x * 0.17 * size, 0, 0)
 		_eyes.add_child(e)
 		var p := MeshInstance3D.new()
 		var ps := SphereMesh.new()
 		ps.radius = 0.05 * size
 		ps.height = 0.1 * size
+		ps.radial_segments = 8
+		ps.rings = 4
 		p.mesh = ps
 		var pm := StandardMaterial3D.new()
 		pm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		pm.albedo_color = Color(0.1, 0.05, 0.1)
 		p.material_override = pm
+		p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		p.position = Vector3(x * 0.17 * size, -0.01, 0.08 * size)
 		_eyes.add_child(p)
 	_ray = PhysicsRayQueryParameters3D.new()

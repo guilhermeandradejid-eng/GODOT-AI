@@ -4,6 +4,7 @@
     python3 tools/build_android.py                 # APK debug (assinado com a keystore de debug)
     python3 tools/build_android.py --release       # APK release (precisa de keystore própria, veja abaixo)
     python3 tools/build_android.py --install       # + instala via adb no aparelho conectado
+    python3 tools/build_android.py --check         # + valida o build exportado (export Linux + autoteste)
 
 Pré-requisitos (uma vez):
   * Godot 4.7+ (GODOT_BIN ou `godot` no PATH) e os export templates da MESMA versão
@@ -137,6 +138,56 @@ def write_preset(release: bool) -> None:
     print(f"preset '{PRESET_NAME}' -> export_presets.cfg ({len(game_resources())} recursos)")
 
 
+def write_linux_check_preset() -> None:
+    """Preset "SoproLinuxCheck": same resources as the APK, exported for Linux so the
+    exported build can be self-tested on a PC (no phone needed)."""
+    path = ROOT / "export_presets.cfg"
+    cfg = configparser.RawConfigParser()
+    cfg.optionxform = str
+    cfg.read(path, encoding="utf-8")
+    idx = None
+    used = []
+    for sec in cfg.sections():
+        if sec.startswith("preset.") and sec.count(".") == 1:
+            used.append(int(sec.split(".")[1]))
+            if cfg.get(sec, "name", fallback="").strip('"') == "SoproLinuxCheck":
+                idx = int(sec.split(".")[1])
+    if idx is None:
+        idx = max(used) + 1 if used else 0
+    sec, opt = f"preset.{idx}", f"preset.{idx}.options"
+    for s_ in (sec, opt):
+        if cfg.has_section(s_):
+            cfg.remove_section(s_)
+        cfg.add_section(s_)
+    files = ", ".join(f'"{f}"' for f in game_resources())
+    for k, v in {"name": '"SoproLinuxCheck"', "platform": '"Linux"', "runnable": "false",
+                 "export_filter": '"resources"', "export_files": f"PackedStringArray({files})",
+                 "include_filter": '""', "exclude_filter": '"game/blender/*, game/tools/*"',
+                 "export_path": '"build/selftest/sopro.x86_64"'}.items():
+        cfg.set(sec, k, v)
+    for k, v in {"binary_format/embed_pck": "true", "binary_format/architecture": '"x86_64"',
+                 "texture_format/s3tc_bptc": "true", "texture_format/etc2_astc": "false"}.items():
+        cfg.set(opt, k, v)
+    with open(path, "w", encoding="utf-8") as f:
+        cfg.write(f, space_around_delimiters=False)
+
+
+def run_check(godot: str, env: dict) -> int:
+    out = ROOT / "build" / "selftest" / "sopro.x86_64"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    write_linux_check_preset()
+    proc = subprocess.run([godot, "--headless", "--path", str(ROOT), "--export-debug", "SoproLinuxCheck", str(out)],
+                          env=env, capture_output=True, text=True, timeout=1800)
+    if not out.exists():
+        print((proc.stdout + proc.stderr)[-3000:])
+        print("check: export Linux falhou (instale os export templates de Linux)")
+        return 1
+    run = subprocess.run([str(out), "--headless", "--", "--selftest"], capture_output=True, text=True, timeout=600)
+    line = next((l for l in run.stdout.splitlines() if l.startswith("SELFTEST")), "SELFTEST sem resposta")
+    print("build exportado:", line)
+    return run.returncode
+
+
 def ensure_debug_keystore() -> Path:
     ks = Path(os.environ.get("GODOT_ANDROID_KEYSTORE_DEBUG_PATH", Path.home() / ".android" / "debug.keystore"))
     if not ks.exists():
@@ -157,9 +208,15 @@ def main() -> int:
     ap.add_argument("--release", action="store_true")
     ap.add_argument("--install", action="store_true", help="instala com adb depois de gerar")
     ap.add_argument("--out", default=None, help="caminho do APK (padrão build/sopro-debug.apk)")
+    ap.add_argument("--check", action="store_true",
+                    help="exporta os mesmos recursos para Linux e roda um autoteste no build exportado")
     a = ap.parse_args()
     godot = find_godot()
     write_preset(a.release)
+    if a.check:
+        rc = run_check(godot, dict(os.environ))
+        if rc != 0:
+            return rc
     out = Path(a.out) if a.out else ROOT / "build" / ("sopro-release.apk" if a.release else "sopro-debug.apk")
     out.parent.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)

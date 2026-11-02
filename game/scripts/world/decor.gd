@@ -94,6 +94,7 @@ static func pole(pos: Vector3, height := 3.2) -> Node3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = Color(0.62, 0.44, 0.32)
 	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.position = pos + Vector3.UP * height * 0.5
 	return mi
 
@@ -135,6 +136,7 @@ class Kite extends Node3D:
 		m.rim = 0.5
 		_kite.material_override = m
 		_kite.scale = Vector3.ONE * 1.6
+		_kite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_kite)
 		_line = MeshInstance3D.new()
 		_line.mesh = ImmediateMesh.new()
@@ -160,7 +162,8 @@ class Kite extends Node3D:
 		cyl.bottom_radius = 0.06
 		cyl.height = 0.8
 		stake.mesh = cyl
-		stake.position = anchor - global_position + Vector3.UP * 0.4
+		stake.position = Vector3.UP * 0.4
+		stake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(stake)
 
 	func _process(delta: float) -> void:
@@ -209,6 +212,9 @@ class Pinwheel extends Node3D:
 		var p := PropLib.make("pinwheel")
 		p.scale = Vector3.ONE * big
 		add_child(p)
+		if big < 2.0:
+			for m in PropLib.meshes(p):
+				m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_blades = p.find_child("blades", true, false)
 
 	func _process(delta: float) -> void:

@@ -114,9 +114,7 @@ func apply_quality(q: int) -> void:
 			vp.scaling_3d_scale = 0.72
 			vp.msaa_3d = Viewport.MSAA_DISABLED
 			vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
-			atmosphere.sun.shadow_enabled = true
-			atmosphere.sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-			atmosphere.sun.directional_shadow_max_distance = 40.0
+			atmosphere.sun.shadow_enabled = false
 			atmosphere.camera_attributes.dof_blur_far_enabled = false
 			e.glow_enabled = true
 			e.set_glow_level(5, 0.0)
@@ -126,7 +124,7 @@ func apply_quality(q: int) -> void:
 			vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 			atmosphere.sun.shadow_enabled = true
 			atmosphere.sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-			atmosphere.sun.directional_shadow_max_distance = 60.0
+			atmosphere.sun.directional_shadow_max_distance = 45.0
 			atmosphere.camera_attributes.dof_blur_far_enabled = false
 			e.glow_enabled = true
 			e.set_glow_level(5, 0.7)

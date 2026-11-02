@@ -64,7 +64,7 @@ void fragment() {
 	float cau = caustics(floor_w.xz, t) * caustic_strength * (1.0 - dd) * smoothstep(0.02, 0.25, water_depth);
 	water += vec3(1.0, 1.0, 0.92) * cau;
 	water *= ambient;
-	vec3 col = mix(water, sky_reflect, fres * 0.75);
+	vec3 col = mix(water, sky_reflect, fres * 0.5);
 	// sun glint
 	vec3 h = normalize(normalize(sun_dir) + view_w);
 	float spec = pow(clamp(dot(wn, h), 0.0, 1.0), 260.0) * 6.0 + pow(clamp(dot(wn, h), 0.0, 1.0), 30.0) * 0.25;

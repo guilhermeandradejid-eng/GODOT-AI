@@ -18,6 +18,7 @@ Tudo que dá para fazer no editor também dá para fazer por comandos.
 | `recipes/` | receitas JSON dos mundos de demonstração (bons exemplos para copiar) |
 | `demos/` | cenas de demonstração geradas + hub (`demo_hub.tscn` é a cena principal) |
 | `tests/` | `run_tests.py` (testes headless), `render_gallery.py` (galeria de estilos) |
+| `game/` | **SOPRO**, MVP de aventura 3D co-op (cena principal `game/main.tscn`) — veja `game/README.md` |
 
 ## Como executar comandos
 
@@ -105,3 +106,23 @@ efeitos e personagens, abrindo clareiras em volta deles), `camera` e `commands` 
   `godot --headless --path . --script res://addons/vibe_core/cli/vibe_cli.gd -- --write-schema res://addons/vibe_core/commands.schema.json`.
 - Validação antes de commitar: `godot --headless --path . --import` (sem erros de script/shader)
   e `python3 tests/run_tests.py`. Visual: `python3 tests/render_gallery.py`, `python3 tools/build_demos.py <demo>`.
+
+## SOPRO (game/) — o jogo
+
+MVP de aventura co-op (Juba, o mico-leão-dourado, e Caju, a capivara) no mundo "Lençóis do Céu".
+É a cena principal do projeto (`game/main.tscn`); o hub de demos da suíte continua em `demos/`.
+
+- **Mundo = receita** `game/world/lencois.json`: ilhas (forma, lagoas, platôs) e todo o conteúdo
+  (props, lumes, sementes, águas-vivas, flores-canhão, fita de vento, portais, placas, Breus, totens,
+  bandeirinhas, pipas). Mudou ilha/lagoa/platô → rode `blender -b --factory-startup --python game/blender/build_world.py`.
+  Mudou só conteúdo → basta rodar o jogo.
+- **Assets por código**: `game/blender/build_{world,props,characters}.py` (Blender 4.x headless),
+  `game/tools/gen_textures.py`, `game/tools/gen_audio.py` (sons/músicas CC0). Não edite os `.glb` à mão.
+- **Visual**: shaders em `game/shaders/` (renderer Mobile/Vulkan). Para olhar o resultado:
+  `xvfb-run -a godot --path . --rendering-method mobile res://game/tools/capture.tscn -- --out /tmp/shots --views hero,aerial,east`
+  (views em `game/tools/capture.gd`, ou `"px,py,pz>tx,ty,tz"`; `--player --bot run` usa a câmera do jogo).
+  Personagens: `res://game/tools/char_preview.tscn -- --hero juba|caju --anims run,glide [--turntable|--closeup]`.
+- **Validação do jogo**: `python3 tests/run_tests.py --game-only` (playtest automático de todas as
+  mecânicas + co-op em rede com duas instâncias). Sempre rode antes de commitar mudanças em `game/`.
+- **APK Android**: `python3 tools/build_android.py` (arm64, Vulkan, paisagem, debug assinado; `--install` usa adb).
+  Requer export templates da versão do Godot, `ANDROID_HOME` (apksigner) e JDK.

@@ -229,21 +229,21 @@ def palm(M):
 
         trunk.tube(pts, radii, tcol, mat="wood", seg=9)
         top = pts[-1]
-        for j in range(15):
-            az = TAU * j / 15 + rnd.uniform(-0.15, 0.15)
+        for j in range(13):
+            az = TAU * j / 13 + rnd.uniform(-0.15, 0.15)
             el = rnd.uniform(-0.15, 0.55)
             d = Vector((math.cos(az) * math.cos(el), math.sin(az) * math.cos(el), math.sin(el)))
             stalk_end = top + d * 1.3
             trunk.tube([top, top + d * 0.65, stalk_end], [0.05, 0.04, 0.03],
                        lambda t, a, p: (0.55, 0.6, 0.4, 0.4 + 0.4 * t), mat="wood", seg=5, cap=False)
             trunk.leaf_fan(stalk_end, d + Vector((0, 0, 0.15)), rnd.uniform(1.4, 1.8), 0.32,
-                           (0.42, 0.60, 0.44), (0.66, 0.78, 0.52), leaflets=11, segs=5, droop=0.55)
+                           (0.42, 0.60, 0.44), (0.66, 0.78, 0.52), leaflets=9, segs=4, droop=0.55)
         # a skirt of old dry fronds
-        for j in range(5):
-            az = TAU * j / 5 + 0.3
+        for j in range(4):
+            az = TAU * j / 4 + 0.3
             d = Vector((math.cos(az), math.sin(az), -1.6)).normalized()
             trunk.leaf_fan(top - Vector((0, 0, 0.3)), d, 1.1, 0.28, (0.62, 0.52, 0.36), (0.78, 0.66, 0.45),
-                           leaflets=7, segs=3, droop=0.1)
+                           leaflets=6, segs=3, droop=0.1)
         attach(trunk.build(M), r)
         export(f"palm_{k}", [r])
     return []
