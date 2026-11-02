@@ -165,8 +165,10 @@ func _hero_state(pos: Vector3, vel: Vector3, facing: float, state: int, vis: Str
 		var strong := mine
 		if state == Hero.S.RIDE and strong.rider == null:
 			strong.rider = other
+			strong.visual.set_glyph(true)
 		elif state != Hero.S.RIDE and strong.rider == other:
 			strong.rider = null
+			strong.visual.set_glyph(false)
 
 
 ## Chamado pelo MoteField quando um herói local coleta.

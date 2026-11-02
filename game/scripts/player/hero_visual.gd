@@ -27,6 +27,7 @@ var tree: AnimationTree
 var springs: SpringBoneSimulator3D
 var eye_materials: Array[ShaderMaterial] = []
 var body_materials: Array[ShaderMaterial] = []
+var glyph_material: ShaderMaterial
 var states: Array[String] = ["loco"]
 var state := "loco"
 var base_lid := 0.06
@@ -99,6 +100,13 @@ func _setup_materials() -> void:
 				mat.set_shader_parameter("rim_strength", 1.15)
 				mat.set_shader_parameter("sss_strength", 0.05)
 				mat.next_pass = outline
+				body_materials.append(mat)
+			"glyph":
+				# the missing dot of the duo's emblem: lit only while the partner is aboard
+				mat.shader = TOON
+				mat.set_shader_parameter("vertex_glow", 0.0)
+				mat.set_shader_parameter("emission_color", Color(0.0, 0.0, 0.0))
+				glyph_material = mat
 				body_materials.append(mat)
 			"stone":
 				mat.shader = TOON
@@ -286,6 +294,17 @@ func _process(delta: float) -> void:
 		_flash = maxf(0.0, _flash - delta * 3.0)
 		for m in body_materials:
 			m.set_shader_parameter("flash", _flash)
+
+
+## Acende (ou apaga) o ponto do glifo da dupla.
+func set_glyph(on: bool) -> void:
+	if glyph_material == null:
+		return
+	var from := float(glyph_material.get_shader_parameter("vertex_glow"))
+	create_tween().tween_method(func(v: float):
+		glyph_material.set_shader_parameter("vertex_glow", v)
+		glyph_material.set_shader_parameter("emission_color", Color(0.35, 1.0, 0.94) * (v / 3.0)),
+		from, 3.0 if on else 0.0, 0.5)
 
 
 func look(dir: Vector2) -> void:

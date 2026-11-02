@@ -543,6 +543,7 @@ func _special() -> void:
 func mount_on(strong: Hero) -> void:
 	if strong == null or strong.rider != null:
 		return
+	strong.visual.set_glyph(true)
 	mount = strong
 	strong.rider = self
 	shape.disabled = true
@@ -555,6 +556,7 @@ func mount_on(strong: Hero) -> void:
 func dismount(push := Vector3.ZERO) -> void:
 	if mount != null:
 		mount.rider = null
+		mount.visual.set_glyph(false)
 	mount = null
 	shape.disabled = false
 	velocity = push
@@ -575,6 +577,7 @@ func catapult() -> void:
 		if net != null:
 			net.request_catapult(v)
 		rider = null
+		visual.set_glyph(false)
 	else:
 		r.dismount(v)
 		r.set_state(S.LAUNCH)
