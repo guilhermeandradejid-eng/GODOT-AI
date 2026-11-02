@@ -13,6 +13,8 @@ const EYE := preload("res://game/shaders/hero_eye.gdshader")
 ## Animações em laço; as demais tocam uma vez.
 const LOOPS := ["idle", "walk", "run", "fall", "glide", "ride", "swim", "sit", "surf", "launch", "brace"]
 const LOCO := ["idle", "walk", "run"]
+## Animações de uma vez que voltam sozinhas para a locomoção ao terminar.
+const AUTO_RETURN := ["land", "brace", "ram", "celebrate"]
 
 @export var hero := "agile"
 
@@ -32,6 +34,7 @@ var _blink_t := 2.0
 var _blink := 0.0
 var _flash := 0.0
 var _expression_happy := 0.0
+var _oneshot_left := 0.0
 
 
 func _ready() -> void:
@@ -211,6 +214,7 @@ func set_state(s: String, xfade := -1.0) -> void:
 	if xfade >= 0.0:
 		(tree.tree_root as AnimationNodeBlendTree).get_node("state").xfade_time = xfade
 	tree.set("parameters/state/transition_request", s)
+	_oneshot_left = anim.get_animation(s).length if s in AUTO_RETURN and anim.has_animation(s) else 0.0
 
 
 func restart_state(s: String) -> void:
@@ -264,6 +268,10 @@ func set_happy(v: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _oneshot_left > 0.0:
+		_oneshot_left -= delta
+		if _oneshot_left <= 0.0 and state in AUTO_RETURN:
+			set_state("loco", 0.22)
 	_blink_t -= delta
 	if _blink_t <= 0.0:
 		_blink = 1.0

@@ -162,7 +162,7 @@ class Launcher extends Node3D:
 		_busy = true
 		h.set_state(Hero.S.CUTSCENE)
 		h.teleport(global_position + Vector3.UP * 2.0)
-		h.visual.set_state("fall" if h.hero_id == "strong" else "jump")
+		h.visual.set_state("launch" if h.visual.has_state("launch") else "fall")
 		_open(-0.8, 0.25)
 		Sfx.play_at("urn_load", global_position)
 		await get_tree().create_timer(0.45, false).timeout

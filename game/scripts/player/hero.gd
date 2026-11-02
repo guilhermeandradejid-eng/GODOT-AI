@@ -639,7 +639,7 @@ func launch(v: Vector3, lock := 0.35) -> void:
 	state_t = -lock
 	air_jumps = 1
 	air_spin = true
-	visual.restart_state("double_jump" if hero_id == "agile" else "jump")
+	visual.restart_state("launch" if visual.has_state("launch") else ("double_jump" if hero_id == "agile" else "jump"))
 	if v.x != 0.0 or v.z != 0.0:
 		facing = atan2(v.x, v.z)
 
@@ -860,7 +860,8 @@ func _update_visual(delta: float) -> void:
 	visual.set_locomotion(speed01, cps)
 	match state:
 		S.GROUND:
-			if visual.state in ["fall", "glide", "swim", "double_jump", "hurt", "flop"] or (visual.state == "spin" and action_t <= 0.0):
+			if visual.state in ["fall", "glide", "swim", "double_jump", "hurt", "flop", "slam", "launch", "surf"] \
+					or (visual.state in ["spin", "ram"] and action_t <= 0.0):
 				visual.set_state("loco")
 			elif visual.state == "jump" and state_t > 0.2:
 				visual.set_state("loco")
