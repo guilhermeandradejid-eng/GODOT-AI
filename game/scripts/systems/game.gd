@@ -1,26 +1,26 @@
 extends Node
-## Autoload "Game": estado da partida (lumes, sementes, checkpoints), modo de
-## jogo (solo com companheiro IA, co-op local ou co-op em rede), qualidade
-## gráfica e configurações salvas em user://sopro.cfg.
+## Autoload "Game": estado da partida (coletáveis, relíquias, checkpoints), modo
+## de jogo (solo com companheiro IA, co-op local ou co-op em rede), qualidade
+## gráfica e configurações salvas em user://settings.cfg.
 
-signal lumes_changed(total: int)
-signal seed_collected(seed_id: String, total: int)
-signal all_seeds_collected
-signal bell_rung
+signal motes_changed(total: int)
+signal relic_collected(seed_id: String, total: int)
+signal all_relics_collected
+signal finale_started
 signal toast(text: String, seconds: float)
 signal quality_changed(level: int)
 signal mode_changed(mode: String)
 
-const SETTINGS := "user://sopro.cfg"
-const SEEDS_TOTAL := 3
+const SETTINGS := "user://settings.cfg"
+const RELICS_TOTAL := 3
 const QUALITY_NAMES := ["Baixa", "Média", "Alta"]
 
 enum Mode { SOLO, LOCAL_COOP, NET_HOST, NET_CLIENT }
 
 var mode: int = Mode.SOLO
-var lumes := 0
-var seeds: Array[String] = []
-var bell_done := false
+var motes := 0
+var relics: Array[String] = []
+var finale_done := false
 var quality := 1
 var touch_enabled := true
 var invert_camera := false
@@ -28,9 +28,9 @@ var camera_sensitivity := 1.0
 var vibration := true
 var music_volume := 0.8
 var sfx_volume := 1.0
-var level: Node = null              ## SoproLevel atual
+var level: Node = null              ## fase atual
 var heroes: Array = []              ## Hero nodes (agile, strong)
-var checkpoint := Vector3(0, 4, 38)
+var checkpoint := Vector3.ZERO
 var net_peer_hero := ""             ## herói controlado por este peer na rede
 
 
@@ -49,31 +49,31 @@ func is_mobile() -> bool:
 
 
 func reset_run() -> void:
-	lumes = 0
-	seeds.clear()
-	bell_done = false
-	checkpoint = Vector3(0, 4, 38)
+	motes = 0
+	relics.clear()
+	finale_done = false
+	checkpoint = Vector3.ZERO
 
 
-func add_lumes(n: int) -> void:
-	lumes += n
-	lumes_changed.emit(lumes)
+func add_motes(n: int) -> void:
+	motes += n
+	motes_changed.emit(motes)
 
 
-func collect_seed(seed_id: String) -> void:
-	if seed_id in seeds:
+func collect_relic(seed_id: String) -> void:
+	if seed_id in relics:
 		return
-	seeds.append(seed_id)
-	seed_collected.emit(seed_id, seeds.size())
-	if seeds.size() >= SEEDS_TOTAL:
-		all_seeds_collected.emit()
+	relics.append(seed_id)
+	relic_collected.emit(seed_id, relics.size())
+	if relics.size() >= RELICS_TOTAL:
+		all_relics_collected.emit()
 
 
-func ring_bell() -> void:
-	if bell_done:
+func start_finale() -> void:
+	if finale_done:
 		return
-	bell_done = true
-	bell_rung.emit()
+	finale_done = true
+	finale_started.emit()
 
 
 func show_toast(text: String, seconds := 3.0) -> void:

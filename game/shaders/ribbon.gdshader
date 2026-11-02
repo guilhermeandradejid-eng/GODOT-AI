@@ -1,4 +1,4 @@
-// SOPRO — "fita de vento": trilho translúcido que flui (chevrons andando no
+// "fita de vento": trilho translúcido que flui (chevrons andando no
 // sentido do trilho), bordas douradas brilhantes e ondulação suave.
 shader_type spatial;
 render_mode blend_add, depth_draw_never, cull_disabled, unshaded, shadows_disabled;

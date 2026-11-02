@@ -244,11 +244,35 @@ def build(recipe: dict):
             w = float(f["width"])
             prof = smoothstep(w, 0.0, d)
             if t == "ramp":
-                # raised sand road whose sides fall at the angle of repose (no cliffs)
+                # raised sand road; continuous: max over each segment's own profile
                 h0, h1 = f["heights"]
-                hl = h0 + (h1 - h0) * (tp ** float(f.get("curve", 1.0)))
                 side = math.tan(math.radians(float(f.get("side_deg", 27.0))))
-                road = hl - np.maximum(0.0, d - w * 0.5) * side
+                P = np.asarray(f["points"], dtype=np.float64)
+                seglen = np.hypot(np.diff(P[:, 0]), np.diff(P[:, 1]))
+                total = max(seglen.sum(), 1e-6)
+                road = np.full(X.shape, -1e9)
+                acc = 0.0
+                for i in range(len(P) - 1):
+                    ax, az = P[i]; bx, bz = P[i + 1]
+                    ddx, ddz = bx - ax, bz - az
+                    L2 = max(ddx * ddx + ddz * ddz, 1e-9)
+                    tu = ((X - ax) * ddx + (Z - az) * ddz) / L2          # unclamped
+                    tt = np.clip(tu, 0.0, 1.0)
+                    di = np.hypot(X - (ax + ddx * tt), Z - (az + ddz * tt))
+                    # height keeps the segment's own grade past its ends (no flat caps at joints)
+                    tpi = np.clip((acc + tu * seglen[i]) / total, 0.0, 1.0)
+                    tpc = np.clip((acc + tt * seglen[i]) / total, 1e-6, 1.0)
+                    cv = float(f.get("curve", 1.0))
+                    slope_t = cv * tpc ** (cv - 1.0) if cv != 1.0 else 1.0
+                    hl = h0 + (h1 - h0) * (tpc ** cv + slope_t * (tpi - tpc))
+                    road = np.maximum(road, hl - np.maximum(0.0, di - w * 0.5) * side)
+                    acc += seglen[i]
+                # dune-like flanks: noisy side slopes and width, smooth lane in the middle
+                fn = float(f.get("flank_noise", 3.5))
+                if fn > 0.0:
+                    fl = smoothstep(w * 0.35, w * 0.5 + 14.0, d)
+                    road = road + fn * fbm(X / 34.0, Z / 34.0, seed + 41, 3) * fl \
+                        - np.maximum(0.0, d - w * 0.5) * side * 0.35 * fbm(X / 70.0, Z / 70.0, seed + 43, 2)
                 H = smax(H, road, float(f.get("soft", 4.0)))
             else:
                 H += float(f["height"]) * prof ** 1.3

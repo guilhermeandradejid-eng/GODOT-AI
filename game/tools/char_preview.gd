@@ -30,7 +30,7 @@ func _ready() -> void:
 			"--closeup": _closeup = true
 		i += 1
 	DirAccess.make_dir_recursive_absolute(_out)
-	var atmo := SoproAtmosphere.new()
+	var atmo := Atmosphere.new()
 	add_child(atmo)
 	atmo.camera_attributes.dof_blur_far_enabled = false
 	var floor_mi := MeshInstance3D.new()

@@ -29,7 +29,7 @@ var _t := 0.0
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_font = SoproTheme.font(700)
+	_font = UITheme.font(700)
 
 
 func _scale() -> float:

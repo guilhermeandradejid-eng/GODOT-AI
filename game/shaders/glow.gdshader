@@ -1,4 +1,4 @@
-// SOPRO — partes que emitem luz (runas, sementes, núcleo das flores): cor por
+// partes que emitem luz (runas, sementes, núcleo das flores): cor por
 // vértice como emissão HDR (alimenta o glow), pulso suave e borda mais clara.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, unshaded;

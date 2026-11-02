@@ -1,4 +1,4 @@
-// SOPRO — props (pedra, madeira, bronze, folhas): cor por vértice, areia que
+// props (pedra, madeira, bronze, folhas): cor por vértice, areia que
 // se acumula nas faces voltadas para cima, luz envolvente com sombras lavanda,
 // contraluz dourado e vento (alfa do vértice = quanto aquela parte balança).
 shader_type spatial;

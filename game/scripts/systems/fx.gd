@@ -20,7 +20,7 @@ func _ready() -> void:
 			"vel": [3.0, 5.5], "spread": 90.0, "dir": Vector3.UP, "flat": true, "grav": Vector3(0, -0.5, 0), "damp": 5.0, "add": false},
 		"sparkle": {"amount": 14, "life": 0.7, "color": Color(1.0, 0.9, 0.55, 1.0), "size": [0.06, 0.16],
 			"vel": [1.5, 4.0], "spread": 180.0, "dir": Vector3.UP, "grav": Vector3(0, -2.0, 0), "damp": 1.5, "add": true},
-		"seed": {"amount": 60, "life": 1.6, "color": Color(1.0, 0.86, 0.45, 1.0), "size": [0.08, 0.28],
+		"relic": {"amount": 60, "life": 1.6, "color": Color(1.0, 0.86, 0.45, 1.0), "size": [0.08, 0.28],
 			"vel": [2.0, 7.0], "spread": 180.0, "dir": Vector3.UP, "grav": Vector3(0, -1.5, 0), "damp": 1.2, "add": true},
 		"poof": {"amount": 18, "life": 0.9, "color": Color(0.35, 0.22, 0.45, 0.9), "size": [0.25, 0.55],
 			"vel": [1.0, 3.0], "spread": 180.0, "dir": Vector3.UP, "grav": Vector3(0, 1.5, 0), "damp": 2.0, "add": false,

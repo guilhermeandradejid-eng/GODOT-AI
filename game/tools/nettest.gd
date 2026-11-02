@@ -7,7 +7,7 @@ extends Node
 
 const LEVEL := preload("res://game/scenes/level.tscn")
 
-var level: SoproLevel
+var level: GameLevel
 var net: Node
 var host := false
 var ok := true
@@ -27,7 +27,7 @@ func _ready() -> void:
 	level = LEVEL.instantiate()
 	level.capture_mode = true
 	add_child(level)
-	net = load("res://game/scripts/net/sopro_net.gd").new()
+	net = load("res://game/scripts/net/net_coop.gd").new()
 	net.name = "Rede"
 	get_tree().root.add_child.call_deferred(net)
 	_run.call_deferred()
@@ -84,9 +84,9 @@ func _run() -> void:
 	check(moved > 4.0, "vejo o %s se mexer pela rede (%.1f m)" % [other.hero_id, moved])
 	check(other.is_remote, "o herói do outro é marionete de rede")
 	if not host:
-		check(Game.lumes >= 4, "lumes coletados pelo host chegaram aqui (%d)" % Game.lumes)
+		check(Game.motes >= 4, "lumes coletados pelo host chegaram aqui (%d)" % Game.motes)
 	else:
-		check(Game.lumes >= 4, "coletei lumes (%d)" % Game.lumes)
+		check(Game.motes >= 4, "coletei lumes (%d)" % Game.motes)
 	await get_tree().create_timer(1.0).timeout
 	say("fim: " + ("OK" if ok else "FALHOU"))
 	get_tree().quit(0 if ok else 1)

@@ -126,8 +126,26 @@ func _physics_process(delta: float) -> void:
 	updraft = 0.0
 	if Game.level != null and global_position.y < Game.level.kill_y:
 		respawn()
+	_world_bounds()
 	_sand_trail()
 	_update_visual(delta)
+
+
+## Mundo contínuo: atrás das dunas altas da borda, uma parede invisível macia
+## (a colisão do terreno termina na borda do mapa).
+func _world_bounds() -> void:
+	if Game.level == null or Game.level.get("builder") == null or Game.level.builder.terrain == null:
+		return
+	var lim: float = Game.level.builder.terrain.half - 14.0
+	var p := global_position
+	if absf(p.x) > lim:
+		global_position.x = signf(p.x) * lim
+		if signf(velocity.x) == signf(p.x):
+			velocity.x = 0.0
+	if absf(p.z) > lim:
+		global_position.z = signf(p.z) * lim
+		if signf(velocity.z) == signf(p.z):
+			velocity.z = 0.0
 
 
 ## Sulco contínuo na areia atrás do herói (fino andando, largo surfando).

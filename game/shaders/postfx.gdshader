@@ -1,4 +1,4 @@
-// SOPRO — pós-processamento de tela cheia (CanvasLayer acima do 3D, abaixo do HUD).
+// pós-processamento de tela cheia (CanvasLayer acima do 3D, abaixo do HUD).
 // Lê a imagem final do 3D (já com glow/tonemap do Environment) e aplica:
 // raios de sol radiais a partir da posição do sol na tela, gradação de cor
 // "hora dourada" (sombras lavanda, luzes pêssego), vinheta, aberração cromática

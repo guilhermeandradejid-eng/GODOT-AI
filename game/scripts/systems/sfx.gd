@@ -1,14 +1,14 @@
 extends Node
 ## Autoload "Sfx": efeitos sonoros (gerados proceduralmente por
 ## game/tools/gen_audio.py) com pool de players 3D/2D, notas pentatônicas para
-## sinos e lumes, e trilha ambiente com crossfade.
+## sinos e centelhas, e trilha ambiente com crossfade.
 
 const SFX_DIR := "res://game/assets/audio/sfx"
 ## Lista de reserva (caso a listagem do diretório não funcione num build exportado).
-const SFX_NAMES := ["bell", "bounce", "bump", "call", "checkpoint", "chime", "enemy_poof", "flower_load",
-	"gate_open", "grind_start", "hurt_strong", "hurt_agile", "join", "jump2", "jump_strong", "jump_agile", "land",
-	"launch", "lume", "mount", "plate_off", "plate_on", "portal", "pound", "respawn", "reveal", "seed", "spin",
-	"splash", "step", "superjump", "surf", "surf_start", "swap", "ui_click", "whoosh"]
+const SFX_NAMES := ["bell", "bounce", "bump", "call", "checkpoint", "chime", "enemy_poof", "gate_open",
+	"grind_start", "hurt_agile", "hurt_strong", "join", "jump2", "jump_agile", "jump_strong", "land", "launch",
+	"mote", "mount", "plate_off", "plate_on", "portal", "pound", "relic", "respawn", "reveal", "spin", "splash",
+	"step", "superjump", "surf", "surf_start", "swap", "ui_click", "urn_load", "whoosh"]
 const MUSIC_DIR := "res://game/assets/audio/music"
 ## Pentatônica maior de Dó (C D E G A) em duas oitavas, como razão de pitch.
 const PENTA := [1.0, 1.1225, 1.2599, 1.4983, 1.6818, 2.0, 2.2449, 2.5198]
@@ -96,7 +96,7 @@ func play(id: String, pitch := 1.0, vol_db := 0.0) -> void:
 			return
 
 
-## Nota musical ascendente para sequências de coleta (lumes em fila soam como melodia).
+## Nota musical ascendente para sequências de coleta (centelhas em fila soam como melodia).
 func play_note(id: String, pos: Vector3, vol_db := -4.0) -> void:
 	var now := Time.get_ticks_msec() * 0.001
 	if now - _note_t > 1.2:

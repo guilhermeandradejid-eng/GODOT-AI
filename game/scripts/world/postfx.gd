@@ -1,4 +1,4 @@
-class_name SoproPostFX
+class_name PostFX
 extends CanvasLayer
 ## Pós-processamento de tela cheia (raios de sol, gradação, vinheta, grão...).
 ## Fica acima do 3D e abaixo do HUD (layer 1; o HUD usa layer >= 5).

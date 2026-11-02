@@ -1,4 +1,4 @@
-// SOPRO — "fenda": disco de portal com espiral de cores, estrelas sugadas para
+// "fenda": disco de portal com espiral de cores, estrelas sugadas para
 // o centro e borda que respira. Cores em tons de lavanda e dourado.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_disabled, unshaded, shadows_disabled;

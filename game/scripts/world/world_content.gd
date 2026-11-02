@@ -16,7 +16,7 @@ var terrain: SandTerrain
 var data: Dictionary
 var menu_focus: Node3D          ## o que a câmera do menu orbita
 var goal: Node3D
-var lume_field: LumeField
+var mote_field: MoteField
 var _arenas := {}               ## arena id -> {"enemies": int, "relic": Node3D}
 var _quality := 2
 
@@ -126,22 +126,22 @@ func _goal() -> void:
 	if not data.has("goal"):
 		return
 	var e: Dictionary = data["goal"]
-	var g := BellTower.new()
-	g.name = "Objetivo"
+	var g := VaelGate.new()
+	g.name = "PortaoDeVael"
 	goal = _add(g, item_pos(e), float(e.get("rot", 0.0)))
-	g.wind_returned.connect(_on_goal_complete)
+	g.finished.connect(_on_goal_complete)
 
 
 func _checkpoints() -> void:
 	for e in data.get("checkpoints", []):
-		var t := Interactables.Totem.new()
+		var t := Interactables.Waystone.new()
 		_add(t, item_pos(e) + Vector3.DOWN * 0.1, float(e.get("rot", 0.0)))
 
 
 # ---------------------------------------------------------------------------- relics / arenas
 func _relics() -> void:
 	for e in data.get("relics", []):
-		var s := Interactables.WindSeed.new()
+		var s := Interactables.Relic.new()
 		s.seed_id = e["id"]
 		s.name = "Reliquia_" + String(e["id"])
 		if e.has("gate") or e.has("arena") or bool(e.get("hidden", false)):
@@ -156,7 +156,7 @@ func _relics() -> void:
 # ---------------------------------------------------------------------------- traversal
 func _launchers() -> void:
 	for e in data.get("launchers", []):
-		var c := Interactables.FlowerCannon.new()
+		var c := Interactables.Launcher.new()
 		c.target = pos_of(e["target"], float(e.get("target_h", 0.0)))
 		c.flight_time = float(e.get("time", 2.4))
 		var p := item_pos(e) + Vector3.DOWN * 0.1
@@ -167,7 +167,7 @@ func _launchers() -> void:
 
 func _bounce_pads() -> void:
 	for e in data.get("bounce_pads", []):
-		var j := Interactables.JellyPad.new()
+		var j := Interactables.BouncePad.new()
 		j.size = float(e.get("size", 1.6))
 		j.bob = float(e.get("bob", 0.0))
 		j.power = float(e.get("power", 15.5))
@@ -185,7 +185,7 @@ func _updrafts() -> void:
 
 func _rails() -> void:
 	for e in data.get("rails", []):
-		var r := Interactables.WindRibbon.new()
+		var r := Interactables.SandRail.new()
 		var pts: Array[Vector3] = []
 		var rel := bool(e.get("relative", true))
 		var dh := float(e.get("h", 2.5))
@@ -215,9 +215,9 @@ func _plates_and_gates() -> void:
 		pl.group_id = e.get("group", "g1")
 		_add(pl, item_pos(e) + Vector3.DOWN * 0.08)
 	for e in data.get("gates", []):
-		var g := Interactables.FlowerGate.new()
+		var g := Interactables.StoneGate.new()
 		g.group_id = e.get("group", "g1")
-		for s in get_tree().get_nodes_in_group(&"seeds"):
+		for s in get_tree().get_nodes_in_group(&"relics"):
 			if s.seed_id == e.get("relic", ""):
 				g.seed = s
 		_add(g, item_pos(e) + Vector3.DOWN * 0.1, float(e.get("rot", 0.0)))
@@ -227,7 +227,7 @@ func _plates_and_gates() -> void:
 func _enemies() -> void:
 	var idx := 0
 	for e in data.get("enemies", []):
-		var b := Breu.new()
+		var b := Silente.new()
 		b.name = "Inimigo_%d" % idx
 		idx += 1
 		_add(b, item_pos(e))
@@ -291,11 +291,11 @@ func _motes() -> void:
 		elif e.has("points"):
 			for a in e["points"]:
 				pts.append(pos_of(a, h))
-	lume_field = LumeField.new()
-	lume_field.name = "Coletaveis"
-	lume_field.add_to_group(&"lume_field")
-	add_child(lume_field)
-	lume_field.setup(pts)
+	mote_field = MoteField.new()
+	mote_field.name = "Coletaveis"
+	mote_field.add_to_group(&"motes")
+	add_child(mote_field)
+	mote_field.setup(pts)
 
 
 # ---------------------------------------------------------------------------- misc

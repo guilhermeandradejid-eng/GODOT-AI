@@ -2,114 +2,341 @@
  "terrain": {
   "size": 1024,
   "cell_size": 1.0,
-  "seed": 7,
+  "seed": 11,
   "base": {
-   "height": 0,
-   "amplitude": 10,
+   "height": 5,
+   "amplitude": 7,
    "scale": 420
   },
   "dunes": [
    {
-    "wavelength": 150,
-    "amplitude": 20,
-    "wind_deg": 25,
-    "warp": 0.9,
-    "stretch": 2.4
+    "wavelength": 95,
+    "amplitude": 7,
+    "wind_deg": -60,
+    "warp": 0.8,
+    "stretch": 2.2
    },
    {
-    "wavelength": 55,
-    "amplitude": 5,
-    "wind_deg": 40,
+    "wavelength": 200,
+    "amplitude": 26,
+    "wind_deg": -49,
+    "warp": 0.9,
+    "stretch": 2.6,
+    "sharpness": 2.8,
+    "seed": 3,
+    "at": [
+     -215,
+     235
+    ],
+    "radius": 210,
+    "falloff": 0.45
+   },
+   {
+    "wavelength": 170,
+    "amplitude": 22,
+    "wind_deg": 125,
+    "warp": 0.9,
+    "stretch": 2.4,
+    "sharpness": 2.6,
+    "seed": 5,
+    "at": [
+     215,
+     -300
+    ],
+    "radius": 190,
+    "falloff": 0.45
+   },
+   {
+    "wavelength": 130,
+    "amplitude": 12,
+    "wind_deg": -100,
     "warp": 0.7,
-    "seed": 2,
-    "small_amplitude": 0
+    "stretch": 2.2,
+    "seed": 7,
+    "at": [
+     230,
+     230
+    ],
+    "radius": 170,
+    "falloff": 0.5
    }
   ],
   "features": [
    {
-    "type": "plateau",
-    "at": [
-     -220,
-     -180
-    ],
-    "radius": 90,
-    "height": 46,
-    "cliff": 24,
-    "talus": 6
-   },
-   {
-    "type": "canyon",
-    "points": [
-     [
-      -420,
-      120
-     ],
-     [
-      -260,
-      60
-     ],
-     [
-      -120,
-      110
-     ],
-     [
-      20,
-      40
-     ]
-    ],
-    "width": 34,
-    "depth": 22,
-    "wall": 14
-   },
-   {
     "type": "basin",
     "at": [
-     230,
-     -120
+     0,
+     0
     ],
-    "radius": 120,
-    "floor": -18
-   },
-   {
-    "type": "ramp",
-    "points": [
-     [
-      120,
-      300
-     ],
-     [
-      260,
-      200
-     ],
-     [
-      340,
-      60
-     ]
-    ],
-    "width": 30,
-    "heights": [
-     40,
-     4
-    ],
-    "curve": 1.2
+    "radius": 112,
+    "floor": -24,
+    "packed": 0.3
    },
    {
     "type": "flatten",
     "at": [
      0,
-     380
+     0
     ],
-    "radius": 18,
+    "radius": 24,
+    "height": -22,
+    "blend": 1.5,
+    "packed": 0.6
+   },
+   {
+    "type": "mound",
+    "at": [
+     62,
+     272
+    ],
+    "radius": 115,
+    "height": 46,
+    "power": 1.15
+   },
+   {
+    "type": "ramp",
+    "points": [
+     [
+      62,
+      258
+     ],
+     [
+      48,
+      205
+     ],
+     [
+      30,
+      160
+     ],
+     [
+      12,
+      100
+     ]
+    ],
+    "width": 34,
+    "heights": [
+     50,
+     -8
+    ],
+    "curve": 0.9,
+    "side_deg": 26,
+    "soft": 5
+   },
+   {
+    "type": "flatten",
+    "at": [
+     63,
+     268
+    ],
+    "radius": 11,
+    "height": 51,
+    "blend": 1.8,
+    "packed": 0.4
+   },
+   {
+    "type": "plateau",
+    "at": [
+     -120,
+     -265
+    ],
+    "radius": 70,
+    "height": 48,
+    "cliff": 12,
+    "talus": 6
+   },
+   {
+    "type": "ramp",
+    "points": [
+     [
+      -101,
+      -206
+     ],
+     [
+      -84,
+      -172
+     ],
+     [
+      -63,
+      -136
+     ],
+     [
+      -43,
+      -100
+     ],
+     [
+      -22,
+      -64
+     ]
+    ],
+    "width": 26,
+    "heights": [
+     48,
+     -14
+    ],
+    "curve": 1.0,
+    "side_deg": 26,
+    "soft": 4
+   },
+   {
+    "type": "mound",
+    "at": [
+     -238,
+     -22
+    ],
+    "radius": 86,
+    "height": 40,
+    "power": 1.5
+   },
+   {
+    "type": "mound",
+    "at": [
+     -262,
+     -64
+    ],
+    "radius": 32,
+    "height": 13,
+    "power": 1.3
+   },
+   {
+    "type": "ridge",
+    "points": [
+     [
+      -185,
+      -10
+     ],
+     [
+      -140,
+      4
+     ],
+     [
+      -104,
+      14
+     ]
+    ],
+    "width": 22,
+    "height": 7
+   },
+   {
+    "type": "flatten",
+    "at": [
+     -98,
+     18
+    ],
+    "radius": 9,
     "height": 6,
+    "blend": 1.6,
     "packed": 0.5
+   },
+   {
+    "type": "mound",
+    "at": [
+     250,
+     -40
+    ],
+    "radius": 140,
+    "height": 22,
+    "power": 1.0
+   },
+   {
+    "type": "basin",
+    "at": [
+     250,
+     -40
+    ],
+    "radius": 88,
+    "floor": -6,
+    "packed": 0.0
+   },
+   {
+    "type": "flatten",
+    "at": [
+     250,
+     -40
+    ],
+    "radius": 20,
+    "height": -6,
+    "blend": 1.5
    },
    {
     "type": "glass",
     "at": [
-     230,
-     -120
+     250,
+     -40
     ],
-    "radius": 70
+    "radius": 95
+   },
+   {
+    "type": "ramp",
+    "points": [
+     [
+      166,
+      -28
+     ],
+     [
+      130,
+      -20
+     ],
+     [
+      95,
+      -12
+     ],
+     [
+      60,
+      -6
+     ]
+    ],
+    "width": 26,
+    "heights": [
+     24,
+     -18
+    ],
+    "curve": 1.0,
+    "side_deg": 26,
+    "soft": 4
+   },
+   {
+    "type": "ramp",
+    "points": [
+     [
+      -226,
+      2
+     ],
+     [
+      -182,
+      20
+     ],
+     [
+      -136,
+      32
+     ],
+     [
+      -92,
+      34
+     ],
+     [
+      -52,
+      26
+     ]
+    ],
+    "width": 30,
+    "heights": [
+     43,
+     -14
+    ],
+    "curve": 1.0,
+    "side_deg": 25,
+    "soft": 5
+   },
+   {
+    "type": "plateau",
+    "at": [
+     288,
+     -14
+    ],
+    "radius": 8,
+    "height": 6,
+    "cliff": 2,
+    "talus": 0
    }
   ],
   "border": {
@@ -119,13 +346,877 @@
  },
  "content": {
   "spawn": [
-   120,
-   300
+   63,
+   268
   ],
-  "spawn_yaw": 125,
+  "spawn_yaw": 193,
   "menu_focus": [
    0,
    0
+  ],
+  "goal": {
+   "at": [
+    0,
+    16
+   ],
+   "rot": 0
+  },
+  "props": [
+   {
+    "type": "agulha",
+    "at": [
+     0,
+     -8
+    ],
+    "rot": 28.6,
+    "collide": "trimesh",
+    "name": "AgulhaDeVael"
+   },
+   {
+    "type": "cabeca_colosso",
+    "at": [
+     -262,
+     -64
+    ],
+    "rot": 70,
+    "collide": "trimesh",
+    "sink": 2.0
+   },
+   {
+    "type": "mao_colosso",
+    "at": [
+     -98,
+     18
+    ],
+    "rot": 75,
+    "collide": "trimesh",
+    "sink": 0.3
+   },
+   {
+    "type": "geodo",
+    "at": [
+     250,
+     -56
+    ],
+    "rot": 0,
+    "collide": "none"
+   },
+   {
+    "type": "cristal",
+    "at": [
+     214,
+     -78
+    ],
+    "rot": 20,
+    "scale": 1.4,
+    "collide": "convex"
+   },
+   {
+    "type": "cristal",
+    "at": [
+     298,
+     -88
+    ],
+    "rot": 140,
+    "scale": 1.0,
+    "collide": "convex"
+   },
+   {
+    "type": "cristal",
+    "at": [
+     312,
+     6
+    ],
+    "rot": 260,
+    "scale": 1.7,
+    "collide": "convex"
+   },
+   {
+    "type": "cristal_b",
+    "at": [
+     226,
+     8
+    ],
+    "rot": 80,
+    "scale": 1.2,
+    "collide": "convex"
+   },
+   {
+    "type": "cristal_b",
+    "at": [
+     196,
+     -30
+    ],
+    "rot": 200,
+    "scale": 0.8,
+    "collide": "convex"
+   },
+   {
+    "type": "colunata",
+    "at": [
+     -128,
+     -276
+    ],
+    "rot": 25,
+    "collide": "trimesh"
+   },
+   {
+    "type": "arco",
+    "at": [
+     -60,
+     -160
+    ],
+    "rot": 30,
+    "collide": "trimesh"
+   },
+   {
+    "type": "arco",
+    "at": [
+     40,
+     175
+    ],
+    "rot": -20,
+    "collide": "trimesh"
+   },
+   {
+    "type": "pilar",
+    "at": [
+     -30,
+     110
+    ],
+    "rot": 10,
+    "collide": "convex"
+   },
+   {
+    "type": "pilar",
+    "at": [
+     96,
+     40
+    ],
+    "rot": 50,
+    "collide": "convex",
+    "tilt": [
+     8,
+     0
+    ]
+   },
+   {
+    "type": "pilar",
+    "at": [
+     -110,
+     -60
+    ],
+    "rot": 80,
+    "collide": "convex",
+    "tilt": [
+     0,
+     -12
+    ]
+   },
+   {
+    "type": "pilar",
+    "at": [
+     140,
+     160
+    ],
+    "rot": 0,
+    "collide": "convex"
+   },
+   {
+    "type": "rocha",
+    "at": [
+     -150,
+     -215
+    ],
+    "rot": 0,
+    "scale": 2.0,
+    "collide": "convex"
+   },
+   {
+    "type": "rocha",
+    "at": [
+     -60,
+     -300
+    ],
+    "rot": 90,
+    "scale": 2.6,
+    "collide": "convex"
+   },
+   {
+    "type": "rocha_b",
+    "at": [
+     -170,
+     -300
+    ],
+    "rot": 30,
+    "scale": 2.2,
+    "collide": "convex"
+   },
+   {
+    "type": "rocha_b",
+    "at": [
+     120,
+     -200
+    ],
+    "rot": 160,
+    "scale": 1.8,
+    "collide": "convex"
+   },
+   {
+    "type": "rocha",
+    "at": [
+     -300,
+     60
+    ],
+    "rot": 200,
+    "scale": 1.6,
+    "collide": "convex"
+   }
+  ],
+  "checkpoints": [
+   {
+    "at": [
+     56,
+     262
+    ],
+    "rot": 193
+   },
+   {
+    "at": [
+     14,
+     118
+    ],
+    "rot": 180
+   },
+   {
+    "at": [
+     -200,
+     -4
+    ],
+    "rot": 70
+   },
+   {
+    "at": [
+     -108,
+     -236
+    ],
+    "rot": 20
+   },
+   {
+    "at": [
+     176,
+     -40
+    ],
+    "rot": 90
+   }
+  ],
+  "relics": [
+   {
+    "id": "tolvaren",
+    "at": [
+     -262,
+     -60
+    ],
+    "h": 1.6,
+    "gate": "tolvaren"
+   },
+   {
+    "id": "saryth",
+    "at": [
+     -132,
+     -286
+    ],
+    "h": 1.2,
+    "arena": "saryth"
+   },
+   {
+    "id": "kesrin",
+    "at": [
+     250,
+     -56
+    ],
+    "h": 1.4,
+    "gate": "kesrin"
+   }
+  ],
+  "launchers": [
+   {
+    "at": [
+     -44,
+     -102
+    ],
+    "target": [
+     -114,
+     -246
+    ],
+    "time": 3.6
+   },
+   {
+    "at": [
+     -98,
+     46
+    ],
+    "target": [
+     -232,
+     -16
+    ],
+    "time": 3.4
+   },
+   {
+    "at": [
+     104,
+     -20
+    ],
+    "target": [
+     176,
+     -36
+    ],
+    "time": 2.6
+   },
+   {
+    "at": [
+     -74,
+     -196
+    ],
+    "target": [
+     -116,
+     -252
+    ],
+    "time": 2.2
+   }
+  ],
+  "updrafts": [
+   {
+    "at": [
+     -84,
+     -212
+    ],
+    "radius": 3.2,
+    "height": 62,
+    "strength": 34
+   },
+   {
+    "at": [
+     -160,
+     -205
+    ],
+    "radius": 3.2,
+    "height": 62,
+    "strength": 34
+   },
+   {
+    "at": [
+     -226,
+     -30
+    ],
+    "radius": 3.0,
+    "height": 40,
+    "strength": 32
+   }
+  ],
+  "bounce_pads": [
+   {
+    "at": [
+     279,
+     -6
+    ],
+    "power": 17.5
+   }
+  ],
+  "rails": [
+   {
+    "points": [
+     [
+      -102,
+      16,
+      1.4
+     ],
+     [
+      -140,
+      4,
+      1.6
+     ],
+     [
+      -182,
+      -8,
+      1.8
+     ],
+     [
+      -214,
+      -18,
+      1.8
+     ]
+    ],
+    "speed": 13,
+    "relative": true
+   }
+  ],
+  "rifts": [
+   {
+    "at": [
+     232,
+     -22
+    ],
+    "h": 1.0,
+    "exit": [
+     118,
+     -8
+    ],
+    "exit_h": 0.6,
+    "rot": 250,
+    "exit_rot": 270
+   },
+   {
+    "at": [
+     -14,
+     -62
+    ],
+    "h": 1.0,
+    "exit": [
+     214,
+     -40
+    ],
+    "exit_h": 0.6,
+    "rot": 0,
+    "exit_rot": 90
+   }
+  ],
+  "plates": [
+   {
+    "at": [
+     -98,
+     18
+    ],
+    "h": 0.82,
+    "group": "tolvaren",
+    "heavy": true
+   },
+   {
+    "at": [
+     -238,
+     -22
+    ],
+    "group": "tolvaren",
+    "heavy": false
+   },
+   {
+    "at": [
+     262,
+     -40
+    ],
+    "group": "kesrin",
+    "heavy": true
+   },
+   {
+    "at": [
+     288,
+     -14
+    ],
+    "group": "kesrin",
+    "heavy": false
+   }
+  ],
+  "gates": [
+   {
+    "at": [
+     -258,
+     -52
+    ],
+    "group": "tolvaren",
+    "rot": 70,
+    "relic": "tolvaren"
+   },
+   {
+    "at": [
+     250,
+     -48
+    ],
+    "group": "kesrin",
+    "rot": 0,
+    "relic": "kesrin"
+   }
+  ],
+  "enemies": [
+   {
+    "at": [
+     -110,
+     -268
+    ],
+    "arena": "saryth",
+    "wander": 6
+   },
+   {
+    "at": [
+     -134,
+     -258
+    ],
+    "arena": "saryth",
+    "wander": 6
+   },
+   {
+    "at": [
+     -120,
+     -290
+    ],
+    "arena": "saryth",
+    "wander": 6
+   },
+   {
+    "at": [
+     -100,
+     -280
+    ],
+    "arena": "saryth",
+    "wander": 6
+   },
+   {
+    "at": [
+     -146,
+     -280
+    ],
+    "arena": "saryth",
+    "wander": 6
+   },
+   {
+    "at": [
+     30,
+     -40
+    ],
+    "wander": 8
+   },
+   {
+    "at": [
+     -40,
+     30
+    ],
+    "wander": 8
+   },
+   {
+    "at": [
+     232,
+     -64
+    ],
+    "wander": 6
+   },
+   {
+    "at": [
+     -210,
+     -40
+    ],
+    "wander": 6
+   }
+  ],
+  "sandfalls": [
+   {
+    "top": [
+     -67.2,
+     48.5,
+     -223.8
+    ],
+    "height": 42,
+    "width": 7,
+    "facing": 52.0
+   },
+   {
+    "top": [
+     -78.8,
+     48.5,
+     -212.2
+    ],
+    "height": 42,
+    "width": 9,
+    "facing": 38.0
+   },
+   {
+    "top": [
+     -127.0,
+     48.5,
+     -198.4
+    ],
+    "height": 42,
+    "width": 8,
+    "facing": -6.0
+   },
+   {
+    "top": [
+     -142.9,
+     48.5,
+     -202.0
+    ],
+    "height": 42,
+    "width": 6,
+    "facing": -20.0
+   }
+  ],
+  "motes": [
+   {
+    "circle": [
+     63,
+     268
+    ],
+    "r": 5,
+    "n": 8,
+    "h": 1.0
+   },
+   {
+    "line": [
+     [
+      60,
+      250
+     ],
+     [
+      48,
+      205
+     ]
+    ],
+    "n": 9,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      46,
+      198
+     ],
+     [
+      30,
+      160
+     ]
+    ],
+    "n": 8,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      28,
+      152
+     ],
+     [
+      12,
+      100
+     ]
+    ],
+    "n": 10,
+    "h": 1.2
+   },
+   {
+    "arc": [
+     [
+      10,
+      92
+     ],
+     [
+      4,
+      48
+     ]
+    ],
+    "n": 9,
+    "h": 1.0,
+    "peak": 2.5
+   },
+   {
+    "circle": [
+     0,
+     16
+    ],
+    "r": 11,
+    "n": 16,
+    "h": 1.0
+   },
+   {
+    "circle": [
+     0,
+     -8
+    ],
+    "r": 34,
+    "n": 24,
+    "h": 0.8
+   },
+   {
+    "line": [
+     [
+      -98,
+      -200
+     ],
+     [
+      -63,
+      -136
+     ]
+    ],
+    "n": 14,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      -60,
+      -130
+     ],
+     [
+      -24,
+      -66
+     ]
+    ],
+    "n": 13,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      162,
+      -27
+     ],
+     [
+      62,
+      -7
+     ]
+    ],
+    "n": 18,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      -222,
+      4
+     ],
+     [
+      -136,
+      32
+     ]
+    ],
+    "n": 16,
+    "h": 1.2
+   },
+   {
+    "line": [
+     [
+      -130,
+      33
+     ],
+     [
+      -56,
+      27
+     ]
+    ],
+    "n": 14,
+    "h": 1.2
+   },
+   {
+    "arc": [
+     [
+      -215,
+      240
+     ],
+     [
+      -150,
+      185
+     ]
+    ],
+    "n": 10,
+    "h": 1.5,
+    "peak": 3.0
+   },
+   {
+    "arc": [
+     [
+      -260,
+      170
+     ],
+     [
+      -190,
+      120
+     ]
+    ],
+    "n": 10,
+    "h": 1.5,
+    "peak": 3.0
+   },
+   {
+    "arc": [
+     [
+      190,
+      -300
+     ],
+     [
+      150,
+      -230
+     ]
+    ],
+    "n": 10,
+    "h": 1.5,
+    "peak": 3.0
+   },
+   {
+    "arc": [
+     [
+      260,
+      -250
+     ],
+     [
+      200,
+      -180
+     ]
+    ],
+    "n": 10,
+    "h": 1.5,
+    "peak": 3.0
+   },
+   {
+    "circle": [
+     250,
+     -40
+    ],
+    "r": 22,
+    "n": 18,
+    "h": 1.0
+   },
+   {
+    "circle": [
+     -238,
+     -22
+    ],
+    "r": 9,
+    "n": 10,
+    "h": 1.0
+   },
+   {
+    "circle": [
+     -120,
+     -265
+    ],
+    "r": 30,
+    "n": 20,
+    "h": 1.0
+   },
+   {
+    "line": [
+     [
+      200,
+      220
+     ],
+     [
+      140,
+      150
+     ]
+    ],
+    "n": 12,
+    "h": 1.2
+   },
+   {
+    "points": [
+     [
+      -84,
+      -212
+     ],
+     [
+      -160,
+      -205
+     ]
+    ],
+    "h": 20.0
+   }
   ]
  }
 }

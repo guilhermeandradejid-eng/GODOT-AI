@@ -1,39 +1,18 @@
 class_name PropLib
 extends RefCounted
 ## Instancia os props (GLB do Blender) trocando os materiais pelos shaders do
-## jogo conforme o nome do material (stone, wood, leaf, bronze, glow, petal,
+## jogo conforme o nome do material (stone, wood, bronze, glow, crystal, seam,
 ## cloth, jelly) e cria colisões simples quando pedido.
 
 const NOISE := preload("res://addons/vibe_vfx/textures/cloud_noise.png")
 const PROP_SHADER := preload("res://game/shaders/prop.gdshader")
-const FOLIAGE := preload("res://game/shaders/foliage.gdshader")
 const GLOW := preload("res://game/shaders/glow.gdshader")
 const JELLY := preload("res://game/shaders/jelly.gdshader")
-const PETAL := preload("res://game/shaders/petal.gdshader")
+const CRYSTAL := preload("res://game/shaders/crystal.gdshader")
+const SEAM := preload("res://game/shaders/seam.gdshader")
 
-const SCENES := {
-	"arch": preload("res://game/assets/props/arch.glb"),
-	"pillar": preload("res://game/assets/props/pillar.glb"),
-	"rock_0": preload("res://game/assets/props/rock_0.glb"),
-	"rock_1": preload("res://game/assets/props/rock_1.glb"),
-	"rock_2": preload("res://game/assets/props/rock_2.glb"),
-	"spire": preload("res://game/assets/props/spire.glb"),
-	"tower": preload("res://game/assets/props/tower.glb"),
-	"bell": preload("res://game/assets/props/bell.glb"),
-	"palm_0": preload("res://game/assets/props/palm_0.glb"),
-	"palm_1": preload("res://game/assets/props/palm_1.glb"),
-	"grass": preload("res://game/assets/props/grass.glb"),
-	"pinwheel": preload("res://game/assets/props/pinwheel.glb"),
-	"flower_cannon": preload("res://game/assets/props/flower_cannon.glb"),
-	"chime_post": preload("res://game/assets/props/chime_post.glb"),
-	"gate_flower": preload("res://game/assets/props/gate_flower.glb"),
-	"plate": preload("res://game/assets/props/plate.glb"),
-	"plate_heavy": preload("res://game/assets/props/plate_heavy.glb"),
-	"seed": preload("res://game/assets/props/seed.glb"),
-	"totem": preload("res://game/assets/props/totem.glb"),
-	"portal": preload("res://game/assets/props/portal.glb"),
-	"jelly": preload("res://game/assets/props/jelly.glb"),
-}
+## Props com nomes fixos (os demais vêm de game/assets/props/<nome>.glb).
+const SCENES := {}
 
 static var _shared := {}
 
@@ -65,19 +44,15 @@ static func shared_material(kind: String) -> ShaderMaterial:
 			m.set_shader_parameter("noise_tex", NOISE)
 			m.set_shader_parameter("sand_amount", 0.0)
 			m.set_shader_parameter("rim_strength", 0.9)
-		"leaf":
-			m.shader = FOLIAGE
-		"grass":
-			m.shader = FOLIAGE
-			m.set_shader_parameter("wind_strength", 1.6)
-			m.set_shader_parameter("tint", Color(0.95, 1.0, 0.9))
 		"glow":
 			m.shader = GLOW
-		"petal":
-			m.shader = PETAL
 		"jelly":
 			m.shader = JELLY
 			m.render_priority = 2
+		"crystal":
+			m.shader = CRYSTAL
+		"seam":
+			m.shader = SEAM
 		_:
 			m.shader = PROP_SHADER
 			m.set_shader_parameter("noise_tex", NOISE)
@@ -107,7 +82,7 @@ static func make(prop: String, unique: Array = []) -> Node3D:
 		return Node3D.new()
 	var inst: Node3D = scene.instantiate()
 	inst.name = prop.to_pascal_case()
-	var sway := prop.begins_with("palm")
+	var sway := false
 	var uniq := {}
 	for mi in meshes(inst):
 		var m := mi.mesh
@@ -116,8 +91,6 @@ static func make(prop: String, unique: Array = []) -> Node3D:
 			var kind := src.resource_name if src != null else "stone"
 			if kind == "wood" and sway:
 				kind = "wood_sway"
-			if prop == "grass" and kind == "leaf":
-				kind = "grass"
 			var mat: Material
 			if kind in unique:
 				if not uniq.has(kind):

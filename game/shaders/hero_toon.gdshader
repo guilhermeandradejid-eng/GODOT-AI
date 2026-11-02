@@ -1,4 +1,4 @@
-// SOPRO — pelagem/pele dos heróis: toon suave (2 faixas com transição macia),
+// pelagem/pele dos heróis: toon suave (2 faixas com transição macia),
 // "subsurface" quente no terminador, rim light forte de contraluz (estilo Sky),
 // leve brilho de pelo (sheen) e cor vinda dos vértices (gerada no Blender).
 // Técnica de rim/bandas inspirada em FlexibleToonShaderGD (MIT, reescrito).

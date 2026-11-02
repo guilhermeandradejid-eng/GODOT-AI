@@ -1,4 +1,4 @@
-// SOPRO — contorno "casco invertido" dos heróis (segundo passe): engrossa a malha
+// contorno "casco invertido" dos heróis (segundo passe): engrossa a malha
 // pela normal e desenha só as faces de trás numa cor escura quente, com espessura
 // constante em pixels (compensada pela distância). Lê melhor no celular.
 shader_type spatial;

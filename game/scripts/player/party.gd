@@ -1,10 +1,10 @@
-class_name SoproParty
+class_name HeroParty
 extends Node
 ## A dupla: cria as duas personagens (papéis agile e strong; nomes em HeroDefs),
 ## distribui controles conforme o modo e cuida da
 ## câmera. Solo: um herói é seu e o outro segue pela IA (botão Trocar alterna).
 ## Co-op local: aperte START/A num controle para o jogador 2 entrar (o forte).
-## Co-op em rede: cada aparelho controla um herói (SoproNet sincroniza).
+## Co-op em rede: cada aparelho controla um herói (NetCoop sincroniza).
 
 signal controlled_changed(hero: Hero)
 signal p2_joined
@@ -46,7 +46,7 @@ func setup(parent: Node3D, spawn: Vector3, spawn_yaw: float) -> void:
 		Game.Mode.LOCAL_COOP:
 			_assign_local_coop()
 		Game.Mode.NET_HOST, Game.Mode.NET_CLIENT:
-			pass   # SoproNet assigns controllers
+			pass   # NetCoop assigns controllers
 		_:
 			_assign_solo(agile)
 	Input.joy_connection_changed.connect(_on_joy)

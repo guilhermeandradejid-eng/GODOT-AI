@@ -1,17 +1,17 @@
-class_name SoproLevel
+class_name GameLevel
 extends Node3D
-## Fase "Lençóis do Céu": monta atmosfera, ilhas, conteúdo, heróis, câmera,
+## Fase "Ylvaar": monta atmosfera, terreno contínuo, conteúdo, heróis, câmera,
 ## pós-processamento e HUD, e aplica a qualidade gráfica escolhida.
 
 const SPAWN := Vector3(0, 3.2, 38)
 const SPAWN_YAW := PI          ## olhando para o norte (Grande Sino)
 
-var atmosphere: SoproAtmosphere
+var atmosphere: Atmosphere
 var builder: WorldBuilder
 var content: Node3D
-var party: SoproParty
-var hud: SoproHUD
-var postfx: SoproPostFX
+var party: HeroParty
+var hud: GameHUD
+var postfx: PostFX
 var capture_mode := false
 var menu_mode := false             ## true: câmera orbitando a torre, sem HUD (menu principal)
 var kill_y := -30.0
@@ -24,7 +24,7 @@ func set_capture_mode(v: bool) -> void:
 func _ready() -> void:
 	Game.level = self
 	get_tree().physics_interpolation = true
-	atmosphere = SoproAtmosphere.new()
+	atmosphere = Atmosphere.new()
 	atmosphere.name = "Atmosfera"
 	add_child(atmosphere)
 	builder = WorldBuilder.new()
@@ -39,15 +39,15 @@ func _ready() -> void:
 		add_child(content)
 		content.call("build", self)
 	Game.checkpoint = SPAWN
-	party = SoproParty.new()
+	party = HeroParty.new()
 	party.name = "Dupla"
 	add_child(party)
 	party.setup(self, SPAWN, SPAWN_YAW)
-	postfx = SoproPostFX.new()
+	postfx = PostFX.new()
 	postfx.name = "PosProcesso"
 	postfx.sun_direction = atmosphere.sun_direction
 	add_child(postfx)
-	hud = SoproHUD.new()
+	hud = GameHUD.new()
 	hud.name = "HUD"
 	add_child(hud)
 	hud.bind(party)
@@ -101,9 +101,9 @@ func begin_play(mode: int) -> void:
 
 func _intro() -> void:
 	await get_tree().create_timer(1.2, false).timeout
-	Game.show_toast("O vento adormeceu sobre os Lençóis do Céu…", 3.5)
+	Game.show_toast("O tempo parou em Ylvaar, uma hora antes do pôr do sol…", 3.5)
 	await get_tree().create_timer(3.8, false).timeout
-	Game.show_toast("Encontrem as 3 Sementes de Sopro e toquem o Grande Sino!", 4.0)
+	Game.show_toast("Encontrem as 3 Pedras das Horas e levem à Agulha de Vael!", 4.0)
 
 
 func apply_quality(q: int) -> void:

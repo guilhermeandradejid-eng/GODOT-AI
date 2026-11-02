@@ -1,4 +1,4 @@
-// SOPRO — olhos procedurais: esclera, íris com gradiente e anel, pupila,
+// olhos procedurais: esclera, íris com gradiente e anel, pupila,
 // dois brilhos especulares fixos (leitura "fofa"), pálpebra superior animável
 // (piscar / olhar sonolento) e direção do olhar. UV: centro = frente do olho.
 shader_type spatial;

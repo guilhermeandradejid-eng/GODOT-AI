@@ -259,13 +259,13 @@ def make_sfx():
     S["respawn"] = buf * np.linspace(0.6, 1, n)
     lume = fm_bell(note_hz(84), 0.6, sr, ratio=2.0, index=1.0, tau=0.22) * 0.8
     place(lume, fm_bell(note_hz(96), 0.4, sr, ratio=3.0, index=0.5, tau=0.1), 0, 0.2)
-    S["lume"] = lume
+    S["mote"] = lume
     buf = np.zeros(int(3.0 * sr))
     for k, m in enumerate((60, 64, 67, 71, 74, 76, 79, 83, 86, 88)):
         place(buf, pluck(note_hz(m), 2.0, sr, tau=1.0, bright=1.2), k * 0.07 * sr, 0.35)
     for m in (72, 79, 84):
         place(buf, fm_bell(note_hz(m), 2.5, sr, ratio=2.0, index=0.5, tau=1.0), 0.75 * sr, 0.25)
-    S["seed"] = soft_room(buf, sr, 0.35, 1.6)[: len(buf)]
+    S["relic"] = soft_room(buf, sr, 0.35, 1.6)[: len(buf)]
     S["chime"] = fm_bell(note_hz(84), 2.4, sr, ratio=2.76, index=1.6, tau=0.9,
                          partials=[(2.76, 0.25, 0.4), (5.4, 0.12, 0.2)])
     n = int(1.4 * sr)
@@ -308,7 +308,7 @@ def make_sfx():
     place(x, 0.4 * bandpass(noise(int(0.05 * bsr)), bsr, 1500, 6000), 0)
     S["bell"] = soft_room(x, bsr, 0.35, 2.5)[:n]
     n = int(0.5 * sr)
-    S["flower_load"] = sweep_sine(240, 90, 0.5, sr, 0.5) * exp_decay(n, sr, 0.18) + 0.3 * lowpass(noise(n), sr, 800) * exp_decay(n, sr, 0.1)
+    S["urn_load"] = sweep_sine(240, 90, 0.5, sr, 0.5) * exp_decay(n, sr, 0.18) + 0.3 * lowpass(noise(n), sr, 800) * exp_decay(n, sr, 0.1)
     n = int(0.3 * sr)
     S["plate_on"] = lowpass(noise(n), sr, 1200) * exp_decay(n, sr, 0.04) + 0.6 * np.sin(2 * np.pi * 220 * np.arange(n) / sr) * exp_decay(n, sr, 0.12)
     S["plate_off"] = lowpass(noise(n), sr, 900) * exp_decay(n, sr, 0.03) * 0.6

@@ -1,16 +1,16 @@
-class_name SoproHUD
+class_name GameHUD
 extends CanvasLayer
-## HUD minimalista (estilo Sky): contador de lumes, 3 sementes, pétalas de vida
+## HUD minimalista (estilo Sky): contador de centelhas, 3 Pedras das Horas, pétalas de vida
 ## de cada herói, avisos que aparecem e somem, controles de toque e pausa.
 
 signal resume_requested
 signal restart_requested
 signal menu_requested
 
-var party: SoproParty
+var party: HeroParty
 var touch: TouchControls
-var _lume_label: Label
-var _lume_pop := 0.0
+var _mote_label: Label
+var _mote_pop := 0.0
 var _seed_slots: Array[Control] = []
 var _toast: Label
 var _toast_t := 0.0
@@ -28,20 +28,20 @@ func _ready() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.theme = SoproTheme.theme()
+	_root.theme = UITheme.theme()
 	add_child(_root)
-	# lumes
-	var lume_box := HBoxContainer.new()
-	lume_box.position = Vector2(34, 26)
-	lume_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(lume_box)
+	# centelhas
+	var mote_box := HBoxContainer.new()
+	mote_box.position = Vector2(34, 26)
+	mote_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(mote_box)
 	var icon := _LumeIcon.new()
 	icon.custom_minimum_size = Vector2(44, 44)
-	lume_box.add_child(icon)
-	_lume_label = SoproTheme.label("0", 34, Color(1, 1, 1), 700)
-	_lume_label.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.35, 0.6))
-	_lume_label.add_theme_constant_override("outline_size", 8)
-	lume_box.add_child(_lume_label)
+	mote_box.add_child(icon)
+	_mote_label = UITheme.label("0", 34, Color(1, 1, 1), 700)
+	_mote_label.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.35, 0.6))
+	_mote_label.add_theme_constant_override("outline_size", 8)
+	mote_box.add_child(_mote_label)
 	# seeds
 	var seeds := HBoxContainer.new()
 	seeds.set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -49,7 +49,7 @@ func _ready() -> void:
 	seeds.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	seeds.add_theme_constant_override("separation", 18)
 	_root.add_child(seeds)
-	for i in Game.SEEDS_TOTAL:
+	for i in Game.RELICS_TOTAL:
 		var s := _SeedSlot.new()
 		s.custom_minimum_size = Vector2(40, 52)
 		seeds.add_child(s)
@@ -67,13 +67,13 @@ func _ready() -> void:
 		hp.add_child(p)
 		_petals[id] = p
 	# who am I
-	_who = SoproTheme.label("", 20, Color(1, 1, 1, 0.9), 600)
+	_who = UITheme.label("", 20, Color(1, 1, 1, 0.9), 600)
 	_who.add_theme_color_override("font_outline_color", Color(0.45, 0.25, 0.35, 0.5))
 	_who.add_theme_constant_override("outline_size", 6)
 	_who.position = Vector2(34, 160)
 	_root.add_child(_who)
 	# toast
-	_toast = SoproTheme.label("", 30, Color(1, 1, 1), 600)
+	_toast = UITheme.label("", 30, Color(1, 1, 1), 600)
 	_toast.add_theme_color_override("font_outline_color", Color(0.45, 0.22, 0.35, 0.55))
 	_toast.add_theme_constant_override("outline_size", 10)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -89,12 +89,12 @@ func _ready() -> void:
 	touch.pause_requested.connect(toggle_pause)
 	_root.add_child(touch)
 	_build_pause()
-	Game.lumes_changed.connect(_on_lumes)
-	Game.seed_collected.connect(_on_seed)
+	Game.motes_changed.connect(_on_motes)
+	Game.relic_collected.connect(_on_seed)
 	Game.toast.connect(show_toast)
 
 
-func bind(p: SoproParty) -> void:
+func bind(p: HeroParty) -> void:
 	party = p
 	p.controlled_changed.connect(func(h: Hero): _who.text = "Você: " + HeroDefs.display_name(h.hero_id))
 	_who.text = "Você: " + HeroDefs.display_name("agile")
@@ -104,9 +104,9 @@ func bind(p: SoproParty) -> void:
 		(_petals[h.hero_id] as _Petals).hero = h
 
 
-func _on_lumes(total: int) -> void:
-	_lume_label.text = str(total)
-	_lume_pop = 1.0
+func _on_motes(total: int) -> void:
+	_mote_label.text = str(total)
+	_mote_pop = 1.0
 
 
 func _on_seed(_id: String, total: int) -> void:
@@ -122,9 +122,9 @@ func show_toast(text: String, seconds := 3.0) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	_lume_pop = maxf(0.0, _lume_pop - delta * 4.0)
-	_lume_label.scale = Vector2.ONE * (1.0 + 0.25 * _lume_pop)
-	_lume_label.pivot_offset = _lume_label.size * 0.5
+	_mote_pop = maxf(0.0, _mote_pop - delta * 4.0)
+	_mote_label.scale = Vector2.ONE * (1.0 + 0.25 * _mote_pop)
+	_mote_label.pivot_offset = _mote_label.size * 0.5
 	if _toast_t > 0.0:
 		_toast_t -= delta
 		_toast.modulate.a = minf(1.0, _toast.modulate.a + delta * 4.0) if _toast_t > 0.4 else maxf(0.0, _toast_t / 0.4)
@@ -164,7 +164,7 @@ func _build_pause() -> void:
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	panel.add_child(col)
-	var title := SoproTheme.label("Pausa", 44, SoproTheme.INK, 700)
+	var title := UITheme.label("Pausa", 44, UITheme.INK, 700)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(title)
 	var b1 := Button.new()

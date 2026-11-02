@@ -24,7 +24,7 @@ func _ready() -> void:
 	if "--views" in args:
 		_views = Array(args[args.find("--views") + 1].split(","))
 	DirAccess.make_dir_recursive_absolute(_out)
-	var atmo := SoproAtmosphere.new()
+	var atmo := Atmosphere.new()
 	add_child(atmo)
 	var mat := ShaderMaterial.new()
 	mat.shader = SAND
@@ -37,7 +37,7 @@ func _ready() -> void:
 	cam.far = 4000.0
 	cam.fov = 60.0
 	add_child(cam)
-	var post := SoproPostFX.new()
+	var post := PostFX.new()
 	post.sun_direction = atmo.sun_direction
 	add_child(post)
 	_run.call_deferred()

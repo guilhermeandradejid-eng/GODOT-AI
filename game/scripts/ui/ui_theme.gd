@@ -1,4 +1,4 @@
-class_name SoproTheme
+class_name UITheme
 extends RefCounted
 ## Tema da interface: fonte Fredoka (OFL, Milena Brandão & Hafontia),
 ## botões arredondados em tons pastel, sombras suaves.
