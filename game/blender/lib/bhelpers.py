@@ -1,6 +1,6 @@
-"""Shared helpers for the SOPRO Blender build scripts (Blender 4.x, run headless).
+"""Shared helpers for the YLVAAR Blender build scripts (Blender 4.x, run headless).
 
-Coordinates: the level recipe (game/world/lencois.json) uses Godot axes
+Coordinates: the world recipe (game/world/world.json) uses Godot axes
 (x east, y up, z south). Blender is Z-up: Godot (x, y, z) == Blender (x, -z, y).
 The glTF exporter (export_yup=True) converts back, so meshes built here in
 Blender space land in Godot exactly where the recipe says.
@@ -20,7 +20,7 @@ ASSETS = GAME / "assets"
 
 
 def log(*args) -> None:
-    print("[sopro]", *args, flush=True)
+    print("[ylvaar]", *args, flush=True)
     sys.stdout.flush()
 
 

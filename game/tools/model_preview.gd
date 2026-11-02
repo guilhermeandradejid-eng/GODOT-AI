@@ -4,6 +4,7 @@ extends Node3D
 ##
 ##   xvfb-run -a godot --path . --rendering-method mobile res://game/tools/model_preview.tscn -- \
 ##       --glb /caminho/modelo.glb --out /tmp/prev [--views front,q34,side,back,close] [--anim idle --t 0.3] [--cell 384]
+##       [--hero agile|strong]   (materiais/olhos/contorno de HeroDefs; detectado pelo nome do GLB)
 
 const TOON := preload("res://game/shaders/hero_toon.gdshader")
 const EYE := preload("res://game/shaders/hero_eye.gdshader")
@@ -15,6 +16,7 @@ var _anim := ""
 var _t := 0.0
 var _cell := 384
 var _props := false
+var _hero := ""
 var _model: Node3D
 var _cam: Camera3D
 
@@ -31,6 +33,7 @@ func _ready() -> void:
 			"--t": _t = float(args[i + 1]); i += 1
 			"--cell": _cell = int(args[i + 1]); i += 1
 			"--props": _props = true
+			"--hero": _hero = args[i + 1]; i += 1
 		i += 1
 	DirAccess.make_dir_recursive_absolute(_out)
 	var atmo := Atmosphere.new()
@@ -60,7 +63,14 @@ func _ready() -> void:
 				var src := mi.mesh.surface_get_material(si)
 				mi.set_surface_override_material(si, PropLib.shared_material(src.resource_name if src != null else "stone"))
 	else:
-		apply_materials(_model)
+		if _hero == "":
+			for role in HeroDefs.DEFS:
+				if String(HeroDefs.DEFS[role]["model"]).get_file() == _glb.get_file():
+					_hero = role
+		if _hero != "":
+			apply_hero_materials(_model, _hero)
+		else:
+			apply_materials(_model)
 	_cam = Camera3D.new()
 	_cam.fov = 30.0
 	add_child(_cam)
@@ -84,6 +94,18 @@ static func apply_materials(root: Node) -> void:
 				if mname.begins_with("glow"):
 					mat.set_shader_parameter("emission_color", Color(0.6, 0.9, 1.0))
 			(mi as MeshInstance3D).set_surface_override_material(s, mat)
+
+
+## Os mesmos materiais do jogo (HeroVisual + HeroDefs: olhos, contorno, glow, glifo).
+static func apply_hero_materials(root: Node, role: String) -> void:
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var hv := HeroVisual.new()
+		hv.def = HeroDefs.def_of(role)
+		hv.mesh = mi as MeshInstance3D
+		hv._setup_materials()
+		for m in hv.eye_materials:
+			m.set_shader_parameter("lid", float(hv.def.get("base_lid", 0.06)))
+		hv.free()
 
 
 func _aabb(n: Node) -> AABB:

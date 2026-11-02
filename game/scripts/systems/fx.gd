@@ -1,6 +1,6 @@
 extends Node3D
 ## Autoload "Fx": explosões de partículas com pool (poeira de areia, anéis de
-## pouso, brilhos de coleta, respingos, pétalas, fumaça de breu, rastro de luz).
+## pouso, brilhos de coleta, respingos, fumaça dos Silentes, rastro de luz).
 ## Partículas GPU leves (billboards com sprite suave), pensadas para o celular.
 
 const DOT := preload("res://game/assets/textures/soft_dot.png")

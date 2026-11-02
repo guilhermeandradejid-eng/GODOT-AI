@@ -19,12 +19,12 @@ const CONFIG := {
 		"jump2": 10.4, "gravity": 30.0, "fall_mult": 1.6, "low_jump": 2.1, "max_fall": 26.0,
 		"glide_fall": 2.3, "glide_speed": 9.2, "swim_speed": 3.6, "radius": 0.24, "height": 0.9,
 		"surf_max": 21.0, "surf_grip": 2.7,
-		"walk_v": 2.0, "run_v": 7.5},
+		"walk_v": 1.1, "run_v": 7.5},
 	"strong": {"speed": 7.0, "accel": 34.0, "decel": 46.0, "air_accel": 14.0, "turn": 9.0, "jump": 10.4,
 		"jump2": 0.0, "gravity": 32.0, "fall_mult": 1.7, "low_jump": 2.0, "max_fall": 30.0,
 		"pound_speed": 28.0, "swim_speed": 6.0, "radius": 0.46, "height": 1.3,
 		"surf_max": 18.5, "surf_grip": 1.9,
-		"walk_v": 1.8, "run_v": 6.5},
+		"walk_v": 0.9, "run_v": 6.5},
 }
 const LAYER_WORLD := 1
 const LAYER_HEROES := 2
@@ -857,9 +857,11 @@ func _update_visual(delta: float) -> void:
 		var walk_v: float = cfg["walk_v"]
 		var run_v: float = cfg["run_v"]
 		speed01 = clampf(0.3 * hspeed / walk_v, 0.0, 0.3) if hspeed < walk_v else lerpf(0.3, 1.0, clampf((hspeed - walk_v) / (run_v - walk_v), 0.0, 1.0))
-		var natural := lerpf(1.25, 2.0, clampf((speed01 - 0.3) / 0.7, 0.0, 1.0))
-		var ref_v := lerpf(walk_v, run_v, clampf((speed01 - 0.3) / 0.7, 0.0, 1.0))
-		cps = natural * clampf(hspeed / ref_v, 0.6, 1.9)
+		# cadência pela passada medida no clipe (metros por ciclo): pés plantados
+		var d := visual.def
+		var kb := clampf((speed01 - 0.3) / 0.7, 0.0, 1.0)
+		var stride := lerpf(float(d.get("walk_stride", walk_v / 1.25)), float(d.get("run_stride", run_v / 2.0)), kb)
+		cps = clampf(hspeed / stride, 0.6, float(d.get("max_cps", 3.0)))
 	visual.set_locomotion(speed01, cps)
 	match state:
 		S.GROUND:

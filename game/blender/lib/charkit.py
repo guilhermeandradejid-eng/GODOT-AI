@@ -1,4 +1,4 @@
-"""charkit — kit de modelagem/rig/animação procedural para os heróis de SOPRO.
+"""charkit — kit de modelagem/rig/animação procedural para os heróis de YLVAAR.
 
 Tudo é construído por código (Blender 4.x, headless):
   * MeshBuilder: partes (elipsoides/superelipsoides, tubos ao longo de cadeias de

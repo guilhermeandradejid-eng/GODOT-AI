@@ -25,19 +25,26 @@ const DEFS := {
 		"spring_off": {"tail": ["surf", "glide", "launch", "spin", "ride", "double_jump"]},
 		"materials": {"glow": {"vertex_glow": 2.4, "rim_strength": 0.9}},
 		"aliases": {"swim": "fall", "sit": "idle", "flop": "spin", "brace": "ride"},
+		## passada medida nos clipes (metros por ciclo) para os pés não deslizarem
+		"walk_stride": 0.49, "run_stride": 1.0, "max_cps": 3.4,
 	},
 	"strong": {
 		"name": "Hulvar",
 		"model": "res://game/assets/characters/hulvar.glb",
-		"fallback": "res://game/assets/characters/caju.glb",
-		"base_lid": 0.3,
+		"fallback": "res://game/assets/characters/hulvar.glb",
+		"base_lid": 0.15,
 		"outline": 0.0032,
 		"outline_color": Color("141a3f"),
-		"eye": {"iris_inner": Color("3fe6d8"), "iris_outer": Color("1e8c93"), "pupil_color": Color("10233a"),
-			"lid_color": Color("343c96"), "iris_size": 0.42, "pupil_size": 0.2},
-		"springs": [],
+		"eye": {"sclera": Color("f8fbff"), "iris_inner": Color("3fe6d8"), "iris_outer": Color("1e8c93"),
+			"pupil_color": Color("10233a"), "lid_color": Color("343c96"), "iris_size": 0.55, "pupil_size": 0.24},
+		"springs": [
+			["chain_1", "anchor", 1.0, 0.22, 1.4, 0.06, 0.1, "anchor"],
+			["nest", "nest", 5.0, 0.45, 0.0, 0.05, 0.22, "nest"],
+		],
+		"spring_off": {"anchor": ["brace", "slam", "surf", "celebrate"], "nest": ["brace", "slam"]},
 		"materials": {},
 		"aliases": {"swim": "fall", "flop": "slam", "sit": "brace", "spin": "ram"},
+		"walk_stride": 0.62, "run_stride": 2.9, "max_cps": 2.6,
 	},
 }
 

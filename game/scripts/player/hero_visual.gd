@@ -26,6 +26,7 @@ var anim: AnimationPlayer
 var tree: AnimationTree
 var springs: SpringBoneSimulator3D
 var spring_groups := {}
+var _held := {}
 var eye_materials: Array[ShaderMaterial] = []
 var body_materials: Array[ShaderMaterial] = []
 var glyph_material: ShaderMaterial
@@ -167,9 +168,9 @@ func _setup_tree() -> void:
 	var bs := AnimationNodeBlendSpace1D.new()
 	bs.min_space = 0.0
 	bs.max_space = 1.0
-	bs.add_blend_point(_anim_node("idle"), 0.0)
-	bs.add_blend_point(_anim_node("walk", 1.0), 0.3)
-	bs.add_blend_point(_anim_node("run", 1.0), 1.0)
+	bs.add_blend_point(_anim_node("idle"), 0.0, -1, &"idle")
+	bs.add_blend_point(_anim_node("walk", 1.0), 0.3, -1, &"walk")
+	bs.add_blend_point(_anim_node("run", 1.0), 1.0, -1, &"run")
 	bt.add_node("loco", bs)
 	var ts := AnimationNodeTimeScale.new()
 	bt.add_node("loco_speed", ts)
@@ -272,14 +273,23 @@ func _setup_springs() -> void:
 			springs = sb
 
 
-## Liga/desliga grupos de molas conforme o estado de animação (HeroDefs "spring_off").
+## Liga/desliga grupos de molas conforme o estado de animação (HeroDefs "spring_off")
+## e os grupos segurados pelo jogo (ex.: o cesto firme com a parceira a bordo).
 func _update_spring_groups(s: String) -> void:
 	var off: Dictionary = def.get("spring_off", {})
 	for g in spring_groups:
-		var want := 0.0 if s in off.get(g, []) else 1.0
+		var want := 0.0 if s in off.get(g, []) or _held.has(g) else 1.0
 		var sb: SpringBoneSimulator3D = spring_groups[g]
 		if not is_equal_approx(sb.influence, want):
 			create_tween().tween_property(sb, "influence", want, 0.12)
+
+
+func hold_spring_group(g: String, hold: bool) -> void:
+	if hold:
+		_held[g] = true
+	else:
+		_held.erase(g)
+	_update_spring_groups(state)
 
 
 func set_springs_active(v: bool) -> void:
@@ -317,8 +327,10 @@ func _process(delta: float) -> void:
 			m.set_shader_parameter("flash", _flash)
 
 
-## Acende (ou apaga) o ponto do glifo da dupla.
+## Parceira a bordo: acende (ou apaga) o ponto do glifo da dupla e firma o cesto.
 func set_glyph(on: bool) -> void:
+	if spring_groups.has("nest"):
+		hold_spring_group("nest", on)
 	if glyph_material == null:
 		return
 	var from := float(glyph_material.get_shader_parameter("vertex_glow"))

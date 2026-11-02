@@ -5,7 +5,7 @@ extends Node3D
 ## persegue heróis próximos. Vence-se pulando em cima, com o Rodopio, o Aríete
 ## ou a Barrigada. Ao ser vencido se desfaz em brilho e solta centelhas.
 
-signal defeated(breu: Silente)
+signal defeated(who: Silente)
 
 const SHADER := preload("res://game/shaders/silente.gdshader")
 

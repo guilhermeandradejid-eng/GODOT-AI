@@ -1,6 +1,6 @@
 class_name GameHUD
 extends CanvasLayer
-## HUD minimalista (estilo Sky): contador de centelhas, 3 Pedras das Horas, pétalas de vida
+## HUD minimalista (estilo Sky): contador de centelhas, 3 Pedras das Horas, losangos de vida
 ## de cada herói, avisos que aparecem e somem, controles de toque e pausa.
 
 signal resume_requested

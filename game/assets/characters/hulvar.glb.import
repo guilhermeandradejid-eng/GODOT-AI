@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dqyga3xmtv7xe"
-path="res://.godot/imported/caju.glb-c3f216746f8195799b0ccc5834ba2e96.scn"
+uid="uid://c3572k5dwrwvm"
+path="res://.godot/imported/hulvar.glb-40439e1aba88efdae0a7f63a439b795a.scn"
 
 [deps]
 
-source_file="res://game/assets/characters/caju.glb"
-dest_files=["res://.godot/imported/caju.glb-c3f216746f8195799b0ccc5834ba2e96.scn"]
+source_file="res://game/assets/characters/hulvar.glb"
+dest_files=["res://.godot/imported/hulvar.glb-40439e1aba88efdae0a7f63a439b795a.scn"]
 
 [params]
 

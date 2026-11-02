@@ -59,7 +59,7 @@ func _run() -> void:
 	var sk := _vis.skeleton
 	if sk != null and sk.find_bone("head") >= 0:
 		head = (sk.global_transform * sk.get_bone_global_pose(sk.find_bone("head"))).origin + Vector3(0, 0.12, 0)
-	_cam.look_at_from_position(head + Vector3(0.28, 0.06, 1.0).normalized() * 1.05, head)
+	_cam.look_at_from_position(head + Vector3(0.28, 0.06, 1.0).normalized() * 1.28, head + Vector3(0.02, 0.02, 0))
 	for f in 4:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
