@@ -68,19 +68,19 @@ func _ready() -> void:
 
 
 func _enter_menu() -> void:
-	var tower: Node3D = null
+	var focus: Node3D = null
 	for i in 30:
 		await get_tree().process_frame
-		tower = find_child("TorreDoSino", true, false) as Node3D
-		if tower != null:
+		if content != null and content.get("menu_focus") != null:
+			focus = content.get("goal") if content.get("goal") != null else content.get("menu_focus")
 			break
 	if not menu_mode:
 		return
 	for h in Game.heroes:
 		h.set_state(Hero.S.CUTSCENE)
-	if tower != null:
+	if focus != null:
 		party.camera.yaw = 2.6
-		party.camera.start_cinematic(tower, 34.0, 13.0)
+		party.camera.start_cinematic(focus, 34.0, 13.0)
 
 
 ## Sai do menu e começa a jogar (transição suave da câmera, sem carregamento).

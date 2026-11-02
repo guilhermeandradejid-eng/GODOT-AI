@@ -8,7 +8,7 @@ extends Node3D
 const SAND_SHADER := preload("res://game/shaders/sand_terrain.gdshader")
 const CLOUD_NOISE := preload("res://addons/vibe_vfx/textures/cloud_noise.png")
 
-var recipe_path := "res://game/world/aurelith.json"
+var recipe_path := "res://game/world/world.json"
 var recipe: Dictionary
 var terrain: SandTerrain
 var trails: SandTrails

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gera o terreno contínuo do mundo (um só mapa de alturas) a partir da receita JSON.
 
-    python3 game/tools/gen_terrain.py [game/world/aurelith.json] [--preview]
+    python3 game/tools/gen_terrain.py [game/world/world.json] [--preview]
 
 Saída (ao lado da receita, em game/world/<nome>_terrain/):
     height.bin   float32 little-endian, resolution x resolution (linha = z), em metros
@@ -298,7 +298,7 @@ def _import_settings(path: Path) -> None:
 
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    recipe_path = Path(args[0]) if args else ROOT / "game" / "world" / "aurelith.json"
+    recipe_path = Path(args[0]) if args else ROOT / "game" / "world" / "world.json"
     recipe = json.loads(recipe_path.read_text())
     H, M, res, cell, size = build(recipe)
     out = recipe_path.parent / (recipe_path.stem + "_terrain")

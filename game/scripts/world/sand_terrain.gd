@@ -17,7 +17,7 @@ const GRID_LOW := 16                 ## celulares mais simples: 2 m perto da câ
 const LEAF_SIZE := 32.0              ## tamanho (m) do nó mais fino (1 m por vértice)
 const WORLD_SPAN := 8192.0           ## área coberta pela quadtree (inclui o horizonte)
 
-@export var data_dir := "res://game/world/aurelith_terrain"
+@export var data_dir := "res://game/world/world_terrain"
 @export var material: ShaderMaterial
 @export var lod_base_range := 56.0   ## raio do LOD mais fino (dobra a cada nível)
 @export var cast_shadows := true

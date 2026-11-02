@@ -168,13 +168,18 @@ def make_sfx():
     x = bandpass(noise(n), sr, 700, 5200) * exp_decay(n, sr, 0.025)
     x += 0.4 * lowpass(noise(n), sr, 400) * exp_decay(n, sr, 0.02)
     S["step"] = x
-    # jumps
-    x = sweep_sine(380, 980, 0.16, sr, 0.6) * env_adsr(int(0.16 * sr), sr, 0.004, 0.05, 0.6, 0.08)
-    w = bandpass(noise(int(0.2 * sr)), sr, 1500, 7000) * env_adsr(int(0.2 * sr), sr, 0.02, 0.05, 0.4, 0.12) * 0.3
-    S["jump_juba"] = np.concatenate([x, np.zeros(len(w) - len(x))]) + w
-    x = sweep_sine(170, 340, 0.2, sr, 0.7) * env_adsr(int(0.2 * sr), sr, 0.006, 0.06, 0.6, 0.1)
-    x += 0.4 * sweep_sine(340, 700, 0.2, sr, 0.7) * env_adsr(int(0.2 * sr), sr, 0.006, 0.06, 0.4, 0.1)
-    S["jump_caju"] = lowpass(x, sr, 2500)
+    # jumps: agile = airy whistle + fan "fwip"; strong = hollow ceramic thunk + short low hum
+    x = sweep_sine(620, 1500, 0.14, sr, 0.5) * env_adsr(int(0.14 * sr), sr, 0.003, 0.04, 0.55, 0.07)
+    w = bandpass(noise(int(0.16 * sr)), sr, 2500, 9000) * env_adsr(int(0.16 * sr), sr, 0.002, 0.03, 0.3, 0.1) * 0.45
+    S["jump_agile"] = np.concatenate([x, np.zeros(max(0, len(w) - len(x)))])[: max(len(x), len(w))] + np.pad(w, (0, max(0, len(x) - len(w))))
+    t = t_axis(0.26, sr)
+    f = 92 + 46 * (1 - np.exp(-t * 18))
+    x = np.zeros(len(t))
+    for h, a in ((1, 1.0), (2, 0.45), (3, 0.25), (5, 0.12)):
+        x += a * np.sin(2 * np.pi * np.cumsum(f * h) / sr)
+    x = lowpass(x * env_adsr(len(t), sr, 0.006, 0.06, 0.5, 0.12), sr, 1800)
+    x += 0.6 * bandpass(noise(len(t)), sr, 220, 900) * exp_decay(len(t), sr, 0.03)
+    S["jump_strong"] = x
     buf = np.zeros(int(0.6 * sr))
     for k, m in enumerate((84, 88, 91, 96)):
         place(buf, fm_bell(note_hz(m), 0.5, sr, ratio=2.0, index=1.2, tau=0.2), k * 0.04 * sr, 0.5)
@@ -201,11 +206,15 @@ def make_sfx():
     x += lowpass(noise(n), sr, 1500) * exp_decay(n, sr, 0.12) * 0.8
     x += bandpass(noise(n), sr, 2000, 6000) * exp_decay(n, sr, 0.3) * 0.2
     S["pound"] = x
-    # capybara chirps (call)
-    buf = np.zeros(int(0.5 * sr))
-    for k, (f0, f1) in enumerate(((1300, 1700), (1250, 1650))):
-        c = sweep_sine(f0, f1, 0.09, sr) * env_adsr(int(0.09 * sr), sr, 0.005, 0.03, 0.6, 0.04)
-        place(buf, c, k * 0.14 * sr, 0.6)
+    # the strong one calls its partner: two-note low foghorn hum
+    buf = np.zeros(int(1.0 * sr))
+    for k, m in enumerate((43, 47)):
+        t = t_axis(0.38, sr)
+        f = note_hz(m) * (1 + 0.004 * np.sin(2 * np.pi * 5 * t))
+        x = np.zeros(len(t))
+        for h, a in ((1, 1.0), (2, 0.6), (3, 0.35), (4, 0.18)):
+            x += a * np.sin(2 * np.pi * np.cumsum(f * h) / sr)
+        place(buf, lowpass(x * env_adsr(len(t), sr, 0.05, 0.08, 0.8, 0.15), sr, 1400), k * 0.42 * sr, 0.45)
     S["call"] = buf
     buf = np.zeros(int(0.5 * sr))
     for k, m in enumerate((76, 83)):
@@ -234,13 +243,15 @@ def make_sfx():
         blip = sweep_sine(f, f * 1.6, d, sr) * exp_decay(int(d * sr), sr, d * 0.4)
         place(x, blip * 0.25, rng.uniform(0.02, 0.4) * sr)
     S["splash"] = x
-    S["hurt_juba"] = sweep_sine(1300, 650, 0.22, sr, 0.8) * env_adsr(int(0.22 * sr), sr, 0.005, 0.05, 0.7, 0.1)
-    t = t_axis(0.3, sr)
-    f = 220 - 80 * t / 0.3
-    x = np.zeros(len(t))
-    for h, a in ((1, 1.0), (2, 0.5), (3, 0.35), (4, 0.2)):
-        x += a * np.sin(2 * np.pi * np.cumsum(f * h) / sr)
-    S["hurt_caju"] = lowpass(x * env_adsr(len(t), sr, 0.02, 0.05, 0.7, 0.12), sr, 1600)
+    S["hurt_agile"] = sweep_sine(1500, 640, 0.24, sr, 0.8) * env_adsr(int(0.24 * sr), sr, 0.004, 0.05, 0.7, 0.1)
+    buf = np.zeros(int(0.5 * sr))
+    for k, m in enumerate((45, 40)):
+        t = t_axis(0.2, sr)
+        x = np.zeros(len(t))
+        for h, a in ((1, 1.0), (2, 0.5), (3, 0.3), (4, 0.15)):
+            x += a * np.sin(2 * np.pi * note_hz(m) * h * t)
+        place(buf, lowpass(x * env_adsr(len(t), sr, 0.01, 0.04, 0.7, 0.08), sr, 1500), k * 0.16 * sr, 0.55)
+    S["hurt_strong"] = buf
     n = int(1.1 * sr)
     buf = np.zeros(n)
     for k, m in enumerate((72, 76, 79, 83, 86, 91)):
