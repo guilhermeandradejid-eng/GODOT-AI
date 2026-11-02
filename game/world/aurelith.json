@@ -1,0 +1,131 @@
+{
+ "terrain": {
+  "size": 1024,
+  "cell_size": 1.0,
+  "seed": 7,
+  "base": {
+   "height": 0,
+   "amplitude": 10,
+   "scale": 420
+  },
+  "dunes": [
+   {
+    "wavelength": 150,
+    "amplitude": 20,
+    "wind_deg": 25,
+    "warp": 0.9,
+    "stretch": 2.4
+   },
+   {
+    "wavelength": 55,
+    "amplitude": 5,
+    "wind_deg": 40,
+    "warp": 0.7,
+    "seed": 2,
+    "small_amplitude": 0
+   }
+  ],
+  "features": [
+   {
+    "type": "plateau",
+    "at": [
+     -220,
+     -180
+    ],
+    "radius": 90,
+    "height": 46,
+    "cliff": 24,
+    "talus": 6
+   },
+   {
+    "type": "canyon",
+    "points": [
+     [
+      -420,
+      120
+     ],
+     [
+      -260,
+      60
+     ],
+     [
+      -120,
+      110
+     ],
+     [
+      20,
+      40
+     ]
+    ],
+    "width": 34,
+    "depth": 22,
+    "wall": 14
+   },
+   {
+    "type": "basin",
+    "at": [
+     230,
+     -120
+    ],
+    "radius": 120,
+    "floor": -18
+   },
+   {
+    "type": "ramp",
+    "points": [
+     [
+      120,
+      300
+     ],
+     [
+      260,
+      200
+     ],
+     [
+      340,
+      60
+     ]
+    ],
+    "width": 30,
+    "heights": [
+     40,
+     4
+    ],
+    "curve": 1.2
+   },
+   {
+    "type": "flatten",
+    "at": [
+     0,
+     380
+    ],
+    "radius": 18,
+    "height": 6,
+    "packed": 0.5
+   },
+   {
+    "type": "glass",
+    "at": [
+     230,
+     -120
+    ],
+    "radius": 70
+   }
+  ],
+  "border": {
+   "width": 90,
+   "height": 34
+  }
+ },
+ "content": {
+  "spawn": [
+   120,
+   300
+  ],
+  "spawn_yaw": 125,
+  "menu_focus": [
+   0,
+   0
+  ]
+ }
+}

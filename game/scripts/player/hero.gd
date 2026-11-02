@@ -12,16 +12,18 @@ signal landed(impact: float)
 signal hurt_taken(petals_left: int)
 signal respawned
 
-enum S { GROUND, AIR, GLIDE, POUND, RIDE, LAUNCH, GRIND, SWIM, HURT, CUTSCENE }
+enum S { GROUND, AIR, GLIDE, POUND, RIDE, LAUNCH, GRIND, SWIM, HURT, CUTSCENE, SURF }
 
 const CONFIG := {
 	"juba": {"speed": 8.2, "accel": 46.0, "decel": 58.0, "air_accel": 22.0, "turn": 13.0, "jump": 11.6,
 		"jump2": 10.4, "gravity": 30.0, "fall_mult": 1.6, "low_jump": 2.1, "max_fall": 26.0,
 		"glide_fall": 2.3, "glide_speed": 9.2, "swim_speed": 3.6, "radius": 0.28, "height": 0.95,
+		"surf_max": 21.0, "surf_grip": 2.7,
 		"walk_v": 2.0, "run_v": 7.5},
 	"caju": {"speed": 7.0, "accel": 34.0, "decel": 46.0, "air_accel": 14.0, "turn": 9.0, "jump": 10.4,
 		"jump2": 0.0, "gravity": 32.0, "fall_mult": 1.7, "low_jump": 2.0, "max_fall": 30.0,
 		"pound_speed": 28.0, "swim_speed": 6.0, "radius": 0.4, "height": 0.85,
+		"surf_max": 18.5, "surf_grip": 1.9,
 		"walk_v": 1.8, "run_v": 6.5},
 }
 const LAYER_WORLD := 1
@@ -65,6 +67,7 @@ var _fall_speed := 0.0
 var _step_t := 0.0
 var _turn_rate := 0.0
 var _prev_facing := 0.0
+var _trail_prev := Vector3.ZERO
 var _water_q: PhysicsPointQueryParameters3D
 
 
@@ -123,10 +126,24 @@ func _physics_process(delta: float) -> void:
 		S.SWIM: _st_swim(delta)
 		S.HURT: _st_hurt(delta)
 		S.CUTSCENE: _st_cutscene(delta)
+		S.SURF: _st_surf(delta)
 	updraft = 0.0
 	if Game.level != null and global_position.y < Game.level.kill_y:
 		respawn()
+	_sand_trail()
 	_update_visual(delta)
+
+
+## Sulco contínuo na areia atrás do herói (fino andando, largo surfando).
+func _sand_trail() -> void:
+	var p := global_position
+	var grounded := (state == S.GROUND and is_on_floor()) or state == S.SURF
+	if grounded and _trail_prev.distance_squared_to(p) < 9.0 and _trail_prev.distance_squared_to(p) > 0.0004:
+		var big := hero_id != "juba"
+		var r := (0.55 if big else 0.4) if state == S.SURF else (0.26 if big else 0.17)
+		var st := 0.2 if state == S.SURF else (0.14 if big else 0.11)
+		get_tree().call_group(&"sand_trails", &"stroke", _trail_prev, p, r, st)
+	_trail_prev = p
 
 
 func wish_dir() -> Vector3:
@@ -137,6 +154,8 @@ func wish_dir() -> Vector3:
 func set_state(s: int) -> void:
 	if s == state:
 		return
+	if state == S.SURF:
+		Sfx.loop("surf", false)
 	if state == S.GLIDE:
 		_kite_target = 0.0
 	state = s
@@ -146,9 +165,20 @@ func set_state(s: int) -> void:
 
 
 # ------------------------------------------------------------------- ground
-func _horizontal(delta: float, accel: float, decel: float, speed: float, turn: float) -> void:
+func _horizontal(delta: float, accel: float, decel: float, speed: float, turn: float, keep_momentum := false) -> void:
 	var wish := wish_dir()
 	var hv := Vector2(velocity.x, velocity.z)
+	if keep_momentum and hv.length() > speed + 0.5:
+		# airborne after surfing: steer the momentum, let it decay slowly
+		var mag := maxf(speed, hv.length() - 3.0 * delta)
+		var dir := hv.normalized()
+		if wish.length() > 0.08:
+			dir = dir.slerp(Vector2(wish.x, wish.z).normalized(), clampf(1.6 * delta, 0.0, 1.0))
+		hv = dir * mag
+		velocity.x = hv.x
+		velocity.z = hv.y
+		facing = rotate_toward(facing, atan2(hv.x, hv.y), turn * delta)
+		return
 	var tv := Vector2(wish.x, wish.z) * speed
 	var a := accel if tv.length() > 0.05 else decel
 	# turning hard at speed costs momentum (skid) – reads as weight
@@ -185,6 +215,69 @@ func _st_ground(delta: float) -> void:
 		set_state(S.AIR)
 	else:
 		_footsteps(delta)
+		_maybe_surf()
+
+
+## Encosta de areia íngreme + descendo rápido = começa a surfar (como no Journey).
+func _maybe_surf() -> void:
+	var n := get_floor_normal()
+	if n.y > 0.96:
+		return
+	var downhill := Vector3(n.x, 0.0, n.z).normalized()
+	var hv := Vector3(velocity.x, 0.0, velocity.z)
+	var slope := rad_to_deg(acos(clampf(n.y, -1.0, 1.0)))
+	if (slope > 17.0 and hv.dot(downhill) > 3.6) or (slope > 27.0 and hv.dot(downhill) > 1.0):
+		set_state(S.SURF)
+		Sfx.play_at("surf_start", global_position, randf_range(0.95, 1.05))
+
+
+func _st_surf(delta: float) -> void:
+	action_t = maxf(0.0, action_t - delta)
+	var n := get_floor_normal() if is_on_floor() else Vector3.UP
+	var slope_sin := sqrt(maxf(0.0, 1.0 - n.y * n.y))
+	var downhill := Vector3(n.x, 0.0, n.z)
+	if downhill.length() > 0.001:
+		downhill = downhill.normalized()
+	var v := Vector3(velocity.x, 0.0, velocity.z)
+	v += downhill * cfg["gravity"] * slope_sin * 0.78 * delta
+	var wish := wish_dir()
+	if wish.length() > 0.1 and v.length() > 0.5:
+		var ang := v.normalized().signed_angle_to(wish.normalized(), Vector3.UP)
+		v = v.rotated(Vector3.UP, clampf(ang, -1.0, 1.0) * cfg["surf_grip"] * delta)
+		# carving into the turn bleeds a little speed (feels grounded)
+		v *= 1.0 - absf(clampf(ang, -1.0, 1.0)) * 0.25 * delta
+	var drag := 0.08 if slope_sin > 0.22 else 0.9
+	v *= 1.0 - drag * delta
+	v = v.limit_length(cfg["surf_max"])
+	velocity.x = v.x
+	velocity.z = v.z
+	velocity.y = -6.0
+	if v.length() > 0.5:
+		facing = rotate_toward(facing, atan2(v.x, v.z), 9.0 * delta)
+	if jump_buffer > 0.0:
+		var keep := v
+		_jump(cfg["jump"] * 1.05, "jump")
+		velocity.x = keep.x
+		velocity.z = keep.z
+		return
+	if intent.take("action"):
+		_action_ground()
+	_fall_speed = velocity.y
+	move_and_slide()
+	if not is_on_floor():
+		# launched off a crest: keep the momentum in the air
+		set_state(S.AIR)
+		visual.set_state("fall", 0.2)
+		return
+	var sp := v.length()
+	if sp < 4.0 and slope_sin < 0.3 or (sp < 2.5):
+		set_state(S.GROUND)
+		visual.set_state("loco", 0.25)
+		return
+	# sand spray, groove in the sand, sliding sound
+	if Engine.get_physics_frames() % 5 == 0:
+		Fx.burst("dust", global_position - v.normalized() * 0.4 + Vector3.UP * 0.1, Color(1.0, 0.86, 0.66, 0.5), 0.5 + sp / 20.0)
+	Sfx.loop("surf", true, global_position, -14.0 + sp * 0.4)
 
 
 func _footsteps(delta: float) -> void:
@@ -212,7 +305,7 @@ func _st_air(delta: float) -> void:
 		g *= 0.55
 	velocity.y = maxf(velocity.y - g * delta, -cfg["max_fall"])
 	velocity.y += updraft * delta * 0.35
-	_horizontal(delta, cfg["air_accel"], cfg["air_accel"] * 0.35, cfg["speed"], cfg["turn"] * 0.7)
+	_horizontal(delta, cfg["air_accel"], cfg["air_accel"] * 0.35, cfg["speed"], cfg["turn"] * 0.7, true)
 	if jump_buffer > 0.0:
 		if coyote > 0.0:
 			_jump(cfg["jump"], "jump")
@@ -707,6 +800,9 @@ func _update_visual(delta: float) -> void:
 	if state == S.GLIDE:
 		pitch = 0.18
 		roll *= 1.6
+	elif state == S.SURF:
+		pitch = -0.05
+		roll = clampf(-_turn_rate * hspeed * 0.04, -0.6, 0.6)
 	_lean = _lean.lerp(Vector2(pitch, roll), 1.0 - exp(-8.0 * delta))
 	visual.rotation = Vector3(_lean.x, facing, _lean.y)
 	# squash & stretch spring
@@ -752,6 +848,8 @@ func _update_visual(delta: float) -> void:
 				visual.set_state("ride")
 		S.SWIM:
 			visual.set_state("swim")
+		S.SURF:
+			visual.set_state("surf" if "surf" in HeroVisual.STATES.get(hero_id, []) else ("glide" if hero_id == "juba" else "fall"), 0.2)
 	if kite != null:
 		var ks := lerpf(kite.scale.x, _kite_target, 1.0 - exp(-14.0 * delta))
 		kite.scale = Vector3.ONE * maxf(ks, 0.001)

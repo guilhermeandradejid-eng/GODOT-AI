@@ -7,7 +7,7 @@ const SPAWN := Vector3(0, 3.2, 38)
 const SPAWN_YAW := PI          ## olhando para o norte (Grande Sino)
 
 var atmosphere: SoproAtmosphere
-var builder: SoproLevelBuilder
+var builder: WorldBuilder
 var content: Node3D
 var party: SoproParty
 var hud: SoproHUD
@@ -27,12 +27,12 @@ func _ready() -> void:
 	atmosphere = SoproAtmosphere.new()
 	atmosphere.name = "Atmosfera"
 	add_child(atmosphere)
-	builder = SoproLevelBuilder.new()
+	builder = WorldBuilder.new()
 	builder.name = "Mundo"
 	add_child(builder)
 	builder.build(atmosphere)
 	kill_y = builder.kill_y
-	var content_script := load("res://game/scripts/world/level_content.gd") as GDScript
+	var content_script := load("res://game/scripts/world/world_content.gd") as GDScript
 	if content_script != null:
 		content = content_script.new()
 		content.name = "Conteudo"
@@ -60,7 +60,7 @@ func _ready() -> void:
 	Game.quality_changed.connect(apply_quality)
 	apply_quality(Game.quality)
 	party.camera.snap_to_targets.call_deferred()
-	Sfx.music("lencois")
+	Sfx.music("explore")
 	if menu_mode:
 		_enter_menu.call_deferred()
 	elif not capture_mode:
@@ -141,11 +141,11 @@ func apply_quality(q: int) -> void:
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	postfx.set_quality(q)
 	Fx.set_quality(q)
+	builder.set_quality(q)
 	if content != null and content.has_method("set_quality"):
 		content.call("set_quality", q)
 
 
 func _process(_delta: float) -> void:
-	var cam := get_viewport().get_camera_3d()
-	if cam != null:
-		builder.follow_camera(cam.global_position)
+	if not Game.heroes.is_empty() and is_instance_valid(Game.heroes[0]):
+		builder.follow_player((Game.heroes[0] as Node3D).global_position)

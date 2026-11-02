@@ -93,7 +93,9 @@ func _run() -> void:
 		var safe := view.replace(">", "_").replace(",", "_")
 		var path := _out.path_join("%s.png" % safe)
 		img.save_png(path)
-		print("CAPTURE ", path)
+		var c := get_viewport().get_camera_3d()
+		print("CAPTURE ", path, "  cam ", c.global_position if c != null else Vector3.ZERO,
+			" -> ", (c.global_position - c.global_transform.basis.z * 10.0) if c != null else Vector3.ZERO)
 	get_tree().quit()
 
 
@@ -120,5 +122,7 @@ class _CaptureBot extends RefCounted:
 				intent.jump = true
 				if fmod(t, 3.0) < delta * 1.5 or fmod(t, 3.0) - 0.35 < delta * 1.5 and fmod(t, 3.0) > 0.35:
 					intent.press("jump")
+			"surf":
+				intent.move = Vector2(0.45 * sin(t * 0.9), -1.0)
 			"idle":
 				intent.move = Vector2.ZERO

@@ -8,9 +8,9 @@ const SKY_SHADER := preload("res://game/shaders/sky_lencois.gdshader")
 const CLOUD_NOISE := preload("res://addons/vibe_vfx/textures/cloud_noise.png")
 
 ## Direção PARA o sol (normalizada no _ready).
-@export var sun_direction := Vector3(-0.42, 0.27, -0.87)
-@export var sun_color := Color(1.0, 0.86, 0.70)
-@export var sun_energy := 1.05
+@export var sun_direction := Vector3(-0.45, 0.36, -0.82)
+@export var sun_color := Color(1.0, 0.80, 0.58)
+@export var sun_energy := 1.5
 
 var environment: Environment
 var world_env: WorldEnvironment
@@ -28,6 +28,13 @@ func _build() -> void:
 	sky_material = ShaderMaterial.new()
 	sky_material.shader = SKY_SHADER
 	sky_material.set_shader_parameter("cloud_noise", CLOUD_NOISE)
+	# desert at golden hour: teal-blue zenith, warm gold horizon, pink-violet clouds
+	sky_material.set_shader_parameter("zenith", Color(0.27, 0.45, 0.80))
+	sky_material.set_shader_parameter("upper", Color(0.52, 0.60, 0.90))
+	sky_material.set_shader_parameter("mid", Color(0.98, 0.72, 0.64))
+	sky_material.set_shader_parameter("horizon", Color(1.0, 0.86, 0.64))
+	sky_material.set_shader_parameter("below", Color(0.96, 0.76, 0.60))
+	sky_material.set_shader_parameter("cloud_shadow", Color(0.68, 0.56, 0.80))
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	sky.radiance_size = Sky.RADIANCE_SIZE_64
@@ -37,9 +44,9 @@ func _build() -> void:
 	e.background_mode = Environment.BG_SKY
 	e.sky = sky
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	e.ambient_light_sky_contribution = 0.55
-	e.ambient_light_color = Color(0.74, 0.76, 0.96)
-	e.ambient_light_energy = 0.75
+	e.ambient_light_sky_contribution = 0.35
+	e.ambient_light_color = Color(0.44, 0.50, 0.88)
+	e.ambient_light_energy = 0.7
 	e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	e.tonemap_mode = Environment.TONE_MAPPER_ACES
 	e.tonemap_exposure = 0.92
@@ -59,14 +66,14 @@ func _build() -> void:
 	# atmospheric depth: pastel fog with sun scattering + aerial perspective
 	e.fog_enabled = true
 	e.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	e.fog_light_color = Color(1.0, 0.86, 0.80)
+	e.fog_light_color = Color(1.0, 0.84, 0.70)
 	e.fog_light_energy = 1.0
-	e.fog_sun_scatter = 0.16
-	e.fog_density = 0.0022
-	e.fog_aerial_perspective = 0.3
+	e.fog_sun_scatter = 0.12
+	e.fog_density = 0.0011
+	e.fog_aerial_perspective = 0.28
 	e.fog_sky_affect = 0.0
 	e.fog_height = -14.0
-	e.fog_height_density = 0.02
+	e.fog_height_density = 0.0
 	e.adjustment_enabled = true
 	e.adjustment_brightness = 1.0
 	e.adjustment_contrast = 1.04

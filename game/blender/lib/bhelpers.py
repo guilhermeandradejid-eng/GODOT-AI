@@ -147,7 +147,11 @@ def export_glb(path: Path, objs, animations: bool = False, skins: bool = False) 
             export_reset_pose_bones=True,
         )
     bpy.ops.export_scene.gltf(**kw)
-    log("exported", path.relative_to(ROOT), f"{path.stat().st_size // 1024} KB")
+    try:
+        shown = path.relative_to(ROOT)
+    except ValueError:
+        shown = path
+    log("exported", shown, f"{path.stat().st_size // 1024} KB")
 
 
 def hemisphere_dirs(n: int):

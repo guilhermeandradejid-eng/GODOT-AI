@@ -5,9 +5,9 @@
     python3 game/tools/gen_audio.py --sfx      # só efeitos
 
 Efeitos  → game/assets/audio/sfx/*.wav  (mono 16-bit, 32 kHz)
-Músicas  → game/assets/audio/music/lencois.ogg (ambiente sonhador: pads, kalimba/harpa,
-           flauta suave, vento) e vento.ogg (final festivo em ritmo de baião:
-           zabumba, triângulo e "sanfona"), com loop sem emenda (cauda do reverb dobrada).
+Músicas  → game/assets/audio/music/explore.ogg (deserto ao entardecer: drone de cordas,
+           coro etéreo por formantes, harpa esparsa, flauta de vidro, vento) e finale.ogg
+           (o portal desperta: coro, sinos, arpejos de cordas), com loop sem emenda.
 """
 from __future__ import annotations
 
@@ -311,6 +311,22 @@ def make_sfx():
     for k, m in enumerate((76, 79, 83, 88, 91)):
         place(buf, fm_bell(note_hz(m), 0.8, sr, ratio=2.0, index=0.7, tau=0.3), k * 0.06 * sr, 0.3)
     S["reveal"] = buf
+    # sand surfing: start whoosh + seamless sliding loop (2 s)
+    n = int(0.6 * sr)
+    S["surf_start"] = bandpass(noise(n), sr, 300, 4500) * np.sin(np.pi * np.arange(n) / n) ** 0.7 * 0.9
+    n = int(2.0 * sr)
+    tt = np.arange(n) / sr
+    hiss = bandpass(noise(n), sr, 700, 6500) * (0.75 + 0.25 * np.sin(2 * np.pi * 3.0 * tt))
+    rumble = lowpass(noise(n), sr, 180) * 1.4
+    grains = np.zeros(n)
+    for k in range(120):
+        at = int(rng.uniform(0, n - 400))
+        g = bandpass(noise(300), sr, 2500, 9000) * np.hanning(300) * rng.uniform(0.2, 0.6)
+        grains[at:at + 300] += g
+    loop = hiss * 0.6 + rumble * 0.5 + grains
+    fade = int(0.08 * sr)
+    loop[:fade] = loop[:fade] * np.linspace(0, 1, fade) + loop[-fade:] * np.linspace(1, 0, fade)
+    S["surf"] = loop[:-fade]
     for name, x in S.items():
         write_wav(SFX / f"{name}.wav", normalize(np.asarray(x, dtype=float), 0.85), sr)
     print("sfx:", len(S))
@@ -342,172 +358,147 @@ def pan(sig, p):
     return sig * np.cos(a), sig * np.sin(a)
 
 
-def music_lencois(sr=44100):
-    bpm = 70.0
+def choir(m, dur, sr, vowel="a", vib=0.005):
+    """Ethereal choir 'aah': detuned saws through vowel formant band-passes."""
+    n = int(dur * sr)
+    tt = np.arange(n) / sr
+    f = note_hz(m)
+    x = np.zeros(n)
+    for det in (-0.006, -0.002, 0.003, 0.007):
+        ph = 2 * np.pi * f * (1 + det) * tt + vib * np.sin(2 * np.pi * 5.0 * tt + det * 900)
+        x += 2 * (ph / (2 * np.pi) % 1.0) - 1.0
+    forms = {"a": ((800, 1150, 2900), (1.0, 0.6, 0.25)), "o": ((500, 900, 2600), (1.0, 0.45, 0.18)),
+             "e": ((450, 1900, 2600), (1.0, 0.5, 0.2))}[vowel]
+    y = np.zeros(n)
+    for fc, g in zip(*forms):
+        y += bandpass(x, sr, fc * 0.82, fc * 1.18) * g
+    return y
+
+
+def bowed(m, dur, sr, bright=1800.0):
+    """Cello-like bowed tone: saw + lowpass, slow attack, vibrato that blooms."""
+    n = int(dur * sr)
+    tt = np.arange(n) / sr
+    vib = 1 + 0.004 * np.sin(2 * np.pi * 5.4 * tt) * np.minimum(1, tt / 0.6)
+    ph = 2 * np.pi * note_hz(m) * np.cumsum(vib) / sr
+    x = 2 * ((ph / (2 * np.pi)) % 1.0) - 1.0
+    x = lowpass(x, sr, bright)
+    return x * env_adsr(n, sr, 0.35, 0.3, 0.8, 0.6)
+
+
+def glass_flute(m, dur, sr):
+    n = int(dur * sr)
+    tt = np.arange(n) / sr
+    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.0 * tt) * np.minimum(1, tt / 0.5)
+    ph = 2 * np.pi * note_hz(m) * np.cumsum(vib) / sr
+    x = np.sin(ph) + 0.12 * np.sin(2 * ph) + 0.05 * np.sin(3 * ph)
+    x += 0.04 * lowpass(noise(n), sr, 2500)
+    return x * env_adsr(n, sr, 0.15, 0.25, 0.75, 0.4)
+
+
+def music_explore(sr=44100):
+    """Exploration theme: vast desert at dusk (D dorian/lydian colours)."""
+    bpm = 62.0
     beat = 60.0 / bpm
     bar = beat * 4
     bars = 16
     dur = bar * bars
-    # D lydian-ish progression (MIDI)
-    prog = [
-        [50, 57, 62, 64, 66, 69],      # Dmaj9
-        [47, 54, 59, 62, 64, 69],      # Bm11
-        [43, 50, 59, 61, 66, 69],      # Gmaj7(#11)
-        [45, 52, 57, 59, 64, 66],      # A6sus2
-    ]
-    penta = [62, 64, 66, 69, 71, 74, 76, 78, 81]
+    prog = [[38, 57, 62, 64, 69], [36, 55, 60, 64, 67], [43, 59, 62, 66, 71], [45, 57, 61, 64, 69]]
+    scale = [62, 64, 65, 67, 69, 71, 72, 74, 76]
 
     def voices(L, R, sr):
         for b in range(bars):
             ch = prog[b % 4]
             t0 = b * bar * sr
-            # pad: detuned soft voices with slow swell
-            n = int(bar * 1.6 * sr)
-            tt = np.arange(n) / sr
-            env = np.minimum(1, tt / 1.6) * np.exp(-np.maximum(0, tt - bar) / 0.9)
-            for k, m in enumerate(ch[1:]):
-                f = note_hz(m)
-                v = np.zeros(n)
-                for det in (-0.004, 0.0, 0.0045):
-                    v += np.sin(2 * np.pi * f * (1 + det) * tt + k)
-                    v += 0.25 * np.sin(2 * np.pi * 2 * f * (1 + det) * tt)
-                v = lowpass(v * env, sr, 1800) * 0.045
-                l, r = pan(v, (k - 2) * 0.3)
+            # low bowed drone on the root, breathing over two bars
+            if b % 2 == 0:
+                d = bowed(ch[0], bar * 2.2, sr, 900.0) * 0.10
+                place(L, d, t0)
+                place(R, d, t0)
+            # choir pad
+            for k, m in enumerate(ch[1:4]):
+                c = choir(m, bar * 1.3, sr, "a" if b % 4 < 2 else "o")
+                c *= env_adsr(len(c), sr, 1.2, 0.5, 0.8, 1.0) * 0.022
+                l, r = pan(c, (k - 1) * 0.5)
                 place(L, l, t0)
                 place(R, r, t0)
-            # bass
-            f = note_hz(ch[0] - 12)
-            v = np.sin(2 * np.pi * f * tt) * env * 0.12
-            place(L, v, t0)
-            place(R, v, t0)
-            # kalimba / harp arpeggio in 8ths with humanized timing and velocity
-            pattern = [0, 2, 4, 3, 5, 4, 2, 3]
+            # sparse harp arpeggio
             for s in range(8):
-                if rng.random() < 0.18 and s not in (0, 4):
+                if rng.random() < 0.35:
                     continue
-                m = ch[1 + pattern[s] % 5] + (12 if s in (4, 5) else 0)
-                at = t0 + (s * beat / 2 + rng.normal(0, 0.008)) * sr
-                vel = 0.12 + 0.05 * rng.random() + (0.04 if s % 4 == 0 else 0)
-                p = pluck(note_hz(m), 1.6, sr, tau=0.9, bright=0.9, harmonics=8) * vel
-                l, r = pan(p, rng.uniform(-0.5, 0.5))
+                m = ch[1 + (s * 3) % 4] + (12 if s >= 4 else 0)
+                at = t0 + (s * beat / 2 + rng.normal(0, 0.01)) * sr
+                p = pluck(note_hz(m), 2.0, sr, tau=1.1, bright=0.8, harmonics=7) * (0.07 + 0.04 * rng.random())
+                l, r = pan(p, rng.uniform(-0.6, 0.6))
                 place(L, l, at)
                 place(R, r, at)
-            # gentle flute melody on some bars (pentatonic phrases)
-            if b % 4 in (1, 2) and b >= 4:
+            # glass flute phrase every other bar from bar 4
+            if b >= 4 and b % 2 == 1:
                 for s in range(3):
-                    m = penta[rng.integers(2, len(penta))]
-                    d = beat * rng.choice([1.0, 1.5, 2.0])
-                    nn = int(d * sr)
-                    tt2 = np.arange(nn) / sr
-                    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.2 * tt2) * np.minimum(1, tt2 / 0.4)
-                    fl = np.sin(2 * np.pi * note_hz(m) * np.cumsum(vib) / sr) + 0.15 * np.sin(4 * np.pi * note_hz(m) * np.cumsum(vib) / sr)
-                    fl += 0.03 * lowpass(noise(nn), sr, 3000)
-                    fl *= env_adsr(nn, sr, 0.12, 0.2, 0.7, 0.3) * 0.07
-                    at = t0 + (s * beat * 1.3 + 0.5 * beat) * sr
-                    l, r = pan(fl, 0.15)
-                    place(L, l, at)
-                    place(R, r, at)
-            # sparkle chimes now and then
-            if rng.random() < 0.5:
-                m = penta[rng.integers(4, len(penta))] + 12
-                c = fm_bell(note_hz(m), 2.0, sr, ratio=2.76, index=1.0, tau=0.7) * 0.03
+                    m = scale[rng.integers(2, len(scale))]
+                    dd = beat * rng.choice([1.0, 1.5, 2.0])
+                    fl = glass_flute(m, dd, sr) * 0.06
+                    l, r = pan(fl, 0.2)
+                    place(L, l, t0 + (s * beat * 1.25 + 0.5 * beat) * sr)
+                    place(R, r, t0 + (s * beat * 1.25 + 0.5 * beat) * sr)
+            # glass bells shimmer
+            if rng.random() < 0.6:
+                m = scale[rng.integers(4, len(scale))] + 12
+                c = fm_bell(note_hz(m), 2.4, sr, ratio=3.5, index=0.9, tau=0.8) * 0.025
                 l, r = pan(c, rng.uniform(-0.8, 0.8))
                 at = t0 + rng.uniform(0, bar) * sr
                 place(L, l, at)
                 place(R, r, at)
-        # wind bed
         n = len(L)
         tt = np.arange(n) / sr
-        w = lowpass(noise(n), sr, 700) * (0.5 + 0.5 * np.sin(2 * np.pi * tt / 9.0)) * 0.05
+        w = lowpass(noise(n), sr, 600) * (0.5 + 0.5 * np.sin(2 * np.pi * tt / 11.0)) * 0.06
         L += w
-        R += np.roll(w, int(0.37 * sr))
+        R += np.roll(w, int(0.41 * sr))
 
-    l, r = render_loop(dur, sr, voices, tail=4.0, wet=0.38, ir_seconds=3.5)
+    l, r = render_loop(dur, sr, voices, tail=4.5, wet=0.42, ir_seconds=4.0)
     return l, r, sr
 
 
-def music_vento(sr=44100):
-    """Festive baião-inspired loop (zabumba, triângulo, sanfona)."""
-    bpm = 104.0
+def music_finale(sr=44100):
+    """Finale: the gate wakes up — choir swell, bells, string arpeggios (D major)."""
+    bpm = 76.0
     beat = 60.0 / bpm
-    bar = beat * 2          # 2/4
-    bars = 24
+    bar = beat * 4
+    bars = 12
     dur = bar * bars
-    prog = [[50, 54, 57], [50, 54, 57], [55, 59, 62], [57, 61, 64], [50, 54, 57], [47, 50, 54], [55, 59, 62], [57, 61, 64]]
-    melody = [74, 76, 78, 76, 74, 71, 69, 71, 74, 74, 76, 78, 81, 78, 76, 74,
-              71, 74, 76, 74, 71, 69, 66, 69, 71, 74, 71, 69, 67, 66, 64, 62]
-
-    def zabumba(sr):
-        n = int(0.35 * sr)
-        x = sweep_sine(95, 48, 0.35, sr) * exp_decay(n, sr, 0.12)
-        x += 0.25 * lowpass(noise(n), sr, 600) * exp_decay(n, sr, 0.03)
-        return x
-
-    def bacalhau(sr):    # high slap (rim)
-        n = int(0.08 * sr)
-        return bandpass(noise(n), sr, 1500, 5000) * exp_decay(n, sr, 0.015)
-
-    def triangle(sr, open_=True):
-        return fm_bell(2400, 0.6 if open_ else 0.1, sr, ratio=1.41, index=2.0, tau=0.3 if open_ else 0.03)
-
-    def accordion(m, d, sr):
-        nn = int(d * sr)
-        tt = np.arange(nn) / sr
-        f = note_hz(m)
-        vib = 1 + 0.004 * np.sin(2 * np.pi * 5.5 * tt)
-        ph = 2 * np.pi * f * np.cumsum(vib) / sr
-        x = np.zeros(nn)
-        for h, a in ((1, 1.0), (2, 0.6), (3, 0.45), (4, 0.3), (5, 0.2), (6, 0.12)):
-            x += a * np.sin(h * ph) + 0.6 * a * np.sin(h * ph * 1.003)
-        x = lowpass(x, sr, 3500)
-        return x * env_adsr(nn, sr, 0.02, 0.08, 0.75, 0.06)
+    prog = [[50, 62, 66, 69, 74], [47, 62, 66, 71, 74], [43, 62, 67, 71, 74], [45, 61, 64, 69, 73]]
 
     def voices(L, R, sr):
-        zb = zabumba(sr)
-        bc = bacalhau(sr)
-        tri_o = triangle(sr, True)
-        tri_c = triangle(sr, False)
         for b in range(bars):
+            ch = prog[b % 4]
             t0 = b * bar * sr
-            ch = prog[b % len(prog)]
-            # zabumba baião: dotted pattern (1, a, 2+)
-            for at, g in ((0.0, 0.5), (0.75, 0.35), (1.5, 0.45)):
-                place(L, zb * g, t0 + at * beat * sr)
-                place(R, zb * g, t0 + at * beat * sr)
-            place(L, bc * 0.25, t0 + 1.0 * beat * sr)
-            place(R, bc * 0.25, t0 + 1.0 * beat * sr)
-            # triângulo: 16ths, open on the off-beats
-            for s in range(8):
-                at = t0 + s * beat / 4 * sr
-                tr = tri_o * 0.06 if s % 2 == 1 else tri_c * 0.05
-                l, r = pan(tr, 0.5)
-                place(L, l, at)
-                place(R, r, at)
-            # bass (sanfona baixaria)
-            for at, m in ((0.0, ch[0] - 12), (0.75, ch[0] - 12 + 7), (1.5, ch[0] - 12)):
-                nn = int(beat * 0.7 * sr)
-                tt = np.arange(nn) / sr
-                bs = (np.sin(2 * np.pi * note_hz(m) * tt) + 0.3 * np.sin(4 * np.pi * note_hz(m) * tt)) * env_adsr(nn, sr, 0.01, 0.1, 0.6, 0.1) * 0.18
-                place(L, bs, t0 + at * beat * sr)
-                place(R, bs, t0 + at * beat * sr)
-            # chords stabs
-            for at in (0.5, 1.5):
-                for m in ch:
-                    st = accordion(m + 12, beat * 0.35, sr) * 0.035
-                    l, r = pan(st, -0.3)
-                    place(L, l, t0 + at * beat * sr)
-                    place(R, r, t0 + at * beat * sr)
-            # melody: 2 notes per bar, from bar 4
+            d = bowed(ch[0] - 12, bar * 1.1, sr, 1200.0) * 0.12
+            place(L, d, t0)
+            place(R, d, t0)
+            for k, m in enumerate(ch[1:]):
+                c = choir(m, bar * 1.2, sr, "a") * env_adsr(int(bar * 1.2 * sr), sr, 0.6, 0.4, 0.85, 0.8) * 0.02
+                l, r = pan(c, (k - 1.5) * 0.4)
+                place(L, l, t0)
+                place(R, r, t0)
+            for s in range(16):
+                m = ch[1 + s % 4] + (12 if s % 8 >= 4 else 0)
+                st = bowed(m, beat * 0.3, sr, 2600.0) * 0.035
+                l, r = pan(st, 0.3 if s % 2 else -0.3)
+                place(L, l, t0 + s * beat / 4 * sr)
+                place(R, r, t0 + s * beat / 4 * sr)
+            if b % 2 == 0:
+                for k, m in enumerate((ch[1] + 12, ch[2] + 12, ch[3] + 12)):
+                    c = fm_bell(note_hz(m), 3.0, sr, ratio=2.0, index=0.7, tau=1.0) * 0.05
+                    place(L, c, t0 + k * 0.08 * sr)
+                    place(R, c, t0 + k * 0.08 * sr)
             if b >= 4:
-                i = ((b - 4) * 2) % len(melody)
-                for k in range(2):
-                    m = melody[(i + k) % len(melody)]
-                    ac = accordion(m, beat * 0.95, sr) * 0.07
-                    l, r = pan(ac, 0.1)
-                    place(L, l, t0 + k * beat * sr)
-                    place(R, r, t0 + k * beat * sr)
+                mel = [74, 76, 78, 81, 79, 78, 76, 74][(b * 2) % 8: (b * 2) % 8 + 2]
+                for k, m in enumerate(mel):
+                    fl = glass_flute(m + 12, beat * 1.8, sr) * 0.05
+                    place(L, fl, t0 + k * beat * 2 * sr)
+                    place(R, fl, t0 + k * beat * 2 * sr)
 
-    l, r = render_loop(dur, sr, voices, tail=2.0, wet=0.22, ir_seconds=1.8)
+    l, r = render_loop(dur, sr, voices, tail=3.5, wet=0.35, ir_seconds=3.2)
     return l, r, sr
 
 
@@ -527,8 +518,8 @@ def main():
     a = ap.parse_args()
     make_sfx()
     if not a.sfx:
-        write_ogg("lencois", *music_lencois())
-        write_ogg("vento", *music_vento())
+        write_ogg("explore", *music_explore())
+        write_ogg("finale", *music_finale())
 
 
 if __name__ == "__main__":

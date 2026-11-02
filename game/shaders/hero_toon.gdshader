@@ -20,6 +20,8 @@ uniform float sheen = 0.18;
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float flash = 0.0;          // hit flash / power-up glow
 uniform vec3 flash_color : source_color = vec3(1.0, 0.95, 0.85);
+uniform float vertex_glow = 2.2;   // vertex alpha < 1 marks glowing paint (sdfkit: alpha = 1 - emission)
+uniform float glow_pulse = 0.0;
 
 void fragment() {
 	vec3 base = COLOR.rgb * tint;
@@ -30,7 +32,8 @@ void fragment() {
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
-	EMISSION = emission_color + flash_color * flash * (0.4 + fres);
+	float vglow = (1.0 - COLOR.a) * vertex_glow * (1.0 + glow_pulse * sin(TIME * 3.0) * 0.35);
+	EMISSION = emission_color + flash_color * flash * (0.4 + fres) + base * vglow;
 }
 
 void light() {

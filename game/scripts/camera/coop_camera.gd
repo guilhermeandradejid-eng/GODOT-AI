@@ -16,6 +16,7 @@ var distance := 4.9
 var cam: Camera3D
 var _pivot := Vector3.ZERO
 var _ground_y := 0.0
+var _lift := 0.0
 var _look_idle := 10.0
 var _trauma := 0.0
 var _shake_t := 0.0
@@ -136,12 +137,31 @@ func _place(_w: float, delta: float) -> void:
 	var look_at_pos := _pivot + Vector3.UP * 0.95
 	var dir := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch) * Vector3(0, 0, 1)
 	var desired := look_at_pos + dir * _cur_dist
+	# continuous terrain: rise over dunes between the camera and the heroes
+	# (instead of being pulled into the slope behind them)
+	var lift := 0.0
+	var terrain = Game.level.get("builder").terrain if Game.level != null and Game.level.get("builder") != null else null
+	if terrain != null:
+		look_at_pos.y = maxf(look_at_pos.y, terrain.height_at(look_at_pos.x, look_at_pos.z) + 0.6)
+		desired = look_at_pos + dir * _cur_dist
+		for i in range(1, 6):
+			var t := i / 5.0
+			var p: Vector3 = look_at_pos.lerp(desired, t)
+			var need: float = terrain.height_at(p.x, p.z) + 1.1 - p.y
+			if need > 0.0:
+				lift = maxf(lift, need / t)
+	lift = minf(lift, 9.0)
+	_lift = lerpf(_lift, lift, 1.0 - exp(-(10.0 if lift > _lift else 2.5) * delta))
+	desired.y += _lift
 	# keep the camera out of the ground / cliffs
 	var space := get_world_3d().direct_space_state
 	var q := PhysicsRayQueryParameters3D.create(look_at_pos, desired, LAYER_WORLD)
 	var hit := space.intersect_ray(q)
 	if not hit.is_empty():
 		desired = hit["position"] + (hit["normal"] as Vector3) * 0.35
+	if terrain != null:
+		# hard floor: never below the sand, whatever the smoothing is doing
+		desired.y = maxf(desired.y, terrain.height_at(desired.x, desired.z) + 0.7)
 	# shake
 	_trauma = maxf(0.0, _trauma - delta * 1.6)
 	_shake_t += delta * 30.0

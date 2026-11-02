@@ -8,7 +8,7 @@ const SFX_DIR := "res://game/assets/audio/sfx"
 const SFX_NAMES := ["bell", "bounce", "bump", "call", "checkpoint", "chime", "enemy_poof", "flower_load",
 	"gate_open", "grind_start", "hurt_caju", "hurt_juba", "join", "jump2", "jump_caju", "jump_juba", "land",
 	"launch", "lume", "mount", "plate_off", "plate_on", "portal", "pound", "respawn", "reveal", "seed", "spin",
-	"splash", "step", "superjump", "swap", "ui_click", "whoosh"]
+	"splash", "step", "superjump", "surf", "surf_start", "swap", "ui_click", "whoosh"]
 const MUSIC_DIR := "res://game/assets/audio/music"
 ## Pentatônica maior de Dó (C D E G A) em duas oitavas, como razão de pitch.
 const PENTA := [1.0, 1.1225, 1.2599, 1.4983, 1.6818, 2.0, 2.2449, 2.5198]
