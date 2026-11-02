@@ -65,11 +65,9 @@ func ground(x: float, z: float) -> Vector3:
 
 func set_quality(q: int) -> void:
 	if terrain != null:
-		terrain.lod_base_range = [40.0, 52.0, 64.0][clampi(q, 0, 2)]
-		terrain.cast_shadows = q > 0
-		for mi in terrain.get_children():
-			if mi is MultiMeshInstance3D:
-				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if q > 0 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		q = clampi(q, 0, 2)
+		terrain.configure([SandTerrain.GRID_LOW, SandTerrain.GRID_LOW, SandTerrain.GRID_HIGH][q], q > 0,
+			[48.0, 56.0, 56.0][q])
 
 
 ## Faixas de areia levadas pelo vento perto da câmera (cristas "fumegando").

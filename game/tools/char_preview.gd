@@ -3,9 +3,9 @@ extends Node3D
 ## modelagem, materiais e animações sem abrir o editor.
 ##
 ##   xvfb-run -a godot --path . --rendering-method mobile res://game/tools/char_preview.tscn -- \
-##       --hero juba --anims idle,run,glide --out /tmp/prev [--frames 6] [--cell 256] [--turntable]
+##       --hero agile --anims idle,run,glide --out /tmp/prev [--frames 6] [--cell 256] [--turntable]
 
-var _hero := "juba"
+var _hero := "agile"
 var _anims: Array = []
 var _out := "user://prev"
 var _frames := 6
@@ -47,11 +47,11 @@ func _ready() -> void:
 	_cam = Camera3D.new()
 	_cam.fov = 35.0
 	add_child(_cam)
-	var target := Vector3(0, 0.5, 0) if _hero == "juba" else Vector3(0, 0.45, -0.1)
-	var dist := 3.0 if _hero == "juba" else 3.6
+	var target := Vector3(0, 0.5, 0) if _hero == "agile" else Vector3(0, 0.45, -0.1)
+	var dist := 3.0 if _hero == "agile" else 3.6
 	if _closeup:
-		target = Vector3(0, 0.8, 0) if _hero == "juba" else Vector3(0, 0.6, 0.5)
-		dist = 1.1 if _hero == "juba" else 1.4
+		target = Vector3(0, 0.8, 0) if _hero == "agile" else Vector3(0, 0.6, 0.5)
+		dist = 1.1 if _hero == "agile" else 1.4
 	var dirv := Vector3(0.9, 0.35, 1.0) if not _closeup else Vector3(0.45, 0.15, 1.0)
 	_cam.look_at_from_position(target + dirv.normalized() * dist, target)
 	_cam.make_current()

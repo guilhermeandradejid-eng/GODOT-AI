@@ -29,7 +29,7 @@ var vibration := true
 var music_volume := 0.8
 var sfx_volume := 1.0
 var level: Node = null              ## SoproLevel atual
-var heroes: Array = []              ## Hero nodes (juba, caju)
+var heroes: Array = []              ## Hero nodes (agile, strong)
 var checkpoint := Vector3(0, 4, 38)
 var net_peer_hero := ""             ## herói controlado por este peer na rede
 

@@ -60,7 +60,7 @@ func _ready() -> void:
 	hp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hp.add_theme_constant_override("separation", 6)
 	_root.add_child(hp)
-	for id in ["juba", "caju"]:
+	for id in ["agile", "strong"]:
 		var p := _Petals.new()
 		p.hero_id = id
 		p.custom_minimum_size = Vector2(150, 30)
@@ -96,9 +96,9 @@ func _ready() -> void:
 
 func bind(p: SoproParty) -> void:
 	party = p
-	p.controlled_changed.connect(func(h: Hero): _who.text = "Você: " + ("Juba" if h.hero_id == "juba" else "Caju"))
-	_who.text = "Você: Juba"
-	for h in [p.juba, p.caju]:
+	p.controlled_changed.connect(func(h: Hero): _who.text = "Você: " + HeroDefs.display_name(h.hero_id))
+	_who.text = "Você: " + HeroDefs.display_name("agile")
+	for h in [p.agile, p.strong]:
 		h.hurt_taken.connect(func(_n): (_petals[h.hero_id] as _Petals).queue_redraw())
 		h.respawned.connect(func(): (_petals[h.hero_id] as _Petals).queue_redraw())
 		(_petals[h.hero_id] as _Petals).hero = h
@@ -259,10 +259,10 @@ class _SeedSlot extends Control:
 
 
 class _Petals extends Control:
-	var hero_id := "juba"
+	var hero_id := "agile"
 	var hero: Node = null
 	func _draw() -> void:
-		var col := Color(1.0, 0.62, 0.2) if hero_id == "juba" else Color(0.72, 0.48, 0.3)
+		var col := Color(1.0, 0.62, 0.2) if hero_id == "agile" else Color(0.72, 0.48, 0.3)
 		draw_circle(Vector2(14, 15), 12, col)
 		draw_arc(Vector2(14, 15), 12, 0, TAU, 32, Color(1, 1, 1, 0.9), 2.5, true)
 		var n: int = hero.petals if hero != null else 3

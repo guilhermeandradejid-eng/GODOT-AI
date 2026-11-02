@@ -43,7 +43,7 @@ func _run(main: Node) -> void:
 	await _shot("hud")
 	await _stats("play_spawn")
 	var level = main.get("level")
-	var h: Hero = level.party.juba
+	var h: Hero = level.party.agile
 	h.teleport(Vector3(4, 5, 4), PI)
 	for i in 40:
 		await get_tree().process_frame

@@ -120,10 +120,50 @@ class Prim:
         a, b = self.fn, o.fn
         return Prim(lambda P: smax(a(P), b(P), k), np.maximum(self.lo, o.lo), np.minimum(self.hi, o.hi))
 
+    def displace(self, amplitude: float, freq: float, octaves: int = 3, seed: int = 0) -> "Prim":
+        """Superfície erodida/orgânica: soma ruído fbm à distância (pedras, ruínas)."""
+        fn = self.fn
+        return Prim(lambda P: fn(P) + fbm3(P, freq, octaves, seed) * amplitude,
+                    self.lo - amplitude, self.hi + amplitude)
+
     def warp(self, fn_warp) -> "Prim":
         """Deforma o espaço: d(P) = sdf(fn_warp(P)). Use com moderação (não-Lipschitz)."""
         fn = self.fn
         return Prim(lambda P: fn(fn_warp(P)), self.lo, self.hi)
+
+
+def _hash3(ix, iy, iz, seed):
+    h = (ix * 374761393 + iy * 668265263 + iz * 2147483647 + seed * 144665) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    return ((h ^ (h >> 16)) & 0xFFFF) / 65535.0
+
+
+def value_noise(P: np.ndarray, freq: float, seed: int = 0) -> np.ndarray:
+    """Ruído de valor 3D suave em [-1, 1] (interpolação quíntica)."""
+    Q = P * freq
+    i = np.floor(Q).astype(np.int64)
+    f = Q - i
+    u = f * f * f * (f * (f * 6 - 15) + 10)
+    out = np.zeros(len(P))
+    for dx in (0, 1):
+        wx = u[:, 0] if dx else 1 - u[:, 0]
+        for dy in (0, 1):
+            wy = u[:, 1] if dy else 1 - u[:, 1]
+            for dz in (0, 1):
+                wz = u[:, 2] if dz else 1 - u[:, 2]
+                out += wx * wy * wz * _hash3(i[:, 0] + dx, i[:, 1] + dy, i[:, 2] + dz, seed)
+    return out * 2.0 - 1.0
+
+
+def fbm3(P: np.ndarray, freq: float, octaves: int = 3, seed: int = 0) -> np.ndarray:
+    out = np.zeros(len(P))
+    amp = 1.0
+    tot = 0.0
+    for o in range(octaves):
+        out += value_noise(P, freq * (2.0 ** o), seed + o * 17) * amp
+        tot += amp
+        amp *= 0.5
+    return out / tot
 
 
 def _local(P, c, R):
@@ -287,6 +327,31 @@ def bezier_points(p0, p1, p2, p3=None, n: int = 8) -> list:
             q3 = _v(p3)
             out.append((1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t * t * p2 + t ** 3 * q3)
     return out
+
+
+def blade(points, radii, flat: float = 0.25, normal=(0.0, 0.0, 1.0), k: float = 0.0) -> Prim:
+    """Lâmina lisa (pena, folha, pétala, aba de tecido): um tubo afunilado ao longo
+    da polilinha, achatado na direção `normal` (espessura = largura * flat).
+    Segmentos unidos suavemente: pontas redondas, sem degraus."""
+    n = _v(normal)
+    n = n / np.linalg.norm(n)
+    pts = [_v(p) for p in points]
+    rs = list(radii) if hasattr(radii, "__len__") else [radii] * len(pts)
+    stretch = 1.0 / max(flat, 0.02) - 1.0
+    c0 = pts[0]
+
+    def to_space(P):
+        # stretch the normal axis so a round tube becomes a flat blade in world space
+        along = (P - c0) @ n
+        return P + np.outer(along * stretch, n)
+    sp = [p + n * (((p - c0) @ n) * stretch) for p in pts]
+    tub = tube(sp, rs, k)
+
+    def f(P):
+        return tub(to_space(P)) * flat
+    lo = np.min(pts, axis=0) - max(rs)
+    hi = np.max(pts, axis=0) + max(rs)
+    return Prim(f, lo, hi)
 
 
 def ribbon(points, widths, thickness: float, up=(0.0, 0.0, 1.0)) -> Prim:
@@ -674,6 +739,11 @@ def build_object(shape: Shape, rig_bones: list[str], log=print, decimate: bool =
     me.loops.foreach_get("vertex_index", li)
     uv = np.stack([Vd[li, 0] * 0.5 + 0.5, Vd[li, 2] * 0.5], axis=1).astype(np.float32)
     uvl.data.foreach_set("uv", uv.ravel())
+    if not rig_bones:
+        for p in me.polygons:
+            p.use_smooth = True
+        log(f"  {shape.name}: final {len(me.vertices)} verts, {sum(len(p.vertices) - 2 for p in me.polygons)} tris")
+        return obj
     # skin weights
     W = shape.weights_at(Vd)
     groups = {b: obj.vertex_groups.new(name=b) for b in rig_bones}

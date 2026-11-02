@@ -14,6 +14,7 @@ var _views: Array = ["front", "q34", "side", "back", "close"]
 var _anim := ""
 var _t := 0.0
 var _cell := 384
+var _props := false
 var _model: Node3D
 var _cam: Camera3D
 
@@ -29,6 +30,7 @@ func _ready() -> void:
 			"--anim": _anim = args[i + 1]; i += 1
 			"--t": _t = float(args[i + 1]); i += 1
 			"--cell": _cell = int(args[i + 1]); i += 1
+			"--props": _props = true
 		i += 1
 	DirAccess.make_dir_recursive_absolute(_out)
 	var atmo := SoproAtmosphere.new()
@@ -52,7 +54,13 @@ func _ready() -> void:
 		return
 	_model = doc.generate_scene(state)
 	add_child(_model)
-	apply_materials(_model)
+	if _props:
+		for mi in PropLib.meshes(_model):
+			for si in mi.mesh.get_surface_count():
+				var src := mi.mesh.surface_get_material(si)
+				mi.set_surface_override_material(si, PropLib.shared_material(src.resource_name if src != null else "stone"))
+	else:
+		apply_materials(_model)
 	_cam = Camera3D.new()
 	_cam.fov = 30.0
 	add_child(_cam)

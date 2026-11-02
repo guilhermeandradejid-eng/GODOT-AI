@@ -41,8 +41,10 @@ VERSION_NAME = "0.1.0"
 VERSION_CODE = 1
 EXTRA_RESOURCES = [
     "res://addons/vibe_vfx/textures/cloud_noise.png",
-    "res://addons/vibe_terrain/textures/water_normal.png",
+    "res://addons/vibe_vfx/textures/soft_circle.webp",
 ]
+# raw terrain data read with FileAccess (not Godot resources): shipped via include_filter
+INCLUDE_FILTER = "game/world/*_terrain/*.bin, game/world/*_terrain/*.json"
 GAME_EXT = {".tscn", ".gd", ".gdshader", ".glb", ".png", ".wav", ".ogg", ".ttf", ".json", ".tres", ".res"}
 
 
@@ -100,7 +102,7 @@ def write_preset(release: bool) -> None:
     base = {
         "name": q(PRESET_NAME), "platform": q("Android"), "runnable": "true", "advanced_options": "false",
         "dedicated_server": "false", "custom_features": q(""), "export_filter": q("resources"),
-        "export_files": f"PackedStringArray({files})", "include_filter": q(""),
+        "export_files": f"PackedStringArray({files})", "include_filter": q(INCLUDE_FILTER),
         "exclude_filter": q("game/blender/*, game/tools/*"), "export_path": q("build/sopro-debug.apk"),
         "patches": "PackedStringArray()", "encryption_include_filters": q(""),
         "encryption_exclude_filters": q(""), "seed": "0", "encrypt_pck": "false",
@@ -162,7 +164,7 @@ def write_linux_check_preset() -> None:
     files = ", ".join(f'"{f}"' for f in game_resources())
     for k, v in {"name": '"SoproLinuxCheck"', "platform": '"Linux"', "runnable": "false",
                  "export_filter": '"resources"', "export_files": f"PackedStringArray({files})",
-                 "include_filter": '""', "exclude_filter": '"game/blender/*, game/tools/*"',
+                 "include_filter": f'"{INCLUDE_FILTER}"', "exclude_filter": '"game/blender/*, game/tools/*"',
                  "export_path": '"build/selftest/sopro.x86_64"'}.items():
         cfg.set(sec, k, v)
     for k, v in {"binary_format/embed_pck": "true", "binary_format/architecture": '"x86_64"',

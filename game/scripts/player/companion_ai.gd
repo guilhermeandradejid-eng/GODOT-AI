@@ -1,7 +1,7 @@
 class_name CompanionAI
 extends RefCounted
 ## Companheiro controlado pela IA (quando só há um jogador). Segue o líder sem
-## grudar, pula obstáculos e buracos, plana (Juba), sobe na carona quando
+## grudar, pula obstáculos e buracos, plana (ágil), sobe na carona quando
 ## chamado, ocupa a placa de pressão livre quando o líder está na outra e, se
 ## ficar para trás ou cair, reaparece perto do líder como um rastro de luz.
 
@@ -67,8 +67,8 @@ func poll(intent: PlayerInput, me: Hero, delta: float) -> void:
 			intent.jump = true
 			_jump_cd = 0.6
 	if me.state in [Hero.S.AIR, Hero.S.GLIDE]:
-		intent.jump = me.velocity.y > 0.0 or (me.hero_id == "juba" and me.global_position.y > target.y + 0.5 and dist > 3.0)
-		if me.hero_id == "juba" and me.state == Hero.S.AIR and me.velocity.y < -2.0 and dist > 3.0 and me.air_jumps > 0:
+		intent.jump = me.velocity.y > 0.0 or (me.hero_id == "agile" and me.global_position.y > target.y + 0.5 and dist > 3.0)
+		if me.hero_id == "agile" and me.state == Hero.S.AIR and me.velocity.y < -2.0 and dist > 3.0 and me.air_jumps > 0:
 			intent.press("jump")
 	# stuck detection
 	if intent.move.length() > 0.3:
@@ -79,8 +79,8 @@ func poll(intent: PlayerInput, me: Hero, delta: float) -> void:
 		if _stuck_t > 1.6:
 			_warp(me)
 	_last_pos = me.global_position
-	# idle juba hops on caju if the leader is caju and standing still for a while
-	if me.hero_id == "juba" and leader.hero_id == "caju" and leader.rider == null and _idle_t > 6.0 \
+	# idle agile hops on strong if the leader is strong and standing still for a while
+	if me.hero_id == "agile" and leader.hero_id == "strong" and leader.rider == null and _idle_t > 6.0 \
 			and leader.velocity.length() < 0.2 and dist < 2.6:
 		_idle_t = 0.0
 		me.mount_on(leader)

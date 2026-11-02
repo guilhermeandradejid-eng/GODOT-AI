@@ -1,26 +1,22 @@
 class_name HeroVisual
 extends Node3D
-## Modelo animado de um herói (GLB do Blender) + materiais toon, olhos que piscam,
-## física secundária (rabo, cachecol, orelhas, caju) e uma AnimationTree com
-## locomoção sincronizada (idle/walk/run) e estados com crossfade.
+## Modelo animado de um herói (GLB gerado no Blender) com materiais toon pelos
+## nomes vindos do Blender (skin, cloth, stone, metal, glow, eye), olhos
+## procedurais que piscam, física secundária (SpringBoneSimulator3D) e uma
+## AnimationTree com locomoção sincronizada (idle/walk/run) e estados com
+## crossfade. Tudo o que muda de uma personagem para outra vem de HeroDefs.
 
 const TOON := preload("res://game/shaders/hero_toon.gdshader")
 const OUTLINE := preload("res://game/shaders/hero_outline.gdshader")
 const EYE := preload("res://game/shaders/hero_eye.gdshader")
-const CHITA := preload("res://game/assets/textures/chita.png")
 
-const MODELS := {
-	"juba": preload("res://game/assets/characters/juba.glb"),
-	"caju": preload("res://game/assets/characters/caju.glb"),
-}
-const LOOPS := ["idle", "walk", "run", "fall", "glide", "ride", "swim", "sit"]
-const STATES := {
-	"juba": ["loco", "jump", "fall", "land", "double_jump", "glide", "spin", "ride", "celebrate", "hurt", "swim"],
-	"caju": ["loco", "jump", "fall", "land", "flop", "swim", "sit", "hurt"],
-}
+## Animações em laço; as demais tocam uma vez.
+const LOOPS := ["idle", "walk", "run", "fall", "glide", "ride", "swim", "sit", "surf", "launch", "brace"]
+const LOCO := ["idle", "walk", "run"]
 
-@export var hero := "juba"
+@export var hero := "agile"
 
+var def: Dictionary
 var model: Node3D
 var skeleton: Skeleton3D
 var mesh: MeshInstance3D
@@ -28,7 +24,8 @@ var anim: AnimationPlayer
 var tree: AnimationTree
 var springs: SpringBoneSimulator3D
 var eye_materials: Array[ShaderMaterial] = []
-var fur_material: ShaderMaterial
+var body_materials: Array[ShaderMaterial] = []
+var states: Array[String] = ["loco"]
 var state := "loco"
 var base_lid := 0.06
 var _blink_t := 2.0
@@ -38,12 +35,17 @@ var _expression_happy := 0.0
 
 
 func _ready() -> void:
-	model = MODELS[hero].instantiate()
+	def = HeroDefs.def_of(hero)
+	var path: String = def.get("model", "")
+	if not ResourceLoader.exists(path):
+		path = def.get("fallback", "")
+	var scene := load(path) as PackedScene
+	model = scene.instantiate()
 	add_child(model)
 	skeleton = _find(model, "Skeleton3D") as Skeleton3D
 	mesh = _find(model, "MeshInstance3D") as MeshInstance3D
 	anim = _find(model, "AnimationPlayer") as AnimationPlayer
-	base_lid = 0.06 if hero == "juba" else 0.4
+	base_lid = float(def.get("base_lid", 0.06))
 	_setup_materials()
 	_setup_loops()
 	_setup_tree()
@@ -66,42 +68,55 @@ func _setup_materials() -> void:
 		return
 	var outline := ShaderMaterial.new()
 	outline.shader = OUTLINE
-	outline.set_shader_parameter("width", 0.0026 if hero == "juba" else 0.0032)
+	outline.set_shader_parameter("width", float(def.get("outline", 0.003)))
+	if def.has("outline_color"):
+		outline.set_shader_parameter("outline_color", def["outline_color"])
+	var overrides: Dictionary = def.get("materials", {})
 	var m := mesh.mesh
 	for i in m.get_surface_count():
 		var src := m.surface_get_material(i)
 		var mname := src.resource_name if src != null else ""
 		var mat := ShaderMaterial.new()
-		match mname:
+		var base := mname.get_slice(".", 0)
+		match base:
 			"eye":
 				mat.shader = EYE
-				if hero == "caju":
-					mat.set_shader_parameter("iris_outer", Color(0.12, 0.07, 0.05))
-					mat.set_shader_parameter("iris_inner", Color(0.45, 0.28, 0.16))
-					mat.set_shader_parameter("lid_color", Color(0.47, 0.28, 0.18))
-					mat.set_shader_parameter("iris_size", 0.4)
-					mat.set_shader_parameter("pupil_size", 0.2)
+				for k in def.get("eye", {}):
+					mat.set_shader_parameter(k, def["eye"][k])
 				eye_materials.append(mat)
-			"chita":
+			"glow":
 				mat.shader = TOON
-				mat.set_shader_parameter("use_texture", true)
-				mat.set_shader_parameter("albedo_tex", CHITA)
-				mat.set_shader_parameter("sheen", 0.05)
+				mat.set_shader_parameter("vertex_glow", 2.6)
+				mat.set_shader_parameter("rim_strength", 0.4)
+				mat.set_shader_parameter("emission_color", Color(0.05, 0.12, 0.12))
+				body_materials.append(mat)
+			"metal":
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 0.65)
+				mat.set_shader_parameter("rim_strength", 1.15)
+				mat.set_shader_parameter("sss_strength", 0.05)
 				mat.next_pass = outline
-			"mane":
+				body_materials.append(mat)
+			"stone":
 				mat.shader = TOON
-				mat.set_shader_parameter("rim_strength", 1.2)
-				mat.set_shader_parameter("sheen", 0.3)
-				mat.set_shader_parameter("sss_strength", 0.5)
+				mat.set_shader_parameter("sheen", 0.12)
+				mat.set_shader_parameter("sss_strength", 0.08)
+				mat.set_shader_parameter("rim_strength", 0.95)
+				mat.next_pass = outline
+				body_materials.append(mat)
 			"cloth":
 				mat.shader = TOON
 				mat.set_shader_parameter("sss_strength", 0.15)
 				mat.set_shader_parameter("rim_strength", 0.7)
+				mat.set_shader_parameter("sheen", 0.08)
 				mat.next_pass = outline
+				body_materials.append(mat)
 			_:
 				mat.shader = TOON
 				mat.next_pass = outline
-				fur_material = mat
+				body_materials.append(mat)
+		for k in overrides.get(base, {}):
+			mat.set_shader_parameter(k, overrides[base][k])
 		mesh.set_surface_override_material(i, mat)
 
 
@@ -113,6 +128,8 @@ func _setup_loops() -> void:
 		for an in lib.get_animation_list():
 			var a := lib.get_animation(an)
 			a.loop_mode = Animation.LOOP_LINEAR if an in LOOPS else Animation.LOOP_NONE
+			if not (an in LOCO) and not (an in states):
+				states.append(an)
 
 
 # ------------------------------------------------------------------ animation tree
@@ -146,17 +163,16 @@ func _setup_tree() -> void:
 	bt.add_node("loco_speed", ts)
 	bt.connect_node("loco_speed", 0, "loco")
 	var tr := AnimationNodeTransition.new()
-	var names: Array = STATES[hero]
-	tr.input_count = names.size()
+	tr.input_count = states.size()
 	tr.xfade_time = 0.14
-	for i in names.size():
-		tr.set_input_name(i, names[i])
+	for i in states.size():
+		tr.set_input_name(i, states[i])
 		tr.set_input_reset(i, true)
-		if names[i] != "loco":
-			bt.add_node("a_" + names[i], _anim_node(names[i]))
+		if states[i] != "loco":
+			bt.add_node("a_" + states[i], _anim_node(states[i]))
 	bt.add_node("state", tr)
-	for i in names.size():
-		bt.connect_node("state", i, "loco_speed" if names[i] == "loco" else "a_" + names[i])
+	for i in states.size():
+		bt.connect_node("state", i, "loco_speed" if states[i] == "loco" else "a_" + states[i])
 	bt.connect_node("output", 0, "state")
 	tree.tree_root = bt
 	tree.active = true
@@ -171,11 +187,26 @@ func set_locomotion(speed01: float, cycles_per_second: float) -> void:
 	tree.set("parameters/loco_speed/scale", maxf(cycles_per_second, 0.05) if speed01 > 0.02 else 1.0)
 
 
+## Resolve o nome pedido pelo controlador para uma animação que o modelo tem.
+func resolve(s: String) -> String:
+	if s in states:
+		return s
+	var alias: String = def.get("aliases", {}).get(s, "")
+	if alias != "" and alias in states:
+		return alias
+	return "loco"
+
+
+func has_state(s: String) -> bool:
+	return s in states
+
+
 func set_state(s: String, xfade := -1.0) -> void:
-	if tree == null or s == state:
+	if tree == null:
 		return
-	if not (s in STATES[hero]):
-		s = "loco"
+	s = resolve(s)
+	if s == state:
+		return
 	state = s
 	if xfade >= 0.0:
 		(tree.tree_root as AnimationNodeBlendTree).get_node("state").xfade_time = xfade
@@ -203,18 +234,19 @@ func _chain(sb: SpringBoneSimulator3D, i: int, root: String, end: String, stiff:
 func _setup_springs() -> void:
 	if skeleton == null:
 		return
+	var chains: Array = []
+	for c in def.get("springs", []):
+		if skeleton.find_bone(c[0]) >= 0 and skeleton.find_bone(c[1]) >= 0:
+			chains.append(c)
+	if chains.is_empty():
+		return
 	springs = SpringBoneSimulator3D.new()
 	springs.name = "Molas"
 	skeleton.add_child(springs)
-	if hero == "juba":
-		springs.setting_count = 2
-		_chain(springs, 0, "tail_1", "tail_7", 2.2, 0.35, 0.0, 0.025, 0.08)
-		_chain(springs, 1, "scarf_1", "scarf_5", 0.9, 0.3, 0.8, 0.03, 0.06)
-	else:
-		springs.setting_count = 3
-		_chain(springs, 0, "ear_L", "ear_L", 3.5, 0.25, 0.0, 0.02, 0.05)
-		_chain(springs, 1, "ear_R", "ear_R", 3.5, 0.25, 0.0, 0.02, 0.05)
-		_chain(springs, 2, "fruit", "fruit", 2.0, 0.12, 0.1, 0.04, 0.1)
+	springs.setting_count = chains.size()
+	for i in chains.size():
+		var c: Array = chains[i]
+		_chain(springs, i, c[0], c[1], c[2], c[3], c[4], c[5], c[6] if c.size() > 6 else 0.06)
 
 
 func set_springs_active(v: bool) -> void:
@@ -242,9 +274,10 @@ func _process(delta: float) -> void:
 	for m in eye_materials:
 		m.set_shader_parameter("lid", lid)
 		m.set_shader_parameter("happy", _expression_happy)
-	if fur_material != null and _flash > 0.0:
+	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta * 3.0)
-		fur_material.set_shader_parameter("flash", _flash)
+		for m in body_materials:
+			m.set_shader_parameter("flash", _flash)
 
 
 func look(dir: Vector2) -> void:

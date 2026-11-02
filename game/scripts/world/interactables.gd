@@ -53,7 +53,7 @@ class WindSeed extends Node3D:
 		Fx.burst("ring_light", global_position + Vector3.UP * 0.3, Color(1, 0.85, 0.5), 1.6)
 		Sfx.play_at("seed", global_position)
 		Game.vibrate(80)
-		h.visual.restart_state("celebrate" if h.hero_id == "juba" else "sit")
+		h.visual.restart_state("celebrate" if h.hero_id == "agile" else "sit")
 		h.visual.set_happy(1.0)
 		get_tree().call_group(&"cameras", &"shake", 0.25)
 		var n := Game.seeds.size()
@@ -205,7 +205,7 @@ class FlowerCannon extends Node3D:
 		_busy = true
 		h.set_state(Hero.S.CUTSCENE)
 		h.teleport(global_position + Vector3.UP * 2.0)
-		h.visual.set_state("fall" if h.hero_id == "caju" else "jump")
+		h.visual.set_state("fall" if h.hero_id == "strong" else "jump")
 		_open(-0.8, 0.25)
 		Sfx.play_at("flower_load", global_position)
 		await get_tree().create_timer(0.45, false).timeout
@@ -422,9 +422,9 @@ class PressurePlate extends Node3D:
 				Fx.burst("dust_ring", global_position + Vector3.UP * 0.2, Color(0, 0, 0, 0), 1.2)
 		if heavy and not now:
 			for h in Game.heroes:
-				if is_instance_valid(h) and h.hero_id == "juba" and h.global_position.distance_to(global_position) < 1.2 and h.state == Hero.S.GROUND:
+				if is_instance_valid(h) and h.hero_id == "agile" and h.global_position.distance_to(global_position) < 1.2 and h.state == Hero.S.GROUND:
 					if Engine.get_physics_frames() % 120 == 0:
-						Game.show_toast("Essa placa é pesada... precisa do Caju!", 2.0)
+						Game.show_toast("Essa placa é pesada... precisa de %s!" % HeroDefs.display_name("strong"), 2.0)
 
 
 # ============================================================================ portão-flor

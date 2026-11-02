@@ -1,6 +1,6 @@
 extends Node
-## Co-op em rede local (Wi-Fi) com ENet: quem cria a sala joga com o Juba,
-## quem entra joga com o Caju. Descoberta automática por broadcast UDP.
+## Co-op em rede local (Wi-Fi) com ENet: quem cria a sala joga com a
+## personagem ágil, quem entra joga com a forte. Descoberta automática por broadcast UDP.
 ## Cada aparelho é dono do próprio herói (envia estado a 30 Hz); eventos do
 ## mundo (lumes, sementes, Breus vencidos, catapulta) vão por RPC confiável.
 
@@ -92,7 +92,7 @@ func _on_peer_connected(_id: int) -> void:
 
 
 func _on_peer_disconnected(_id: int) -> void:
-	Game.show_toast("O outro jogador saiu. O Caju volta a ser controlado pela IA.", 3.5)
+	Game.show_toast("O outro jogador saiu. %s volta a ser controlado pela IA." % HeroDefs.display_name("strong"), 3.5)
 	if level != null and other != null:
 		other.is_remote = false
 		other.controller = CompanionAI.new(mine)
@@ -106,8 +106,8 @@ func start_game(lv: SoproLevel) -> void:
 	if _udp != null:
 		_udp.close()
 		_udp = null
-	mine = lv.party.juba if is_host else lv.party.caju
-	other = lv.party.caju if is_host else lv.party.juba
+	mine = lv.party.agile if is_host else lv.party.strong
+	other = lv.party.strong if is_host else lv.party.agile
 	puppet = NetPuppet.new()
 	lv.party.assign_network(mine, puppet)
 	Game.net_peer_hero = mine.hero_id
@@ -119,7 +119,7 @@ func start_game(lv: SoproLevel) -> void:
 	Game.seed_collected.connect(_on_local_seed)
 	for e in get_tree().get_nodes_in_group(&"enemies"):
 		e.defeated.connect(_on_local_enemy)
-	Game.show_toast("Co-op na rede: você é %s!" % ("o Juba" if is_host else "o Caju"), 3.0)
+	Game.show_toast("Co-op na rede: você é %s!" % HeroDefs.display_name("agile" if is_host else "strong"), 3.0)
 
 
 func _process(delta: float) -> void:
@@ -161,12 +161,12 @@ func _hero_state(pos: Vector3, vel: Vector3, facing: float, state: int, vis: Str
 	puppet.push(pos, vel, facing, state, vis)
 	other.petals = petals
 	# keep "rider" relations consistent across peers
-	if other.hero_id == "juba":
-		var caju := mine
-		if state == Hero.S.RIDE and caju.rider == null:
-			caju.rider = other
-		elif state != Hero.S.RIDE and caju.rider == other:
-			caju.rider = null
+	if other.hero_id == "agile":
+		var strong := mine
+		if state == Hero.S.RIDE and strong.rider == null:
+			strong.rider = other
+		elif state != Hero.S.RIDE and strong.rider == other:
+			strong.rider = null
 
 
 ## Chamado pelo LumeField quando um herói local coleta.
@@ -220,14 +220,14 @@ func _enemy_defeated(enemy_name: String) -> void:
 	_remote_enemy = false
 
 
-## Catapulta pedida pelo Caju (cliente) para o Juba (host).
+## Lançamento pedido pelo forte (cliente) para a ágil (host).
 func request_catapult(v: Vector3) -> void:
 	_do_catapult.rpc(v)
 
 
 @rpc("any_peer", "reliable", "call_remote")
 func _do_catapult(v: Vector3) -> void:
-	if mine != null and mine.hero_id == "juba" and mine.state == Hero.S.RIDE:
+	if mine != null and mine.hero_id == "agile" and mine.state == Hero.S.RIDE:
 		mine.dismount(v)
 		mine.set_state(Hero.S.LAUNCH)
 		mine.visual.restart_state("double_jump")

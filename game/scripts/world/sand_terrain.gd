@@ -12,7 +12,8 @@ extends Node3D
 
 signal built
 
-const GRID := 32                     ## quads por lado da grade de um nó
+const GRID_HIGH := 32                ## quads por lado da grade de um nó (qualidade alta: 1 m)
+const GRID_LOW := 16                 ## celulares mais simples: 2 m perto da câmera
 const LEAF_SIZE := 32.0              ## tamanho (m) do nó mais fino (1 m por vértice)
 const WORLD_SPAN := 8192.0           ## área coberta pela quadtree (inclui o horizonte)
 
@@ -20,6 +21,8 @@ const WORLD_SPAN := 8192.0           ## área coberta pela quadtree (inclui o ho
 @export var material: ShaderMaterial
 @export var lod_base_range := 56.0   ## raio do LOD mais fino (dobra a cada nível)
 @export var cast_shadows := true
+@export var shadow_range := 90.0     ## só os nós até aqui projetam sombra (passe de sombra barato)
+@export var grid := GRID_HIGH
 
 var resolution := 0
 var cell_size := 1.0
@@ -33,6 +36,10 @@ var normal_tex: Texture2D
 var masks_tex: Texture2D
 var _mm_full: MultiMeshInstance3D
 var _mm_quad: MultiMeshInstance3D
+var _sh_full: MultiMeshInstance3D
+var _sh_quad: MultiMeshInstance3D
+var _sel_sh_full: Array = []
+var _sel_sh_quad: Array = []
 var _ranges: Array[float] = []
 var _levels := 0
 var _last_cam := Vector3(INF, INF, INF)
@@ -108,7 +115,7 @@ func _grid_mesh(n: int) -> ArrayMesh:
 	return mesh
 
 
-func _make_mm(grid_dim: int, label: String) -> MultiMeshInstance3D:
+func _make_mm(grid_dim: int, label: String, shadow_only := false) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_custom_data = true
@@ -125,7 +132,11 @@ func _make_mm(grid_dim: int, label: String) -> MultiMeshInstance3D:
 	if mat != null:
 		mat.set_shader_parameter("grid_dim", float(grid_dim))
 	mi.material_override = mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if shadow_only:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		mi.visible = cast_shadows
+	else:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.custom_aabb = AABB(Vector3(-WORLD_SPAN, height_min - 200.0, -WORLD_SPAN), Vector3(WORLD_SPAN * 2.0, height_max - height_min + 400.0, WORLD_SPAN * 2.0))
 	mi.extra_cull_margin = 16384.0
 	add_child(mi)
@@ -137,20 +148,46 @@ func _build_meshes() -> void:
 	_ranges.clear()
 	for l in _levels + 1:
 		_ranges.append(lod_base_range * pow(2.0, l))
-	_mm_full = _make_mm(GRID, "TerrenoNos")
-	_mm_quad = _make_mm(GRID / 2, "TerrenoQuadrantes")
-	for mi in [_mm_full, _mm_quad]:
+	for mi in [_mm_full, _mm_quad, _sh_full, _sh_quad]:
+		if mi != null:
+			mi.queue_free()
+	_mm_full = _make_mm(grid, "TerrenoNos")
+	_mm_quad = _make_mm(grid / 2, "TerrenoQuadrantes")
+	_sh_full = _make_mm(grid, "SombraNos", true)
+	_sh_quad = _make_mm(grid / 2, "SombraQuadrantes", true)
+	for mi in [_mm_full, _mm_quad, _sh_full, _sh_quad]:
 		var m: ShaderMaterial = mi.material_override
 		m.set_shader_parameter("lod_ranges_0", Vector4(_ranges[0], _ranges[1], _ranges[2], _ranges[3]))
 		m.set_shader_parameter("lod_ranges_1", Vector4(_ranges[4], _ranges[5], _ranges[6], _ranges[7]))
 		m.set_shader_parameter("lod_ranges_2", Vector4(_ranges[mini(8, _levels)], _ranges[mini(8, _levels)] * 2.0, 0.0, 0.0))
 
 
-## Materiais efetivos (os dois MultiMesh têm cópias com grid_dim diferente).
+## Qualidade: grade (1 m ou 2 m perto da câmera), sombras e alcance do LOD.
+func configure(new_grid: int, shadows: bool, base_range: float) -> void:
+	var rebuild := new_grid != grid or not is_equal_approx(base_range, lod_base_range)
+	grid = new_grid
+	cast_shadows = shadows
+	lod_base_range = base_range
+	if rebuild and is_inside_tree():
+		var params := {}
+		if _mm_full != null:
+			var m: ShaderMaterial = _mm_full.material_override
+			for p in ["trail_tex", "trail_rect", "far_base", "wind_dir"]:
+				params[p] = m.get_shader_parameter(p)
+		_build_meshes()
+		for p in params:
+			set_param(p, params[p])
+	for mi in [_sh_full, _sh_quad]:
+		if mi != null:
+			mi.visible = shadows
+	_last_cam = Vector3(INF, INF, INF)
+
+
+## Materiais efetivos (os MultiMesh têm cópias com grid_dim diferente).
 func materials() -> Array[ShaderMaterial]:
 	var out: Array[ShaderMaterial] = []
-	for mi in [_mm_full, _mm_quad]:
-		if mi != null and mi.material_override != null:
+	for mi in [_mm_full, _mm_quad, _sh_full, _sh_quad]:
+		if mi != null and is_instance_valid(mi) and mi.material_override != null:
 			out.append(mi.material_override)
 	return out
 
@@ -177,6 +214,11 @@ func _select(cam_pos: Vector3, cam: Camera3D) -> void:
 	_lod_select(Vector2(-WORLD_SPAN * 0.5, -WORLD_SPAN * 0.5), WORLD_SPAN, _levels, cam_pos)
 	_upload(_mm_full, _sel_full)
 	_upload(_mm_quad, _sel_quad)
+	if cast_shadows:
+		_sel_sh_full = _sel_full.filter(func(e): return _node_min_dist(e[0], e[1], cam_pos) < shadow_range)
+		_sel_sh_quad = _sel_quad.filter(func(e): return _node_min_dist(e[0], e[1], cam_pos) < shadow_range)
+		_upload(_sh_full, _sel_sh_full)
+		_upload(_sh_quad, _sel_sh_quad)
 
 
 func _node_min_dist(origin: Vector2, s: float, cam: Vector3) -> float:

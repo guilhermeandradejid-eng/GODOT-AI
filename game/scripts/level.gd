@@ -90,7 +90,7 @@ func begin_play(mode: int) -> void:
 	if mode == Game.Mode.LOCAL_COOP:
 		party._assign_local_coop()
 	elif mode == Game.Mode.SOLO:
-		party._assign_solo(party.juba)
+		party._assign_solo(party.agile)
 	for h in Game.heroes:
 		h.set_state(Hero.S.AIR)
 	party.camera.yaw = SPAWN_YAW + PI

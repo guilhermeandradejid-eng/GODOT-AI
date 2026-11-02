@@ -8,8 +8,8 @@ extends Node
 const LEVEL := preload("res://game/scenes/level.tscn")
 
 var level: SoproLevel
-var juba: Hero
-var caju: Hero
+var agile: Hero
+var strong: Hero
 var bot := ScriptBot.new()
 var fails: Array[String] = []
 var passes := 0
@@ -88,9 +88,9 @@ func _run() -> void:
 		await get_tree().physics_frame
 		if level.content != null and level.content.get("lume_field") != null:
 			break
-	juba = level.party.juba
-	caju = level.party.caju
-	control(juba)
+	agile = level.party.agile
+	strong = level.party.strong
+	control(agile)
 	idle_ai_off()
 	print("[sopro playtest]")
 	if want("spawn"):
@@ -131,52 +131,52 @@ func _run() -> void:
 func _t_spawn() -> void:
 	print("[spawn]")
 	await wait(2.0)
-	check(juba.state == Hero.S.GROUND, "Juba pousa no chão ao nascer", Hero.S.keys()[juba.state])
-	check(caju.state == Hero.S.GROUND, "Caju pousa no chão ao nascer", Hero.S.keys()[caju.state])
-	check(juba.global_position.y > 1.0 and juba.global_position.y < 5.0, "altura do spawn plausível", str(juba.global_position))
+	check(agile.state == Hero.S.GROUND, "Juba pousa no chão ao nascer", Hero.S.keys()[agile.state])
+	check(strong.state == Hero.S.GROUND, "Caju pousa no chão ao nascer", Hero.S.keys()[strong.state])
+	check(agile.global_position.y > 1.0 and agile.global_position.y < 5.0, "altura do spawn plausível", str(agile.global_position))
 
 
 func _t_move() -> void:
 	print("[movimento]")
-	control(juba)
-	place(juba, Vector3(0, 4, 38), PI)
+	control(agile)
+	place(agile, Vector3(0, 4, 38), PI)
 	await wait(1.0)
-	var p0 := juba.global_position
+	var p0 := agile.global_position
 	bot.yaw = 0.0
 	bot.move = Vector2(0, -1)
 	await wait(2.0)
 	bot.move = Vector2.ZERO
-	var d := Vector2(juba.global_position.x - p0.x, juba.global_position.z - p0.z).length()
+	var d := Vector2(agile.global_position.x - p0.x, agile.global_position.z - p0.z).length()
 	check(d > 9.0, "Juba corre (%.1f m em 2 s)" % d)
-	check(juba.global_position.z < p0.z - 5.0, "anda para frente (norte, -Z)")
+	check(agile.global_position.z < p0.z - 5.0, "anda para frente (norte, -Z)")
 	await wait(0.6)
-	var y0 := juba.global_position.y
+	var y0 := agile.global_position.y
 	bot.queue.append("jump")
 	bot.jump_hold = true
 	var peak := y0
 	for i in 40:
 		await get_tree().physics_frame
-		peak = maxf(peak, juba.global_position.y)
+		peak = maxf(peak, agile.global_position.y)
 	bot.jump_hold = false
 	check(peak - y0 > 1.6, "pulo alto o bastante (%.2f m)" % (peak - y0))
 	await wait(1.2)
-	check(juba.state == Hero.S.GROUND, "volta ao chão depois do pulo")
+	check(agile.state == Hero.S.GROUND, "volta ao chão depois do pulo")
 
 
 func _t_glide() -> void:
 	print("[pulo duplo + planar]")
-	control(juba)
-	place(juba, Vector3(0, 20, 30), PI)
+	control(agile)
+	place(agile, Vector3(0, 20, 30), PI)
 	await wait(0.2)
 	bot.queue.append("jump")       # double jump in the air
 	bot.jump_hold = true
 	await wait(0.5)
 	bot.move = Vector2(0, -1)
 	await wait(0.6)
-	check(juba.state == Hero.S.GLIDE, "segurar pulo no ar abre a pipa (planar)", Hero.S.keys()[juba.state])
-	var vy := juba.velocity.y
+	check(agile.state == Hero.S.GLIDE, "segurar pulo no ar abre a pipa (planar)", Hero.S.keys()[agile.state])
+	var vy := agile.velocity.y
 	check(vy > -4.0, "queda lenta planando (vy=%.1f)" % vy)
-	check(juba.kite != null, "a pipa existe")
+	check(agile.kite != null, "a pipa existe")
 	bot.jump_hold = false
 	bot.move = Vector2.ZERO
 	await wait(2.5)
@@ -184,7 +184,7 @@ func _t_glide() -> void:
 
 func _t_jelly() -> void:
 	print("[água-viva trampolim]")
-	control(juba)
+	control(agile)
 	var jellies := []
 	for n in level.content.get_children():
 		if n is Interactables.JellyPad:
@@ -193,17 +193,17 @@ func _t_jelly() -> void:
 	if jellies.is_empty():
 		return
 	var j: Node3D = jellies[0]
-	place(juba, j.global_position + Vector3.UP * 5.0)
+	place(agile, j.global_position + Vector3.UP * 5.0)
 	var max_vy := -99.0
 	for i in 120:
 		await get_tree().physics_frame
-		max_vy = maxf(max_vy, juba.velocity.y)
+		max_vy = maxf(max_vy, agile.velocity.y)
 	check(max_vy > 12.0, "quicar arremessa para cima (vy máx=%.1f)" % max_vy)
 
 
 func _t_cannon() -> void:
 	print("[flor-canhão]")
-	control(juba)
+	control(agile)
 	var cannons := []
 	for n in level.content.get_children():
 		if n is Interactables.FlowerCannon:
@@ -212,16 +212,16 @@ func _t_cannon() -> void:
 	if cannons.is_empty():
 		return
 	var c: Interactables.FlowerCannon = cannons[0]
-	place(juba, c.global_position + Vector3.UP * 2.6)
+	place(agile, c.global_position + Vector3.UP * 2.6)
 	await wait(4.5)
-	var d := juba.global_position.distance_to(c.target)
-	check(d < 7.0, "flor-canhão leva até a ilha dos Cata-ventos (erro %.1f m)" % d, str(juba.global_position))
-	check(juba.state in [Hero.S.GROUND, Hero.S.AIR], "herói recupera o controle depois do voo")
+	var d := agile.global_position.distance_to(c.target)
+	check(d < 7.0, "flor-canhão leva até a ilha dos Cata-ventos (erro %.1f m)" % d, str(agile.global_position))
+	check(agile.state in [Hero.S.GROUND, Hero.S.AIR], "herói recupera o controle depois do voo")
 
 
 func _t_ribbon() -> void:
 	print("[fita de vento]")
-	control(juba)
+	control(agile)
 	var ribbon: Interactables.WindRibbon = null
 	for n in level.content.get_children():
 		if n is Interactables.WindRibbon:
@@ -229,88 +229,88 @@ func _t_ribbon() -> void:
 	if not check(ribbon != null, "fita de vento criada"):
 		return
 	var start := ribbon.transform_at(1.0).origin
-	place(juba, start + Vector3.UP * 0.6)
+	place(agile, start + Vector3.UP * 0.6)
 	var grinded := false
 	for i in 60:
 		await get_tree().physics_frame
-		if juba.state == Hero.S.GRIND:
+		if agile.state == Hero.S.GRIND:
 			grinded = true
 			break
 	check(grinded, "herói engata na fita")
 	await wait(ribbon.length() / ribbon.speed + 2.5)
 	var west: Vector3 = level.builder.island_center("IlhaFita")
-	var dist := Vector2(juba.global_position.x - west.x, juba.global_position.z - west.z).length()
-	check(dist < 30.0 and juba.global_position.y > -5.0, "fita leva até a Ilha da Fita (%.1f m do centro)" % dist, str(juba.global_position))
+	var dist := Vector2(agile.global_position.x - west.x, agile.global_position.z - west.z).length()
+	check(dist < 30.0 and agile.global_position.y > -5.0, "fita leva até a Ilha da Fita (%.1f m do centro)" % dist, str(agile.global_position))
 
 
 func _t_portal() -> void:
 	print("[portal]")
-	control(juba)
+	control(agile)
 	var portals := get_tree().get_nodes_in_group(&"portals")
 	if not check(portals.size() >= 2, "portais criados"):
 		return
 	var p: Node3D = portals[0]
-	place(juba, p.global_position + p.global_transform.basis.z * 2.5 + Vector3.UP * 0.5, p.rotation.y + PI)
+	place(agile, p.global_position + p.global_transform.basis.z * 2.5 + Vector3.UP * 0.5, p.rotation.y + PI)
 	await wait(0.4)
-	place(juba, p.global_position + Vector3.UP * 0.8)
+	place(agile, p.global_position + Vector3.UP * 0.8)
 	await wait(0.5)
 	var exitp: Vector3 = p.exit_pos
-	check(juba.global_position.distance_to(exitp) < 4.0, "portal teleporta para a ilhota secreta", str(juba.global_position))
+	check(agile.global_position.distance_to(exitp) < 4.0, "portal teleporta para a ilhota secreta", str(agile.global_position))
 	await wait(1.6)
 
 
 func _t_ride() -> void:
 	print("[carona + catapulta]")
-	control(juba)
-	place(caju, Vector3(2, 4, 36), PI)
-	place(juba, Vector3(0.6, 4, 36), PI)
-	caju.controller = null
+	control(agile)
+	place(strong, Vector3(2, 4, 36), PI)
+	place(agile, Vector3(0.6, 4, 36), PI)
+	strong.controller = null
 	await wait(1.5)
 	bot.queue.append("special")
 	await wait(0.3)
-	check(juba.state == Hero.S.RIDE and caju.rider == juba, "Juba sobe nas costas do Caju", Hero.S.keys()[juba.state])
-	# drive caju forward with a second bot
+	check(agile.state == Hero.S.RIDE and strong.rider == agile, "Juba sobe nas costas do Caju", Hero.S.keys()[agile.state])
+	# drive strong forward with a second bot
 	var cbot := ScriptBot.new()
-	caju.controller = cbot
+	strong.controller = cbot
 	cbot.move = Vector2(0, -1)
-	var p0 := caju.global_position
+	var p0 := strong.global_position
 	await wait(1.0)
 	cbot.move = Vector2.ZERO
-	check(juba.global_position.distance_to(caju.global_position) < 1.2, "Juba acompanha o Caju andando")
-	check(caju.global_position.distance_to(p0) > 4.0, "Caju anda carregando o Juba")
+	check(agile.global_position.distance_to(strong.global_position) < 1.2, "Juba acompanha o Caju andando")
+	check(strong.global_position.distance_to(p0) > 4.0, "Caju anda carregando o Juba")
 	cbot.queue.append("special")
-	var max_y := juba.global_position.y
+	var max_y := agile.global_position.y
 	for i in 60:
 		await get_tree().physics_frame
-		max_y = maxf(max_y, juba.global_position.y)
-	check(juba.state != Hero.S.RIDE and max_y - caju.global_position.y > 3.0, "catapulta lança o Juba alto (%.1f m)" % (max_y - caju.global_position.y))
-	caju.controller = null
+		max_y = maxf(max_y, agile.global_position.y)
+	check(agile.state != Hero.S.RIDE and max_y - strong.global_position.y > 3.0, "catapulta lança o Juba alto (%.1f m)" % (max_y - strong.global_position.y))
+	strong.controller = null
 	await wait(2.0)
 
 
 func _t_swim() -> void:
 	print("[nado]")
 	var cbot := ScriptBot.new()
-	caju.controller = cbot
-	place(caju, Vector3(22, 3.5, 12))
+	strong.controller = cbot
+	place(strong, Vector3(22, 3.5, 12))
 	await wait(2.0)
-	check(caju.state == Hero.S.SWIM, "Caju nada na lagoa", Hero.S.keys()[caju.state])
-	check(caju.global_position.y > -1.5, "boia perto da superfície (y=%.2f)" % caju.global_position.y)
-	caju.controller = null
-	place(caju, Vector3(4, 4, 36))
+	check(strong.state == Hero.S.SWIM, "Caju nada na lagoa", Hero.S.keys()[strong.state])
+	check(strong.global_position.y > -1.5, "boia perto da superfície (y=%.2f)" % strong.global_position.y)
+	strong.controller = null
+	place(strong, Vector3(4, 4, 36))
 	await wait(1.0)
 
 
 func _t_enemy() -> void:
 	print("[Breu]")
-	control(juba)
+	control(agile)
 	var enemies := get_tree().get_nodes_in_group(&"enemies")
 	if not check(enemies.size() >= 5, "Breus criados (%d)" % enemies.size()):
 		return
 	var e: Breu = enemies[0]
 	var before := get_tree().get_nodes_in_group(&"enemies").size()
 	# stomp from above
-	place(juba, e.global_position + Vector3.UP * 3.0)
+	place(agile, e.global_position + Vector3.UP * 3.0)
 	for i in 90:
 		await get_tree().physics_frame
 		if e.dead:
@@ -321,7 +321,7 @@ func _t_enemy() -> void:
 	if enemies.is_empty():
 		return
 	var e2: Breu = enemies[0]
-	place(juba, e2.global_position + Vector3(1.2, 1.0, 0))
+	place(agile, e2.global_position + Vector3(1.2, 1.0, 0))
 	await wait(0.6)
 	bot.queue.append("action")
 	await wait(0.3)
@@ -346,29 +346,29 @@ func _t_plates() -> void:
 		if n is Interactables.FlowerGate:
 			gate = n
 	check(gate != null and not gate.opened, "portão começa fechado")
-	juba.controller = null
-	caju.controller = null
-	place(juba, heavy.global_position + Vector3.UP * 1.0)
+	agile.controller = null
+	strong.controller = null
+	place(agile, heavy.global_position + Vector3.UP * 1.0)
 	await wait(1.2)
 	check(not heavy.pressed, "placa pesada não desce com o Juba")
-	place(juba, normal.global_position + Vector3.UP * 1.0)
-	place(caju, heavy.global_position + Vector3.UP * 1.0)
+	place(agile, normal.global_position + Vector3.UP * 1.0)
+	place(strong, heavy.global_position + Vector3.UP * 1.0)
 	await wait(1.5)
 	check(normal.pressed and heavy.pressed, "as duas placas descem (Juba + Caju)")
 	await wait(0.5)
 	check(gate != null and gate.opened, "portão-flor abre com as duas placas")
 	if gate != null and gate.seed != null:
 		check(gate.seed.visible, "semente revelada dentro do portão")
-	control(juba)
+	control(agile)
 
 
 func _t_lumes() -> void:
 	print("[lumes]")
-	control(juba)
+	control(agile)
 	var field: LumeField = level.content.lume_field
 	check(field.points.size() > 100, "lumes espalhados (%d)" % field.points.size())
 	var before := Game.lumes
-	place(juba, Vector3(-26, 4, 8), PI * 0.5)
+	place(agile, Vector3(-26, 4, 8), PI * 0.5)
 	await wait(1.0)
 	bot.yaw = PI * 0.5
 	bot.move = Vector2(0, -1)
@@ -380,27 +380,27 @@ func _t_lumes() -> void:
 
 func _t_respawn() -> void:
 	print("[queda + retorno]")
-	control(juba)
-	place(juba, Vector3(200, -10, 200))
+	control(agile)
+	place(agile, Vector3(200, -10, 200))
 	await wait(1.5)
-	check(juba.global_position.distance_to(Game.checkpoint) < 6.0, "cair no mar de nuvens volta ao ponto de retorno")
+	check(agile.global_position.distance_to(Game.checkpoint) < 6.0, "cair no mar de nuvens volta ao ponto de retorno")
 
 
 func _t_seeds_and_bell() -> void:
 	print("[sementes + Grande Sino]")
-	control(juba)
+	control(agile)
 	var seeds := get_tree().get_nodes_in_group(&"seeds")
 	check(seeds.size() == 3, "3 Sementes de Sopro")
 	for s in seeds:
 		if not s.visible:
 			s.reveal()
 		await wait(0.2)
-		place(juba, s.global_position + Vector3.UP * 0.4)
+		place(agile, s.global_position + Vector3.UP * 0.4)
 		await wait(0.4)
 	check(Game.seeds.size() == 3, "coletou as 3 sementes (%d)" % Game.seeds.size())
 	var tower := level.content.find_child("TorreDoSino", true, false) as Node3D
-	place(juba, tower.global_position + Vector3(0, 1.5, 7.5))
+	place(agile, tower.global_position + Vector3(0, 1.5, 7.5))
 	await wait(1.0)
 	check(Game.bell_done, "o Grande Sino toca com as 3 sementes")
 	await wait(9.5)
-	check(juba.state != Hero.S.CUTSCENE, "controle volta depois da cena final")
+	check(agile.state != Hero.S.CUTSCENE, "controle volta depois da cena final")

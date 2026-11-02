@@ -1,11 +1,11 @@
 class_name Hero
 extends CharacterBody3D
-## Herói jogável (Juba ou Caju). Movimento de plataforma com aceleração,
-## coyote time, buffer de pulo, pulo variável, gravidade mais forte na queda,
-## inclinação nas curvas e squash & stretch. Habilidades:
-##   Juba – pulo duplo (pirueta), planar com a pipa, giro com o rabo, montar no Caju.
-##   Caju – barrigada (ground pound com onda de choque), cabeçada, nado rápido,
-##          carregar o Juba e catapultá-lo.
+## Herói jogável. Movimento de plataforma com aceleração, coyote time, buffer
+## de pulo, pulo variável, gravidade mais forte na queda, inclinação nas curvas,
+## squash & stretch e surfe nas dunas. Papéis (nomes/aparência em HeroDefs):
+##   agile  – pulo duplo, planar, giro, subir no parceiro, ser lançada.
+##   strong – pancada no chão (onda de choque), investida, placas pesadas,
+##            carregar a parceira e lançá-la como um canhão.
 
 signal jumped(kind: String)
 signal landed(impact: float)
@@ -15,12 +15,12 @@ signal respawned
 enum S { GROUND, AIR, GLIDE, POUND, RIDE, LAUNCH, GRIND, SWIM, HURT, CUTSCENE, SURF }
 
 const CONFIG := {
-	"juba": {"speed": 8.2, "accel": 46.0, "decel": 58.0, "air_accel": 22.0, "turn": 13.0, "jump": 11.6,
+	"agile": {"speed": 8.2, "accel": 46.0, "decel": 58.0, "air_accel": 22.0, "turn": 13.0, "jump": 11.6,
 		"jump2": 10.4, "gravity": 30.0, "fall_mult": 1.6, "low_jump": 2.1, "max_fall": 26.0,
 		"glide_fall": 2.3, "glide_speed": 9.2, "swim_speed": 3.6, "radius": 0.28, "height": 0.95,
 		"surf_max": 21.0, "surf_grip": 2.7,
 		"walk_v": 2.0, "run_v": 7.5},
-	"caju": {"speed": 7.0, "accel": 34.0, "decel": 46.0, "air_accel": 14.0, "turn": 9.0, "jump": 10.4,
+	"strong": {"speed": 7.0, "accel": 34.0, "decel": 46.0, "air_accel": 14.0, "turn": 9.0, "jump": 10.4,
 		"jump2": 0.0, "gravity": 32.0, "fall_mult": 1.7, "low_jump": 2.0, "max_fall": 30.0,
 		"pound_speed": 28.0, "swim_speed": 6.0, "radius": 0.4, "height": 0.85,
 		"surf_max": 18.5, "surf_grip": 1.9,
@@ -30,7 +30,7 @@ const LAYER_WORLD := 1
 const LAYER_HEROES := 2
 const LAYER_WATER := 8
 
-@export var hero_id := "juba"
+@export var hero_id := "agile"
 
 var intent := PlayerInput.new()
 var controller: Object = null          ## InputSources | CompanionAI | NetPuppet
@@ -57,8 +57,6 @@ var grind = null
 var grind_offset := 0.0
 var water_surface := -INF
 var spawn_offset := Vector3.ZERO
-var kite: Node3D
-var _kite_target := 0.0
 var _lean := Vector2.ZERO
 var _squash := 1.0
 var _squash_v := 0.0
@@ -91,8 +89,6 @@ func _ready() -> void:
 	visual.hero = hero_id
 	visual.name = "Visual"
 	add_child(visual)
-	if hero_id == "juba":
-		_make_kite.call_deferred()
 	_water_q = PhysicsPointQueryParameters3D.new()
 	_water_q.collide_with_areas = true
 	_water_q.collide_with_bodies = false
@@ -139,7 +135,7 @@ func _sand_trail() -> void:
 	var p := global_position
 	var grounded := (state == S.GROUND and is_on_floor()) or state == S.SURF
 	if grounded and _trail_prev.distance_squared_to(p) < 9.0 and _trail_prev.distance_squared_to(p) > 0.0004:
-		var big := hero_id != "juba"
+		var big := hero_id != "agile"
 		var r := (0.55 if big else 0.4) if state == S.SURF else (0.26 if big else 0.17)
 		var st := 0.2 if state == S.SURF else (0.14 if big else 0.11)
 		get_tree().call_group(&"sand_trails", &"stroke", _trail_prev, p, r, st)
@@ -156,12 +152,8 @@ func set_state(s: int) -> void:
 		return
 	if state == S.SURF:
 		Sfx.loop("surf", false)
-	if state == S.GLIDE:
-		_kite_target = 0.0
 	state = s
 	state_t = 0.0
-	if s == S.GLIDE:
-		_kite_target = 1.0
 
 
 # ------------------------------------------------------------------- ground
@@ -197,7 +189,7 @@ func _st_ground(delta: float) -> void:
 	air_jumps = 1
 	air_spin = true
 	action_t = maxf(0.0, action_t - delta)
-	_horizontal(delta, cfg["accel"], cfg["decel"], cfg["speed"] * (1.25 if action_t > 0.0 and hero_id == "caju" else 1.0), cfg["turn"])
+	_horizontal(delta, cfg["accel"], cfg["decel"], cfg["speed"] * (1.25 if action_t > 0.0 and hero_id == "strong" else 1.0), cfg["turn"])
 	velocity.y = -2.0
 	if jump_buffer > 0.0:
 		_jump(cfg["jump"], "jump")
@@ -287,8 +279,8 @@ func _footsteps(delta: float) -> void:
 		return
 	_step_t -= delta * sp
 	if _step_t <= 0.0:
-		_step_t = 1.6 if hero_id == "juba" else 1.4
-		Fx.burst("dust", global_position + Vector3(0, 0.05, 0), Color(0, 0, 0, 0), 0.6 if hero_id == "juba" else 0.9)
+		_step_t = 1.6 if hero_id == "agile" else 1.4
+		Fx.burst("dust", global_position + Vector3(0, 0.05, 0), Color(0, 0, 0, 0), 0.6 if hero_id == "agile" else 0.9)
 		Sfx.play_at("step", global_position, randf_range(0.9, 1.15), -12.0)
 
 
@@ -310,7 +302,7 @@ func _st_air(delta: float) -> void:
 		if coyote > 0.0:
 			_jump(cfg["jump"], "jump")
 			return
-		if hero_id == "juba":
+		if hero_id == "agile":
 			if air_jumps > 0:
 				air_jumps -= 1
 				_jump(cfg["jump2"], "double")
@@ -318,7 +310,7 @@ func _st_air(delta: float) -> void:
 			jump_buffer = 0.0
 			set_state(S.GLIDE)
 			return
-	if hero_id == "juba" and intent.jump and air_jumps == 0 and velocity.y < -1.0 and state_t > 0.12:
+	if hero_id == "agile" and intent.jump and air_jumps == 0 and velocity.y < -1.0 and state_t > 0.12:
 		set_state(S.GLIDE)
 		return
 	if intent.take("action"):
@@ -397,11 +389,11 @@ func bounce(power: float) -> void:
 	set_state(S.AIR)
 	_squash = 1.25
 	_squash_v = 4.0
-	visual.restart_state("jump" if hero_id == "caju" else "double_jump")
+	visual.restart_state("jump" if hero_id == "strong" else "double_jump")
 	Sfx.play_at("bounce", global_position, randf_range(0.95, 1.1))
 
 
-# ------------------------------------------------------------------- glide (Juba)
+# ------------------------------------------------------------------- glide (agile)
 func _st_glide(delta: float) -> void:
 	var target_fall: float = -cfg["glide_fall"]
 	if updraft > 0.0:
@@ -437,11 +429,12 @@ func _st_glide(delta: float) -> void:
 
 # ------------------------------------------------------------------- actions
 func _action_ground() -> void:
-	if hero_id == "juba":
+	if hero_id == "agile":
 		_spin()
 	else:
-		# cabeçada: arrancada curta
+		# investida: arrancada curta que derruba inimigos e quebra coisas
 		action_t = 0.28
+		visual.restart_state("ram")
 		var f := Vector3(sin(facing), 0, cos(facing))
 		velocity.x = f.x * 11.0
 		velocity.z = f.z * 11.0
@@ -451,7 +444,7 @@ func _action_ground() -> void:
 
 
 func _action_air() -> void:
-	if hero_id == "juba":
+	if hero_id == "agile":
 		if air_spin:
 			air_spin = false
 			velocity.y = maxf(velocity.y, 5.0)
@@ -505,26 +498,26 @@ func _pound_impact() -> void:
 
 # ------------------------------------------------------------------- team-up
 func _special() -> void:
-	if hero_id == "juba":
-		var caju := Game.hero("caju") as Hero
-		if caju != null and caju.rider == null and caju.state in [S.GROUND, S.SWIM] \
-				and global_position.distance_to(caju.global_position) < 2.4:
-			mount_on(caju)
+	if hero_id == "agile":
+		var strong := Game.hero("strong") as Hero
+		if strong != null and strong.rider == null and strong.state in [S.GROUND, S.SWIM] \
+				and global_position.distance_to(strong.global_position) < 2.4:
+			mount_on(strong)
 	else:
 		if rider != null:
 			catapult()
 		else:
-			var juba := Game.hero("juba") as Hero
-			if juba != null and juba.player_index < 0 and juba.global_position.distance_to(global_position) < 9.0:
-				juba.call_deferred("mount_on", self)
+			var agile := Game.hero("agile") as Hero
+			if agile != null and agile.player_index < 0 and agile.global_position.distance_to(global_position) < 9.0:
+				agile.call_deferred("mount_on", self)
 				Sfx.play_at("call", global_position)
 
 
-func mount_on(caju: Hero) -> void:
-	if caju == null or caju.rider != null:
+func mount_on(strong: Hero) -> void:
+	if strong == null or strong.rider != null:
 		return
-	mount = caju
-	caju.rider = self
+	mount = strong
+	strong.rider = self
 	shape.disabled = true
 	set_state(S.RIDE)
 	visual.set_state("ride", 0.2)
@@ -611,7 +604,7 @@ func launch(v: Vector3, lock := 0.35) -> void:
 	state_t = -lock
 	air_jumps = 1
 	air_spin = true
-	visual.restart_state("double_jump" if hero_id == "juba" else "jump")
+	visual.restart_state("double_jump" if hero_id == "agile" else "jump")
 	if v.x != 0.0 or v.z != 0.0:
 		facing = atan2(v.x, v.z)
 
@@ -634,7 +627,7 @@ func start_grind(ribbon, offset: float) -> void:
 	grind = ribbon
 	grind_offset = offset
 	set_state(S.GRIND)
-	visual.set_state("glide" if hero_id == "juba" else "fall", 0.12)
+	visual.set_state("glide" if hero_id == "agile" else "fall", 0.12)
 	Sfx.play_at("grind_start", global_position)
 
 
@@ -686,7 +679,7 @@ func _check_water() -> void:
 
 
 func _st_swim(delta: float) -> void:
-	var float_y := water_surface - (0.42 if hero_id == "caju" else 0.62)
+	var float_y := water_surface - (0.42 if hero_id == "strong" else 0.62)
 	velocity.y = move_toward(velocity.y, (float_y - global_position.y) * 6.0, 30.0 * delta)
 	_horizontal(delta, 20.0, 14.0, cfg["swim_speed"], cfg["turn"] * 0.8)
 	if jump_buffer > 0.0:
@@ -777,7 +770,7 @@ func add_updraft(strength: float) -> void:
 
 
 func is_heavy() -> bool:
-	return hero_id == "caju" or state == S.RIDE
+	return hero_id == "strong" or state == S.RIDE
 
 
 func is_attacking() -> bool:
@@ -796,7 +789,7 @@ func _update_visual(delta: float) -> void:
 	var roll := clampf(-_turn_rate * hspeed * 0.022, -0.45, 0.45)
 	var pitch := 0.0
 	if state in [S.GROUND, S.AIR, S.SWIM]:
-		pitch = clampf(hspeed / cfg["speed"], 0.0, 1.0) * (0.12 if hero_id == "juba" else 0.06)
+		pitch = clampf(hspeed / cfg["speed"], 0.0, 1.0) * (0.12 if hero_id == "agile" else 0.06)
 	if state == S.GLIDE:
 		pitch = 0.18
 		roll *= 1.6
@@ -849,87 +842,4 @@ func _update_visual(delta: float) -> void:
 		S.SWIM:
 			visual.set_state("swim")
 		S.SURF:
-			visual.set_state("surf" if "surf" in HeroVisual.STATES.get(hero_id, []) else ("glide" if hero_id == "juba" else "fall"), 0.2)
-	if kite != null:
-		var ks := lerpf(kite.scale.x, _kite_target, 1.0 - exp(-14.0 * delta))
-		kite.scale = Vector3.ONE * maxf(ks, 0.001)
-		kite.visible = ks > 0.02
-
-
-# =================================================================== kite (pipa)
-func _make_kite() -> void:
-	if visual.skeleton == null:
-		return
-	var att := BoneAttachment3D.new()
-	att.bone_name = "chest"
-	visual.skeleton.add_child(att)
-	kite = Node3D.new()
-	kite.name = "Pipa"
-	att.add_child(kite)
-	kite.position = Vector3(0, 0.62, 0.05)
-	kite.rotation_degrees = Vector3(-25, 0, 0)
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var top := Vector3(0, 0.5, 0)
-	var right := Vector3(0.42, 0.08, 0.0)
-	var bottom := Vector3(0, -0.42, 0)
-	var left := Vector3(-0.42, 0.08, 0.0)
-	var mid := Vector3(0, 0.08, -0.07)
-	var cols := [Color(0.95, 0.2, 0.3), Color(1.0, 0.82, 0.2), Color(0.1, 0.7, 0.68), Color(1.0, 0.5, 0.65)]
-	var quads := [[top, right], [right, bottom], [bottom, left], [left, top]]
-	for i in 4:
-		st.set_color(cols[i])
-		st.add_vertex(mid)
-		st.add_vertex(quads[i][0])
-		st.add_vertex(quads[i][1])
-	st.generate_normals()
-	var m := StandardMaterial3D.new()
-	m.vertex_color_use_as_albedo = true
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.roughness = 0.9
-	m.rim_enabled = true
-	m.rim = 0.6
-	var mi := MeshInstance3D.new()
-	mi.mesh = st.commit()
-	mi.material_override = m
-	kite.add_child(mi)
-	# rabiola: little bows hanging from the bottom
-	var tail := MeshInstance3D.new()
-	tail.name = "Rabiola"
-	var tm := ImmediateMesh.new()
-	tail.mesh = tm
-	var tmat := StandardMaterial3D.new()
-	tmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	tmat.vertex_color_use_as_albedo = true
-	tmat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	tail.material_override = tmat
-	kite.add_child(tail)
-	kite.set_meta("tail", tail)
-	kite.scale = Vector3.ONE * 0.001
-	kite.visible = false
-
-
-func _process(_delta: float) -> void:
-	if kite == null or not kite.visible:
-		return
-	var tail: MeshInstance3D = kite.get_meta("tail")
-	var tm := tail.mesh as ImmediateMesh
-	tm.clear_surfaces()
-	tm.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	var t := Time.get_ticks_msec() * 0.001
-	var cols := [Color(0.95, 0.2, 0.3), Color(1.0, 0.82, 0.2), Color(0.15, 0.55, 0.95), Color(0.3, 0.8, 0.4)]
-	for i in 7:
-		var y := -0.45 - i * 0.13
-		var x := sin(t * 7.0 - i * 0.8) * 0.05 * (i + 1) * 0.5
-		var z := sin(t * 5.0 - i * 0.6) * 0.03 * i
-		var c: Color = cols[i % 4]
-		var p := Vector3(x, y, z)
-		var w := 0.05
-		tm.surface_set_color(c)
-		tm.surface_add_vertex(p + Vector3(-w, 0.03, 0))
-		tm.surface_add_vertex(p + Vector3(0, 0, 0))
-		tm.surface_add_vertex(p + Vector3(-w, -0.03, 0))
-		tm.surface_add_vertex(p + Vector3(w, 0.03, 0))
-		tm.surface_add_vertex(p + Vector3(w, -0.03, 0))
-		tm.surface_add_vertex(p + Vector3(0, 0, 0))
-	tm.surface_end()
+			visual.set_state("surf" if visual.has_state("surf") else "fall", 0.2)

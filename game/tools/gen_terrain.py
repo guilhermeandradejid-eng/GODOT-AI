@@ -273,6 +273,29 @@ def build(recipe: dict):
     return H.astype(np.float32), np.clip(masks * 255.0, 0, 255).astype(np.uint8), res, cell, size
 
 
+def _import_settings(path: Path) -> None:
+    """Texturas do terreno: sem compressão com perdas (normais/máscaras), com mipmaps
+    e sem a conversão automática para VRAM quando o Godot detecta uso em 3D."""
+    want = {"compress/mode": "0", "mipmaps/generate": "true", "detect_3d/compress_to": "0"}
+    if path.exists():
+        lines = path.read_text().splitlines()
+        seen = set()
+        for i, ln in enumerate(lines):
+            k = ln.split("=", 1)[0]
+            if k in want:
+                lines[i] = f"{k}={want[k]}"
+                seen.add(k)
+        if "[params]" in lines:
+            at = lines.index("[params]") + 1
+            for k, v in want.items():
+                if k not in seen:
+                    lines.insert(at, f"{k}={v}")
+        path.write_text("\n".join(lines) + "\n")
+    else:
+        path.write_text('[remap]\n\nimporter="texture"\ntype="CompressedTexture2D"\n\n[params]\n\n'
+                        + "".join(f"{k}={v}\n" for k, v in want.items()))
+
+
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     recipe_path = Path(args[0]) if args else ROOT / "game" / "world" / "aurelith.json"
@@ -288,6 +311,8 @@ def main() -> int:
     n /= np.linalg.norm(n, axis=-1, keepdims=True)
     nrm = np.clip((n * 0.5 + 0.5) * 255.0 + 0.5, 0, 255).astype(np.uint8)
     Image.fromarray(nrm, "RGB").save(out / "normals.png", optimize=True)
+    for tex in ("masks.png", "normals.png"):
+        _import_settings(out / (tex + ".import"))
     meta = {"resolution": res, "cell_size": cell, "size": size,
             "height_min": float(H.min()), "height_max": float(H.max())}
     (out / "meta.json").write_text(json.dumps(meta, indent=1))

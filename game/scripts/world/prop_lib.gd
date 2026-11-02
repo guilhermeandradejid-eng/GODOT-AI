@@ -87,8 +87,21 @@ static func shared_material(kind: String) -> ShaderMaterial:
 
 ## Instancia um prop. unique: lista de materiais que recebem cópia própria
 ## (ex.: ["glow"] para runas que acendem só neste prop).
+static var _loaded := {}
+
+
+## Cena do prop: as da lista fixa ou qualquer game/assets/props/<nome>.glb.
+static func scene_of(prop: String) -> PackedScene:
+	if SCENES.has(prop):
+		return SCENES[prop]
+	if not _loaded.has(prop):
+		var path := "res://game/assets/props/%s.glb" % prop
+		_loaded[prop] = load(path) if ResourceLoader.exists(path) else null
+	return _loaded[prop]
+
+
 static func make(prop: String, unique: Array = []) -> Node3D:
-	var scene: PackedScene = SCENES.get(prop)
+	var scene: PackedScene = scene_of(prop)
 	if scene == null:
 		push_warning("Prop desconhecido: " + prop)
 		return Node3D.new()
