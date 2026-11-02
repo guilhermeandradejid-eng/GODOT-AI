@@ -5,7 +5,7 @@ extends Node
 
 const SFX_DIR := "res://game/assets/audio/sfx"
 ## Lista de reserva (caso a listagem do diretório não funcione num build exportado).
-const SFX_NAMES := ["bell", "bounce", "bump", "call", "checkpoint", "chime", "enemy_poof", "gate_open",
+const SFX_NAMES := ["bounce", "bump", "call", "checkpoint", "chime", "enemy_poof", "gate_open",
 	"grind_start", "hurt_agile", "hurt_strong", "join", "jump2", "jump_agile", "jump_strong", "land", "launch",
 	"mote", "mount", "plate_off", "plate_on", "portal", "pound", "relic", "respawn", "reveal", "spin", "splash",
 	"step", "superjump", "surf", "surf_start", "swap", "ui_click", "urn_load", "whoosh"]

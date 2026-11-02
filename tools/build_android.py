@@ -68,6 +68,8 @@ def game_resources() -> list[str]:
         parts = rel.parts
         if "blender" in parts or (len(parts) > 1 and parts[1] == "tools"):
             continue
+        if p.name == "preview.png" and p.parent.name.endswith("_terrain"):
+            continue                      # imagem de conferência do gerador de terreno
         out.append("res://" + rel.as_posix())
     return out + EXTRA_RESOURCES
 
