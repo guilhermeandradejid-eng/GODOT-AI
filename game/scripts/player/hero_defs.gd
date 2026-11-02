@@ -10,7 +10,7 @@ const DEFS := {
 		"name": "Saeli",
 		"model": "res://game/assets/characters/saeli.glb",
 		"fallback": "res://game/assets/characters/saeli.glb",
-		"base_lid": 0.08,
+		"base_lid": 0.16,
 		"outline": 0.0026,
 		"outline_color": Color("1b2350"),
 		"eye": {"sclera": Color("fffdf6"), "iris_inner": Color("ffb13b"), "iris_outer": Color("c2621e"),
@@ -23,10 +23,13 @@ const DEFS := {
 		],
 		## grupos de molas desligados nestes estados (poses autorais)
 		"spring_off": {"tail": ["surf", "glide", "launch", "spin", "ride", "double_jump"]},
-		"materials": {"glow": {"vertex_glow": 2.4, "rim_strength": 0.9}},
+		## "*": todos os materiais do corpo (sombra menos lilás: o marfim não vira malva no contraluz)
+		"materials": {"*": {"shadow_tint": Color(0.78, 0.71, 0.82)}, "glow": {"vertex_glow": 2.4, "rim_strength": 0.9}},
 		"aliases": {"swim": "fall", "sit": "idle", "flop": "spin", "brace": "ride"},
 		## passada medida nos clipes (metros por ciclo) para os pés não deslizarem
-		"walk_stride": 0.49, "run_stride": 1.0, "max_cps": 3.4,
+		"walk_stride": 0.49, "run_stride": 1.0, "max_cps": 3.8, "run_blend_curve": 0.5,
+		## toques no chão (fase do ciclo, tipo): poeira e som de passo sincronizados
+		"contacts": {"walk": [[0.0, "foot"], [0.5, "foot"]], "run": [[0.135, "foot"], [0.635, "foot"]]},
 	},
 	"strong": {
 		"name": "Hulvar",
@@ -42,9 +45,13 @@ const DEFS := {
 			["nest", "nest", 5.0, 0.45, 0.0, 0.05, 0.22, "nest"],
 		],
 		"spring_off": {"anchor": ["brace", "slam", "surf", "celebrate"], "nest": ["brace", "slam"]},
-		"materials": {},
-		"aliases": {"swim": "fall", "flop": "slam", "sit": "brace", "spin": "ram"},
+		## esmalte de porcelana: brilho especular e contraluz mais fortes
+		"materials": {"*": {"shadow_tint": Color(0.78, 0.71, 0.82)}, "stone": {"sheen": 0.35, "rim_strength": 1.1}},
+		"aliases": {"swim": "fall", "flop": "slam", "sit": "idle", "spin": "ram"},
 		"walk_stride": 0.62, "run_stride": 2.9, "max_cps": 2.6,
+		## galope: punho D, punho E, pé D, pé E
+		"contacts": {"walk": [[0.0, "foot"], [0.5, "foot"]],
+			"run": [[0.03, "fist"], [0.14, "fist"], [0.5, "foot"], [0.61, "foot"]]},
 	},
 }
 

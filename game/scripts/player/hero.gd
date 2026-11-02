@@ -89,6 +89,7 @@ func _ready() -> void:
 	visual.hero = hero_id
 	visual.name = "Visual"
 	add_child(visual)
+	visual.contact.connect(_on_contact)
 	_water_q = PhysicsPointQueryParameters3D.new()
 	_water_q.collide_with_areas = true
 	_water_q.collide_with_bodies = false
@@ -292,7 +293,7 @@ func _st_surf(delta: float) -> void:
 
 func _footsteps(delta: float) -> void:
 	var sp := Vector2(velocity.x, velocity.z).length()
-	if sp < 1.0:
+	if sp < 1.0 or visual.has_contacts():   # com toques do clipe, _on_contact cuida disso
 		_step_t = 0.0
 		return
 	_step_t -= delta * sp
@@ -300,6 +301,22 @@ func _footsteps(delta: float) -> void:
 		_step_t = 1.6 if hero_id == "agile" else 1.4
 		Fx.burst("dust", global_position + Vector3(0, 0.05, 0), Color(0, 0, 0, 0), 0.6 if hero_id == "agile" else 0.9)
 		Sfx.play_at("step", global_position, randf_range(0.9, 1.15), -12.0)
+
+
+## Pé ou punho tocou a areia no tempo do clipe: poeira + passo (punhos do Hulvar pesam mais).
+func _on_contact(kind: String) -> void:
+	if state != S.GROUND or not is_on_floor() or is_remote and not visible:
+		return
+	var sp := Vector2(velocity.x, velocity.z).length()
+	if sp < 0.6:
+		return
+	var heavy := hero_id == "strong"
+	var size := (0.55 if not heavy else 0.85) * clampf(0.6 + sp / 9.0, 0.6, 1.3)
+	if kind == "fist":
+		size *= 1.15
+	Fx.burst("dust", global_position + Vector3(0, 0.05, 0), Color(0, 0, 0, 0), size)
+	var pitch := randf_range(0.92, 1.12) * (0.82 if heavy else 1.0) * (0.9 if kind == "fist" else 1.0)
+	Sfx.play_at("step", global_position, pitch, -13.0 if not heavy else -10.0)
 
 
 # ------------------------------------------------------------------- air
@@ -856,9 +873,11 @@ func _update_visual(delta: float) -> void:
 	if hspeed > 0.15:
 		var walk_v: float = cfg["walk_v"]
 		var run_v: float = cfg["run_v"]
-		speed01 = clampf(0.3 * hspeed / walk_v, 0.0, 0.3) if hspeed < walk_v else lerpf(0.3, 1.0, clampf((hspeed - walk_v) / (run_v - walk_v), 0.0, 1.0))
-		# cadência pela passada medida no clipe (metros por ciclo): pés plantados
 		var d := visual.def
+		# curva da mistura andar→correr (< 1: entra na corrida mais cedo)
+		var to_run := pow(clampf((hspeed - walk_v) / (run_v - walk_v), 0.0, 1.0), float(d.get("run_blend_curve", 1.0)))
+		speed01 = clampf(0.3 * hspeed / walk_v, 0.0, 0.3) if hspeed < walk_v else lerpf(0.3, 1.0, to_run)
+		# cadência pela passada medida no clipe (metros por ciclo): pés plantados
 		var kb := clampf((speed01 - 0.3) / 0.7, 0.0, 1.0)
 		var stride := lerpf(float(d.get("walk_stride", walk_v / 1.25)), float(d.get("run_stride", run_v / 2.0)), kb)
 		cps = clampf(hspeed / stride, 0.6, float(d.get("max_cps", 3.0)))

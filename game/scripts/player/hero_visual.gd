@@ -16,6 +16,9 @@ const LOCO := ["idle", "walk", "run"]
 ## Animações de uma vez que voltam sozinhas para a locomoção ao terminar.
 const AUTO_RETURN := ["land", "brace", "ram", "celebrate"]
 
+## Pé/punho tocou o chão, no tempo exato do clipe (HeroDefs "contacts").
+signal contact(kind: String)
+
 @export var hero := "agile"
 
 var def: Dictionary
@@ -38,6 +41,9 @@ var _blink := 0.0
 var _flash := 0.0
 var _expression_happy := 0.0
 var _oneshot_left := 0.0
+var _loco_phase := 0.0          ## fase do ciclo walk/run (o mesmo relógio da AnimationTree)
+var _loco_cps := 0.0
+var _loco_blend := 0.0
 
 
 func _ready() -> void:
@@ -128,6 +134,9 @@ func _setup_materials() -> void:
 				mat.shader = TOON
 				mat.next_pass = outline
 				body_materials.append(mat)
+		if base != "eye":
+			for k in overrides.get("*", {}):          # vale para todo material do corpo
+				mat.set_shader_parameter(k, overrides["*"][k])
 		for k in overrides.get(base, {}):
 			mat.set_shader_parameter(k, overrides[base][k])
 		mesh.set_surface_override_material(i, mat)
@@ -198,6 +207,8 @@ func set_locomotion(speed01: float, cycles_per_second: float) -> void:
 		return
 	tree.set("parameters/loco/blend_position", clampf(speed01, 0.0, 1.0))
 	tree.set("parameters/loco_speed/scale", maxf(cycles_per_second, 0.05) if speed01 > 0.02 else 1.0)
+	_loco_blend = speed01
+	_loco_cps = maxf(cycles_per_second, 0.05) if speed01 > 0.02 else 0.0
 
 
 ## Resolve o nome pedido pelo controlador para uma animação que o modelo tem.
@@ -221,6 +232,8 @@ func set_state(s: String, xfade := -1.0) -> void:
 	if s == state:
 		return
 	state = s
+	if s == "loco":
+		_loco_phase = 0.0          # a transição reinicia a locomoção (input reset)
 	if xfade >= 0.0:
 		(tree.tree_root as AnimationNodeBlendTree).get_node("state").xfade_time = xfade
 	tree.set("parameters/state/transition_request", s)
@@ -307,6 +320,8 @@ func set_happy(v: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if state == "loco" and _loco_cps > 0.0:
+		_advance_contacts(delta)
 	if _oneshot_left > 0.0:
 		_oneshot_left -= delta
 		if _oneshot_left <= 0.0 and state in AUTO_RETURN:
@@ -327,6 +342,23 @@ func _process(delta: float) -> void:
 			m.set_shader_parameter("flash", _flash)
 
 
+func _advance_contacts(delta: float) -> void:
+	var prev := _loco_phase
+	var step := _loco_cps * delta
+	_loco_phase = fposmod(prev + step, 1.0)
+	var clips: Dictionary = def.get("contacts", {})
+	var list: Array = clips.get("run" if _loco_blend > 0.65 else "walk", [])
+	for c in list:
+		var t := float(c[0])
+		# cruzou t neste quadro (com a volta do ciclo)?
+		if fposmod(t - prev, 1.0) < step:
+			contact.emit(String(c[1]))
+
+
+func has_contacts() -> bool:
+	return not def.get("contacts", {}).is_empty()
+
+
 ## Parceira a bordo: acende (ou apaga) o ponto do glifo da dupla e firma o cesto.
 func set_glyph(on: bool) -> void:
 	if spring_groups.has("nest"):
@@ -334,6 +366,7 @@ func set_glyph(on: bool) -> void:
 	if glyph_material == null:
 		return
 	var from := float(glyph_material.get_shader_parameter("vertex_glow"))
+	glyph_material.set_shader_parameter("glow_pulse", 1.0 if on else 0.0)
 	create_tween().tween_method(func(v: float):
 		glyph_material.set_shader_parameter("vertex_glow", v)
 		glyph_material.set_shader_parameter("emission_color", Color(0.35, 1.0, 0.94) * (v / 3.0)),
