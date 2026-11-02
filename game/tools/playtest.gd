@@ -150,7 +150,7 @@ func _run() -> void:
 	idle_ai_off()
 	print("[playtest]")
 	for t in ["spawn", "terrain", "move", "surf", "glide", "bounds", "launcher", "rail", "rift", "bounce",
-			"ride", "enemy", "plates", "motes", "respawn", "relics"]:
+			"ride", "spring", "enemy", "plates", "motes", "respawn", "relics"]:
 		if want(t):
 			await call("_t_" + t)
 	print("%d ok, %d falhas" % [passes, fails.size()])
@@ -367,6 +367,28 @@ func _t_ride() -> void:
 	check(agile.state != Hero.S.RIDE and max_y - strong.global_position.y > 3.0, "o forte lança a parceira alto (%.1f m)" % (max_y - strong.global_position.y))
 	strong.controller = null
 	await wait(2.0)
+
+
+func _t_spring() -> void:
+	print("[mola de dupla: barrigada arremessa a parceira]")
+	var p := flat_spot(level.content.spawn_point(), 6.0)
+	agile.controller = null
+	var cbot := ScriptBot.new()
+	strong.controller = cbot
+	place(agile, p + Vector3(1.5, 0.5, 0), PI)
+	await wait(0.6)
+	place(strong, p + Vector3(0, 9.0, 0), PI)
+	await wait(0.2)
+	cbot.queue.append("action")
+	var y0 := agile.global_position.y
+	var max_y := y0
+	for i in 90:
+		await get_tree().physics_frame
+		max_y = maxf(max_y, agile.global_position.y)
+	check(max_y - y0 > 3.0, "a onda de choque arremessa a ágil (%.1f m)" % (max_y - y0))
+	strong.controller = null
+	control(agile)
+	await wait(1.5)
 
 
 func _t_enemy() -> void:

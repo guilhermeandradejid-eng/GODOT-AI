@@ -508,6 +508,15 @@ func _pound_impact() -> void:
 	get_tree().call_group(&"enemies", &"on_shockwave", p, 3.4, self)
 	get_tree().call_group(&"pound_listeners", &"on_pound", p, self)
 	_attack(p + Vector3.UP * 0.3, 2.2, "pound")
+	# team spring: the shockwave pops a grounded partner high into the air
+	for other in Game.heroes:
+		if other != self and is_instance_valid(other) and other.state in [S.GROUND, S.SURF] \
+				and other.global_position.distance_to(p) < 3.6 and not other.is_remote:
+			other.launch(Vector3(0, 15.5, 0), 0.45)
+			other.visual.restart_state("double_jump")
+			other.air_jumps = 1
+			Fx.burst("ring_light", other.global_position, Color(0.55, 1.0, 0.95), 1.0)
+			Sfx.play_at("superjump", other.global_position)
 	velocity.y = 6.0
 	set_state(S.AIR)
 	_squash = 0.62

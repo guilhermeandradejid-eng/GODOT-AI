@@ -37,8 +37,8 @@ func poll(intent: PlayerInput, me: Hero, delta: float) -> void:
 	var to := target - me.global_position
 	var flat := Vector3(to.x, 0.0, to.z)
 	var dist := flat.length()
-	# teleport if too far / fell / leader on another island
-	if dist > 26.0 or to.y > 8.0 or (me.global_position.y < leader.global_position.y - 12.0):
+	# teleport if far behind (launchers, rifts) or stuck far below/above on the dunes
+	if dist > 42.0 or (to.y > 16.0 and dist > 6.0) or (me.global_position.y < leader.global_position.y - 22.0):
 		_warp(me)
 		return
 	var want := follow_dist if _plate_target == null else 0.15
@@ -61,7 +61,7 @@ func poll(intent: PlayerInput, me: Hero, delta: float) -> void:
 		var ahead := me.global_position + fwd * 1.4 + Vector3.UP * 0.5
 		var q2 := PhysicsRayQueryParameters3D.create(ahead, ahead + Vector3.DOWN * 3.5, Hero.LAYER_WORLD)
 		var ground := space.intersect_ray(q2)
-		var leader_higher := to.y > 1.2 and dist < 6.0
+		var leader_higher := to.y > 1.2 and dist < 4.0
 		if not wall.is_empty() or ground.is_empty() or leader_higher:
 			intent.press("jump")
 			intent.jump = true
