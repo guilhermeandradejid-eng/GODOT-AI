@@ -61,6 +61,8 @@ func _ready() -> void:
 	mesh = _find(model, "MeshInstance3D") as MeshInstance3D
 	anim = _find(model, "AnimationPlayer") as AnimationPlayer
 	base_lid = float(def.get("base_lid", 0.06))
+	if def.has("detail"):
+		_add_rest_attributes(def["detail"].get("surfaces", []))
 	_setup_materials()
 	_setup_loops()
 	_setup_tree()
@@ -153,12 +155,64 @@ func _setup_materials() -> void:
 				mat.shader = TOON
 				mat.next_pass = outline
 				body_materials.append(mat)
+		var det: Dictionary = def.get("detail", {})
+		if base in det.get("surfaces", []):
+			mat.set_shader_parameter("use_detail", true)
+			for k in ["albedo", "normal"]:
+				if det.has(k) and ResourceLoader.exists(String(det[k])):
+					mat.set_shader_parameter("detail_" + k, load(String(det[k])))
+			for k in ["scale", "albedo_mix", "mean", "normal_strength", "sharp"]:
+				if det.has(k):
+					mat.set_shader_parameter("detail_" + k, float(det[k]))
 		if base != "eye":
 			for k in overrides.get("*", {}):          # vale para todo material do corpo
 				mat.set_shader_parameter(k, overrides["*"][k])
 		for k in overrides.get(base, {}):
 			mat.set_shader_parameter(k, overrides[base][k])
 		mesh.set_surface_override_material(i, mat)
+
+
+## Grava a posição/normal de repouso de cada vértice em CUSTOM0/CUSTOM1 nas superfícies
+## pedidas (HeroDefs "detail".surfaces), para a textura de detalhe triplanar não escorregar.
+func _add_rest_attributes(names: Array) -> void:
+	var src := mesh.mesh as ArrayMesh
+	if src == null or names.is_empty():
+		return
+	var dst := ArrayMesh.new()
+	for i in src.get_surface_count():
+		var arrays := src.surface_get_arrays(i)
+		var fmt := src.surface_get_format(i)
+		var mat := src.surface_get_material(i)
+		var mname := mat.resource_name.get_slice(".", 0) if mat != null else ""
+		var flags := 0
+		if fmt & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS:
+			flags |= Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+		if mname in names:
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var nrms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var c0 := PackedFloat32Array()
+			var c1 := PackedFloat32Array()
+			c0.resize(verts.size() * 4)
+			c1.resize(verts.size() * 4)
+			for v in verts.size():
+				var pv := verts[v]
+				var nv := nrms[v]
+				c0[v * 4] = pv.x
+				c0[v * 4 + 1] = pv.y
+				c0[v * 4 + 2] = pv.z
+				c0[v * 4 + 3] = 1.0
+				c1[v * 4] = nv.x
+				c1[v * 4 + 1] = nv.y
+				c1[v * 4 + 2] = nv.z
+				c1[v * 4 + 3] = 0.0
+			arrays[Mesh.ARRAY_CUSTOM0] = c0
+			arrays[Mesh.ARRAY_CUSTOM1] = c1
+			flags |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
+			flags |= Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT
+		dst.add_surface_from_arrays(src.surface_get_primitive_type(i), arrays, [], {}, flags)
+		dst.surface_set_material(i, mat)
+		dst.surface_set_name(i, src.surface_get_name(i))
+	mesh.mesh = dst
 
 
 func _setup_loops() -> void:

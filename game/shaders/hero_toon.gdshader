@@ -23,10 +23,61 @@ uniform vec3 flash_color : source_color = vec3(1.0, 0.95, 0.85);
 uniform float vertex_glow = 2.2;   // vertex alpha < 1 marks glowing paint (sdfkit: alpha = 1 - emission)
 uniform float glow_pulse = 0.0;
 
+// Textura de detalhe (opcional): projeção triplanar na POSIÇÃO DE REPOUSO do vértice
+// (CUSTOM0 = posição, CUSTOM1 = normal, gravados pelo HeroVisual), então a textura não
+// "escorrega" quando o esqueleto deforma a malha. A luminância modula a cor do vértice
+// (as zonas de cor continuam vindo do Blender) e o mapa normal entra em espaço de repouso,
+// girado para a normal deformada.
+uniform bool use_detail = false;
+uniform sampler2D detail_albedo : source_color, hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D detail_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float detail_scale = 2.5;           // repetições por metro
+uniform float detail_albedo_mix = 0.45;     // força da modulação de cor
+uniform float detail_mean = 0.5;            // luminância média da textura (mantém o tom)
+uniform float detail_normal_strength = 0.6;
+uniform float detail_sharp = 4.0;           // nitidez da mistura entre as três projeções
+varying vec3 v_rest_pos;
+varying vec3 v_rest_nrm;
+varying vec3 v_skin_nrm;
+
+void vertex() {
+	v_rest_pos = CUSTOM0.xyz;
+	v_rest_nrm = CUSTOM1.xyz;
+	v_skin_nrm = NORMAL;
+}
+
 void fragment() {
 	vec3 base = COLOR.rgb * tint;
 	if (use_texture) {
 		base = texture(albedo_tex, UV).rgb * tint;
+	}
+	if (use_detail) {
+		vec3 rn = normalize(v_rest_nrm + vec3(1e-5));
+		vec3 w = pow(abs(rn), vec3(detail_sharp));
+		w /= max(w.x + w.y + w.z, 1e-4);
+		vec3 p = v_rest_pos * detail_scale;
+		vec2 ux = p.zy;
+		vec2 uy = p.xz;
+		vec2 uz = p.xy;
+		vec3 ta = texture(detail_albedo, ux).rgb * w.x + texture(detail_albedo, uy).rgb * w.y
+			+ texture(detail_albedo, uz).rgb * w.z;
+		float lum = dot(ta, vec3(0.299, 0.587, 0.114));
+		base *= mix(1.0, lum / max(detail_mean, 0.05), detail_albedo_mix);
+		// triplanar normal mapping, "whiteout" blend (rest object space)
+		vec3 nx = texture(detail_normal, ux).rgb * 2.0 - 1.0;
+		vec3 ny = texture(detail_normal, uy).rgb * 2.0 - 1.0;
+		vec3 nz = texture(detail_normal, uz).rgb * 2.0 - 1.0;
+		nx = vec3(nx.xy + rn.zy, abs(nx.z) * rn.x);
+		ny = vec3(ny.xy + rn.xz, abs(ny.z) * rn.y);
+		nz = vec3(nz.xy + rn.xy, abs(nz.z) * rn.z);
+		vec3 dn = normalize(nx.zyx * w.x + ny.xzy * w.y + nz.xyz * w.z);
+		// rotate from the rest normal to the skinned normal (Rodrigues), then to view space
+		vec3 sn = normalize(v_skin_nrm);
+		vec3 k = cross(rn, sn);
+		float c = dot(rn, sn);
+		vec3 rdn = dn * c + cross(k, dn) + k * (dot(k, dn) / (1.0 + c + 1e-4));
+		vec3 nview = normalize((VIEW_MATRIX * MODEL_MATRIX * vec4(rdn, 0.0)).xyz);
+		NORMAL = normalize(mix(NORMAL, nview, detail_normal_strength));
 	}
 	ALBEDO = base;
 	ROUGHNESS = 0.85;
