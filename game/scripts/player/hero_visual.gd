@@ -30,6 +30,9 @@ var tree: AnimationTree
 var springs: SpringBoneSimulator3D
 var spring_groups := {}
 var _held := {}
+var _wind_t := 0.0
+## Vento do mundo (mesma direção das faixas de areia: wind_deg 25° da receita).
+const WIND_DIR := Vector3(0.906, 0.12, 0.423)
 var eye_materials: Array[ShaderMaterial] = []
 var body_materials: Array[ShaderMaterial] = []
 var glyph_material: ShaderMaterial
@@ -121,6 +124,22 @@ func _setup_materials() -> void:
 				mat.set_shader_parameter("sheen", 0.12)
 				mat.set_shader_parameter("sss_strength", 0.08)
 				mat.set_shader_parameter("rim_strength", 0.95)
+				mat.next_pass = outline
+				body_materials.append(mat)
+			"hair":
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 0.5)
+				mat.set_shader_parameter("rim_strength", 0.85)
+				mat.set_shader_parameter("sss_strength", 0.1)
+				mat.next_pass = outline
+				body_materials.append(mat)
+			"scarf":
+				# tecido fino contra o sol: transluz quente nas bordas e contraluz forte
+				mat.shader = TOON
+				mat.set_shader_parameter("sss_strength", 0.45)
+				mat.set_shader_parameter("sss_color", Color(1.0, 0.36, 0.24))
+				mat.set_shader_parameter("rim_strength", 1.1)
+				mat.set_shader_parameter("sheen", 0.06)
 				mat.next_pass = outline
 				body_materials.append(mat)
 			"cloth":
@@ -284,6 +303,56 @@ func _setup_springs() -> void:
 		spring_groups[g] = sb
 		if springs == null:
 			springs = sb
+	_setup_spring_collisions()
+	_wind_t = randf() * 20.0
+
+
+## Corpos de colisão das molas (HeroDefs "collisions": {grupo: [[osso, "capsule"|"sphere",
+## raio, altura, deslocamento], ...]}): o cachecol não atravessa o tronco nem a cabeça.
+func _setup_spring_collisions() -> void:
+	var cols: Dictionary = def.get("collisions", {})
+	for g in cols:
+		if not spring_groups.has(g):
+			continue
+		var sb: SpringBoneSimulator3D = spring_groups[g]
+		for c in cols[g]:
+			if skeleton.find_bone(String(c[0])) < 0:
+				continue
+			var col: SpringBoneCollision3D
+			if String(c[1]) == "capsule":
+				var cap := SpringBoneCollisionCapsule3D.new()
+				cap.radius = float(c[2])
+				cap.height = float(c[3])
+				col = cap
+			else:
+				var sp := SpringBoneCollisionSphere3D.new()
+				sp.radius = float(c[2])
+				col = sp
+			col.bone_name = String(c[0])
+			if c[c.size() - 1] is Vector3:
+				col.position_offset = c[c.size() - 1]
+			sb.add_child(col)
+		for i in sb.setting_count:
+			sb.set_enable_all_child_collisions(i, true)
+
+
+## Vento nas molas (HeroDefs "wind": {grupo: {strength, flutter}}): rajadas lentas na direção
+## do vento do mundo + tremulação rápida (cima/lado), para o cachecol esvoaçar mesmo parado.
+func _update_wind(delta: float) -> void:
+	var winds: Dictionary = def.get("wind", {})
+	if winds.is_empty():
+		return
+	_wind_t += delta
+	var t := _wind_t
+	var side := Vector3(-WIND_DIR.z, 0.0, WIND_DIR.x)
+	for g in winds:
+		if not spring_groups.has(g):
+			continue
+		var w: Dictionary = winds[g]
+		var gust := 0.7 + 0.3 * sin(t * 0.9) * sin(t * 0.31 + 1.7)
+		var flutter := (Vector3.UP * sin(t * 11.0) + side * sin(t * 7.3 + 1.1) * 0.7) * float(w.get("flutter", 0.4))
+		(spring_groups[g] as SpringBoneSimulator3D).external_force = \
+			(WIND_DIR.normalized() * gust + flutter) * float(w.get("strength", 0.8))
 
 
 ## Liga/desliga grupos de molas conforme o estado de animação (HeroDefs "spring_off")
@@ -320,6 +389,7 @@ func set_happy(v: float) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_wind(delta)
 	if state == "loco" and _loco_cps > 0.0:
 		_advance_contacts(delta)
 	if _oneshot_left > 0.0:
