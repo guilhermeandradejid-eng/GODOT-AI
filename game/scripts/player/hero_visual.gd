@@ -31,6 +31,7 @@ var springs: SpringBoneSimulator3D
 var spring_groups := {}
 var _held := {}
 var _wind_t := 0.0
+var cloth: ScarfCloth               ## pontas do cachecol em tecido simulado (HeroDefs "cloth")
 ## Vento do mundo (mesma direção das faixas de areia: wind_deg 25° da receita).
 const WIND_DIR := Vector3(0.906, 0.12, 0.423)
 var eye_materials: Array[ShaderMaterial] = []
@@ -67,6 +68,7 @@ func _ready() -> void:
 	_setup_loops()
 	_setup_tree()
 	_setup_springs()
+	_setup_cloth()
 
 
 static func _find(n: Node, cls: String) -> Node:
@@ -359,6 +361,36 @@ func _setup_springs() -> void:
 			springs = sb
 	_setup_spring_collisions()
 	_wind_t = randf() * 20.0
+
+
+## Tecido simulado (HeroDefs "cloth"): as pontas modeladas somem (BoneHider) e um ScarfCloth
+## preso ao osso do nó do cachecol faz o pano de verdade, com vento e colisão com o corpo.
+func _setup_cloth() -> void:
+	var c: Dictionary = def.get("cloth", {})
+	if c.is_empty() or skeleton == null:
+		return
+	if not c.get("hide_bones", []).is_empty():
+		var hider := BoneHider.new()
+		hider.name = "EscondePontas"
+		hider.bones = PackedStringArray(c["hide_bones"])
+		skeleton.add_child(hider)
+	cloth = ScarfCloth.new()
+	cloth.name = "Cachecol"
+	add_child(cloth)
+	var mats: Dictionary = def.get("materials", {})
+	var ov: Dictionary = {}
+	for k in mats.get("*", {}):
+		ov[k] = mats["*"][k]
+	for k in mats.get("scarf", {}):
+		ov[k] = mats["scarf"][k]
+	cloth.setup(skeleton, c, ov)
+	body_materials.append(cloth.material())
+
+
+## Recoloca o pano (teletransporte, respawn).
+func reset_cloth() -> void:
+	if cloth != null:
+		cloth.reset()
 
 
 ## Corpos de colisão das molas (HeroDefs "collisions": {grupo: [[osso, "capsule"|"sphere",

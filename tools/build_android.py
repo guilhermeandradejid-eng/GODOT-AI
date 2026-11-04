@@ -45,7 +45,7 @@ EXTRA_RESOURCES = [
 ]
 # raw terrain data read with FileAccess (not Godot resources): shipped via include_filter
 INCLUDE_FILTER = "game/world/*_terrain/*.bin, game/world/*_terrain/*.json"
-GAME_EXT = {".tscn", ".gd", ".gdshader", ".glb", ".png", ".wav", ".ogg", ".ttf", ".json", ".tres", ".res"}
+GAME_EXT = {".tscn", ".gd", ".gdshader", ".gdshaderinc", ".glb", ".png", ".wav", ".ogg", ".ttf", ".json", ".tres", ".res"}
 
 
 def find_godot() -> str:
