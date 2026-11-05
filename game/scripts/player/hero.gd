@@ -131,6 +131,7 @@ var _combo_aim := NAN
 var _combo_aim_rate := 0.0
 var _freeze_t := 0.0                ## hit-stop local: pula a física e congela a animação
 var _last_hits: Array = []
+var _last_foes := 0                 ## acertos em Silentes/sinos no último _attack (Ricochete)
 var _carry_t := 0.0
 var _glide_cap := 9.2
 var _lufada_v := 0.0
@@ -667,11 +668,8 @@ func _spin() -> void:
 	var airborne := state in [S.AIR, S.GLIDE, S.LAUNCH]
 	var hits := _attack(global_position + Vector3.UP * 0.5, SPIN_R_STAFF if staff else SPIN_R,
 		"staff_spin" if staff else "spin", 1, Vector2(4.5, 2.0) if staff else Vector2.ZERO)
-	if hits > 0 and airborne and hero_id == "agile":
-		for n in _last_hits:
-			if is_instance_valid(n) and (n.is_in_group(&"enemies") or n.is_in_group(&"chimes") or n.get("need") != null):
-				_ricochet()
-				break
+	if hits > 0 and airborne and hero_id == "agile" and _last_foes > 0:
+		_ricochet()
 
 
 func _ricochet() -> void:
@@ -693,6 +691,7 @@ func _ricochet() -> void:
 func _attack(center: Vector3, radius: float, kind: String, dmg := 1, push := Vector2.ZERO) -> int:
 	var hits := 0
 	_last_hits.clear()
+	_last_foes = 0
 	var seen := {}
 	for g in [&"enemies", &"breakable", &"chimes", &"attack_listeners"]:
 		for n in get_tree().get_nodes_in_group(g):
@@ -700,6 +699,8 @@ func _attack(center: Vector3, radius: float, kind: String, dmg := 1, push := Vec
 				continue
 			seen[n] = true
 			var was_dead: bool = n.get("dead") == true
+			# Silente ou sino (antes do golpe: o Silente derrotado sai do grupo)
+			var foe: bool = n.is_in_group(&"enemies") or n.is_in_group(&"chimes")
 			var r = null
 			if n.get_method_argument_count(&"on_attack") >= 5:
 				r = n.on_attack(center, radius, self, kind, dmg)
@@ -716,6 +717,8 @@ func _attack(center: Vector3, radius: float, kind: String, dmg := 1, push := Vec
 				continue
 			hits += 1
 			_last_hits.append(n)
+			if foe:
+				_last_foes += 1
 			if push != Vector2.ZERO and n is Node3D and is_instance_valid(n):
 				var away: Vector3 = (n as Node3D).global_position - global_position
 				away.y = 0.0
