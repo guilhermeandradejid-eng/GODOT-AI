@@ -320,9 +320,9 @@ func _setup_tree() -> void:
 		for p in _lantern_mask_paths():
 			b2.set_filter_path(p, true)
 		bt.add_node("lantern", b2)
-		bt.add_node("a_lantern_hold", _anim_node("lantern_hold"))
+		bt.add_node("lantern_clip", _anim_node("lantern_hold"))
 		bt.connect_node("lantern", 0, "state")
-		bt.connect_node("lantern", 1, "a_lantern_hold")
+		bt.connect_node("lantern", 1, "lantern_clip")
 		top = "lantern"
 	# velocidade geral da animação (hit-stop local: 0 congela a pose)
 	bt.add_node("speed", AnimationNodeTimeScale.new())

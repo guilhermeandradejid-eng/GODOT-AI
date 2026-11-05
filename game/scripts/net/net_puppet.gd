@@ -53,16 +53,17 @@ func poll(intent: PlayerInput, me: Hero, delta: float) -> void:
 	_apply_tools(me, delta)
 
 
-## Luz e corda do par remoto. Se o HeroTools souber se desenhar a partir do
-## estado de rede (`apply_net_state`), ele cuida; senão a marionete desenha.
+## Luz e corda do par remoto. O HeroTools do herói remoto desenha a partir do
+## estado de rede (`apply_remote`, depois `process_remote` no Hero) e escreve
+## `Game.lantern_pos`; sem ele, a marionete desenha e escreve.
 func _apply_tools(me: Hero, delta: float) -> void:
 	_t += delta
+	var tools = me.get("tools")
+	if tools != null and tools.has_method("apply_remote"):
+		tools.apply_remote(tool_bits, rope_to)
+		return
 	var lit := tool_bits & 1 != 0
 	var raised := tool_bits & 2 != 0
-	var tools = me.get("tools")
-	var own := not (tools != null and tools.has_method("apply_net_state"))
-	if not own:
-		tools.apply_net_state(tool_bits, rope_to)
 	var lamp_p := _lamp_point(me, raised)
 	# os Silentes e sinos deste aparelho consultam Game.lantern_pos
 	if "lantern_pos" in Game:
@@ -72,8 +73,6 @@ func _apply_tools(me: Hero, delta: float) -> void:
 		elif _lamp_was:
 			Game.set("lantern_pos", Vector3.INF)
 	_lamp_was = lit
-	if not own:
-		return
 	# lanterna: OmniLight sem sombra, cintila ±6% a 3 Hz, mais forte com as horas
 	if lit:
 		if not is_instance_valid(_lamp):

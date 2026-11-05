@@ -27,7 +27,7 @@ from mathutils import Matrix, Vector  # noqa: E402
 import sdfprop  # noqa: E402
 from bhelpers import ASSETS, export_glb, log, material, reset_scene, select_only  # noqa: E402
 from sdfkit import project as sdfkit_project  # noqa: E402
-from sdfkit import (Shape, box, look_basis, capsule, cone, cylinder, ellipsoid, hexcol, plane, round_cone,  # noqa: E402
+from sdfkit import (Shape, box, look_basis, ribbon, capsule, cone, cylinder, ellipsoid, hexcol, plane, round_cone,  # noqa: E402
                     sphere, srgb_to_linear, torus, tube, blade)
 
 OUT = ASSETS / "props"
@@ -761,34 +761,34 @@ def item_concha():
 def relicario():
     """Relicário de Ferramenta (0,9 m): pedestal de arenito em degraus, glifos ciano,
     pano índigo caído na frente e atrás e aro de latão no topo (o item flutua a 1,0 m)."""
-    st = Shape("Pedestal", "stone", voxel=0.012, tris=1600, color_soft=0.03)
+    st = Shape("Pedestal", "stone", voxel=0.01, tris=2400, color_soft=0.03)
     st.add(box((0, 0, 0.07), (0.4, 0.4, 0.07), rounding=0.03).displace(0.006, 6.0, 2, 3), "root", STONE_D, k=0)
     st.add(box((0, 0, 0.18), (0.31, 0.31, 0.05), rounding=0.025), "root", STONE, k=0)
-    st.add(box((0, 0, 0.49), (0.19, 0.19, 0.3), (0, 0, 45), rounding=0.03).displace(0.006, 5.0, 2, 4), "root", STONE_L, k=0.02)
+    st.add(box((0, 0, 0.49), (0.17, 0.17, 0.3), rounding=0.03).displace(0.005, 5.0, 2, 4), "root", STONE_L, k=0.02)
     st.add(cone((0, 0, 0.79), 0.2, 0.32, 0.05, rounding=0.02), "root", STONE, k=0.02)
     st.add(cylinder((0, 0, 0.855), 0.33, 0.025, rounding=0.012), "root", STONE_L, k=0.01)
     st.carve(sphere((0, 0, 1.12), 0.26), k=0.02, color=STONE_D)                                # concavidade do topo
-    for sy in (1, -1):
-        st.paint(box((0, sy * 0.135, 0.5), (0.025, 0.06, 0.16)), GLYPH, soft=0.012)
-        st.paint(box((0, sy * 0.135, 0.31), (0.05, 0.06, 0.012)), GLYPH, soft=0.01)
     strata(st, 0.0, 0.9, 0.09, (STONE_L, STONE, STONE_L), soft=0.03)
+    for sy in (1, -1):                                                                          # glifos nas faces frente/trás
+        st.paint(box((0, sy * 0.17, 0.52), (0.018, 0.03, 0.13)), GLYPH, soft=0.01)
+        st.paint(box((0, sy * 0.17, 0.36), (0.06, 0.03, 0.01)), GLYPH, soft=0.01)
+        st.detail(box((0, sy * 0.17, 0.48), (0.08, 0.04, 0.2)), 0.9)
     sand_drift(st, (0.12, 0.08, -0.04), (0.55, 0.48, 0.1))
     br = Shape("Aro", "bronze", voxel=0.008, tris=500)
     br.add(torus((0, 0, 0.88), 0.315, 0.017), "root", BRASS, k=0)
     for i in range(4):
         a = 2 * math.pi * i / 4 + math.pi / 4
         br.add(sphere((math.cos(a) * 0.315, math.sin(a) * 0.315, 0.885), 0.026), "root", BRASS_D, k=0.004)
-    cl = Shape("Pano", "cloth", voxel=0.007, tris=1100, color_soft=0.01)
-    for sy in (1, -1):                                                                          # aba frente/trás
-        pts = [(0, sy * 0.18, 0.905), (0, sy * 0.3, 0.89), (0, sy * 0.335, 0.8), (0, sy * 0.325, 0.68),
-               (0, sy * 0.31, 0.58)]
-        cl.add(blade(pts, [0.12, 0.13, 0.115, 0.095, 0.03], flat=0.08, normal=(0, 1, 0.25 * sy), k=0.02)
-               .displace(0.004, 18.0, 2, 5 if sy > 0 else 6), "root", INDIGO, k=0)
-        cl.paint(box((0, sy * 0.33, 0.66), (0.2, 0.06, 0.012)), BRASS, soft=0.008)              # barra bordada
-    cl.add(box((0, 0, 0.9), (0.14, 0.19, 0.012), rounding=0.01).displace(0.003, 20.0, 2, 7), "root", INDIGO, k=0.02)
-    cl.paint(box((0, 0, 0.9), (0.15, 0.2, 0.05)), INDIGO_D, soft=0.03)
-    for sy in (1, -1):
-        cl.add(sphere((0, sy * 0.31, 0.56), 0.017), "root", BRASS, k=0.004)                      # pingente
+    cl = Shape("Pano", "cloth", voxel=0.006, tris=1400, color_soft=0.01)
+    cl.add(box((0, 0, 0.9), (0.13, 0.338, 0.009), rounding=0.008).displace(0.002, 20.0, 2, 7), "root", INDIGO, k=0)
+    for sy in (1, -1):                                                                          # abas frente/trás
+        pts = [(0, sy * 0.338, 0.905), (0, sy * 0.35, 0.8), (0, sy * 0.342, 0.7), (0, sy * 0.33, 0.6)]
+        cl.add(ribbon(pts, [0.26, 0.25, 0.2, 0.05], 0.007, up=(0, 1, 0)).displace(0.003, 22.0, 2, 5 if sy > 0 else 6),
+               "root", INDIGO, k=0.01)
+        cl.paint(box((0, sy * 0.345, 0.715), (0.2, 0.03, 0.012)), BRASS, soft=0.008)              # barra bordada
+        cl.add(sphere((0, sy * 0.33, 0.585), 0.018), "root", BRASS, k=0.004)                       # pingente
+    cl.paint(box((0, 0, 0.91), (0.09, 0.2, 0.02)), INDIGO_D, soft=0.04)
+    cl.detail(box((0, 0, 0.75), (0.2, 0.4, 0.2)), 0.5)
     objs = build_parts({"Pedestal": ([st], [], None), "Aro": ([br], [], None), "Pano": ([cl], [], None)})
     objs.append(empty("item", (0, 0, 1.0)))
     export("relicario", objs)
@@ -813,12 +813,12 @@ def argola():
         r = math.radians(a)
         p = np.array([math.cos(r) * R, 0, math.sin(r) * R])
         gl.add(ellipsoid(tuple(p), (0.062, 0.062, 0.062)), "root", CYAN, k=0)
-        ln = 0.42 if a == -90 else 0.32
+        ln = 0.5 if a == -90 else 0.38
         top = p + np.array([0, 0, -0.05])
         sway = 0.04 * (1 if i % 2 else -1)
         pts = [tuple(top), tuple(top + np.array([sway * 0.3, 0.01, -ln * 0.35])),
                tuple(top + np.array([sway, 0.0, -ln * 0.7])), tuple(top + np.array([sway * 1.4, -0.01, -ln]))]
-        cl.add(blade(pts, [0.05, 0.065, 0.055, 0.012], flat=0.12, normal=(0, 1, 0), k=0.01)
+        cl.add(blade(pts, [0.06, 0.08, 0.068, 0.014], flat=0.1, normal=(0, 1, 0), k=0.01)
                .displace(0.004, 14.0, 2, 10 + i), "root", SAILCLOTH, k=0)
         cl.paint(box(tuple(top + np.array([0, 0, -ln * 0.55])), (0.2, 0.2, 0.025)), ROPE, soft=0.012)   # faixa
     objs = build_parts({"Aro": ([br], [], None), "Contas": ([gl], [], None), "Bandeirolas": ([cl], [], None)})
@@ -829,10 +829,11 @@ def aro_puxar():
     """Aro de puxar (0,6 m): placa índigo vertical (frente -Y) com rebites e glifo, um
     olhal e 2 elos de corrente segurando um aro grosso de latão. Origem = centro do
     verso da placa (encosta no objeto); "grab" = centro do aro."""
-    pl = Shape("Placa", "stone", voxel=0.006, tris=900, color_soft=0.01)
+    pl = Shape("Placa", "stone", voxel=0.005, tris=2400, color_soft=0.01)
     pl.add(box((0, -0.03, 0.0), (0.21, 0.03, 0.21), rounding=0.02), "root", INDIGO, k=0)
     pl.add(box((0, -0.064, 0.0), (0.17, 0.006, 0.17), rounding=0.006), "root", INDIGO_D, k=0.004)
-    pl.paint(torus((0, -0.07, -0.02), 0.085, 0.008, (90, 0, 0)), GLYPH, soft=0.006)
+    pl.paint(torus((0, -0.07, -0.02), 0.13, 0.009, (90, 0, 0)), GLYPH, soft=0.008)               # glifo em volta do aro
+    pl.detail(torus((0, -0.07, -0.02), 0.13, 0.03, (90, 0, 0)), 1.0)
     br = Shape("Aro", "bronze", voxel=0.0045, tris=1500, color_soft=0.006)
     frame = box((0, -0.035, 0.0), (0.226, 0.032, 0.226), rounding=0.012).cut(box((0, -0.07, 0.0), (0.19, 0.05, 0.19)), 0.004)
     br.add(frame, "root", BRASS_D, k=0)                                                         # moldura
@@ -851,21 +852,33 @@ def aro_puxar():
     export("aro_puxar", objs)
 
 
-def _tripod(sh, h, foot_r, col=BRONZE, thick=0.035, seed=0):
-    top = np.array([0.0, 0.0, h])
+def _tripod(sh, h, foot_r, col=BRONZE, thick=0.035):
+    """Tripé de bronze: 3 pernas levemente arqueadas, pés de latão, cinta a 38% da
+    altura (encostada nas pernas) e cabeça com anel e pináculo."""
+    top = np.array([0.0, 0.0, h - 0.06])
+    top_r = 0.07
+    ring_z = h * 0.38
+
+    def leg_r(z):
+        return foot_r + (top_r - foot_r) * (z - 0.03) / (top[2] - 0.03)
     for i in range(3):
         a = 2 * math.pi * i / 3 + math.pi / 2
-        foot = np.array([math.cos(a) * foot_r, math.sin(a) * foot_r, 0.03])
-        knee = foot * 0.55 + top * 0.45 + np.array([math.cos(a), math.sin(a), 0]) * 0.08
-        sh.add(tube([tuple(foot), tuple(knee), tuple(top - np.array([0, 0, 0.06]))], [thick * 1.15, thick, thick * 0.8],
-                    k=0.02), "root", col, k=0.02)
-        sh.add(round_cone(tuple(foot), tuple(foot + np.array([math.cos(a) * 0.05, math.sin(a) * 0.05, -0.02])),
-                          thick * 1.5, thick * 1.1), "root", BRASS_D, k=0.01)
-    sh.add(cylinder(tuple(top), 0.09, 0.05, rounding=0.02), "root", BRASS, k=0.03)
-    sh.add(torus(tuple(top - np.array([0, 0, 0.05])), 0.11, 0.018), "root", BRASS_D, k=0.01)
-    sh.add(cone(tuple(top + np.array([0, 0, 0.08])), 0.05, 0.012, 0.04, rounding=0.008), "root", BRASS, k=0.01)
-    ring_z = h * 0.38
-    sh.add(torus((0, 0, ring_z), foot_r * 0.62 * (1 - ring_z / h) + 0.04, 0.016), "root", BRASS_D, k=0.01)
+        o = np.array([math.cos(a), math.sin(a), 0.0])
+        pts = []
+        for t in np.linspace(0.0, 1.0, 6):
+            z = 0.03 + (top[2] - 0.03) * t
+            pts.append(tuple(o * (leg_r(z) + 0.05 * math.sin(math.pi * t)) + np.array([0, 0, z])))
+        sh.add(tube(pts, list(np.linspace(thick * 1.1, thick * 0.8, 6)), k=0.01), "root", col, k=0.015)
+        foot = o * foot_r + np.array([0, 0, 0.03])
+        sh.add(round_cone(tuple(foot), tuple(foot + o * 0.06 + np.array([0, 0, -0.01])), thick * 1.45, thick * 1.05),
+               "root", BRASS_D, k=0.01)
+        knot = o * (leg_r(ring_z) + 0.05 * math.sin(math.pi * (ring_z - 0.03) / (top[2] - 0.03))) + np.array([0, 0, ring_z])
+        sh.add(sphere(tuple(knot), thick * 1.35), "root", BRASS, k=0.01)
+    rr = leg_r(ring_z) + 0.05 * math.sin(math.pi * (ring_z - 0.03) / (top[2] - 0.03))
+    sh.add(torus((0, 0, ring_z), rr, thick * 0.45), "root", BRASS_D, k=0.008)
+    sh.add(cylinder((0, 0, h), 0.09, 0.05, rounding=0.02), "root", BRASS, k=0.03)
+    sh.add(torus((0, 0, h - 0.05), 0.11, 0.018), "root", BRASS_D, k=0.01)
+    sh.add(cone((0, 0, h + 0.08), 0.05, 0.012, 0.04, rounding=0.008), "root", BRASS, k=0.01)
 
 
 def sino_cristal():
@@ -965,9 +978,10 @@ def braseiro():
         br.add(sphere((math.cos(a) * 0.45, math.sin(a) * 0.45, 0.31), 0.04), "root", BRASS, k=0.01)
     br.paint(torus((0, 0, 0.17), 0.39, 0.012), GLYPH, soft=0.012)
     bm = bmesh.new()
-    crystal_prism(bm, (0, 0, 0.08), (0, 0, 1), 0.3, 0.32, sides=8, tip=0.55, twist=0.2)
+    crystal_prism(bm, (0, 0, 0.06), (0, 0, 1), 0.38, 0.31, sides=8, tip=0.42, twist=0.2)
+    deep = hexcol("C8641E")        # âmbar fundo: com energia 2,0 ainda lê laranja, não branco
     gem = bm_object("Gema", bm, "glow", (AMBER[0], AMBER[1], AMBER[2], 0.0), flat=True,
-                    gradient=lambda t: tuple(AMBER[k] * (1 - t) + AMBER_HOT[k] * t for k in range(3)) + (0.0,))
+                    gradient=lambda t: tuple(deep[k] * (1 - t) + AMBER[k] * t for k in range(3)) + (0.0,))
     objs = build_parts({"Tigela": ([br], [], None)}) + [gem]
     objs.append(empty("flame", (0, 0, 0.35)))
     export("braseiro", objs)

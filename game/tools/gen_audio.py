@@ -12,6 +12,7 @@ Músicas  → game/assets/audio/music/explore.ogg (deserto ao entardecer: drone 
 from __future__ import annotations
 
 import argparse
+import struct
 import subprocess
 import wave
 from pathlib import Path
@@ -137,7 +138,7 @@ def normalize(x, peak=0.89):
     return x / m * peak
 
 
-def write_wav(path: Path, x: np.ndarray, sr: int, stereo=False):
+def write_wav(path: Path, x: np.ndarray, sr: int, stereo=False, loop=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     if stereo:
         data = np.stack(x, axis=1)
@@ -149,6 +150,18 @@ def write_wav(path: Path, x: np.ndarray, sr: int, stereo=False):
         w.setsampwidth(2)
         w.setframerate(sr)
         w.writeframes(pcm.tobytes())
+    if loop:
+        add_smpl_loop(path, len(pcm), sr)
+
+
+def add_smpl_loop(path: Path, frames: int, sr: int):
+    """Chunk "smpl" com um laço para frente cobrindo o arquivo todo (lido pelo Godot)."""
+    smpl = struct.pack("<9I", 0, 0, int(1e9 / sr), 60, 0, 0, 0, 1, 0)
+    smpl += struct.pack("<6I", 0, 0, 0, frames - 1, 0, 0)
+    raw = bytearray(path.read_bytes())
+    raw += b"smpl" + struct.pack("<I", len(smpl)) + smpl
+    raw[4:8] = struct.pack("<I", len(raw) - 8)
+    path.write_bytes(bytes(raw))
 
 
 def soft_room(x, sr, wet=0.25, seconds=1.2):
@@ -338,9 +351,194 @@ def make_sfx():
     fade = int(0.08 * sr)
     loop[:fade] = loop[:fade] * np.linspace(0, 1, fade) + loop[-fade:] * np.linspace(1, 0, fade)
     S["surf"] = loop[:-fade]
+    # itens e travas (itens.md 8.3) — depois de todos os antigos para não mudar a sequência do rng
+    item_sfx(S, sr)
     for name, x in S.items():
-        write_wav(SFX / f"{name}.wav", normalize(np.asarray(x, dtype=float), 0.85), sr)
+        write_wav(SFX / f"{name}.wav", normalize(np.asarray(x, dtype=float), 0.85), sr,
+                  loop=name in LOOPS)
     print("sfx:", len(S))
+
+
+## Sons que tocam em laço (Sfx.loop): o WAV leva um chunk "smpl" e o importador do Godot
+## ("Detect From WAV") liga o loop sozinho.
+LOOPS = {"surf", "swing_wind", "cable_hum", "lantern_loop", "rope_creak"}
+
+
+def seamless(x, sr, fade=0.08):
+    """Laço sem emenda: mistura o fim no começo e corta o fim."""
+    f = int(fade * sr)
+    y = x.copy()
+    y[:f] = y[:f] * np.linspace(0, 1, f) + y[-f:] * np.linspace(1, 0, f)
+    return y[:-f]
+
+
+def glide(f0, f1, dur, sr, curve=1.0, harm=((1, 1.0),)):
+    """Tom com glissando (f0 -> f1) e harmônicos."""
+    t = t_axis(dur, sr)
+    f = f0 + (f1 - f0) * (t / dur) ** curve
+    ph = 2 * np.pi * np.cumsum(f) / sr
+    return sum(a * np.sin(ph * h) for h, a in harm)
+
+
+def item_sfx(S, sr):
+    """Arpéu, Bastão, Lanterna, Concha, Sinos e o item_get (itens.md 8.3)."""
+    # --- Arpéu
+    n = int(0.3 * sr)
+    tt = np.arange(n) / sr
+    x = highpass(noise(n), sr, 1200) * (tt / 0.22) ** 3 * (tt < 0.22)
+    x += 0.35 * glide(380, 1900, 0.3, sr, 1.6) * np.minimum(1, tt / 0.05) * (tt < 0.22)
+    crack = highpass(noise(int(0.03 * sr)), sr, 2500) * exp_decay(int(0.03 * sr), sr, 0.004)
+    place(x, crack * 2.2, 0.215 * sr)
+    S["hook_throw"] = x
+    buf = np.zeros(int(0.5 * sr))
+    for k, (f, g) in enumerate(((1180, 0.7), (1530, 0.5))):
+        place(buf, fm_bell(f, 0.4, sr, ratio=1.41, index=4.0, tau=0.07, partials=[(2.7, 0.4, 0.5)]), k * 0.028 * sr, g)
+    n2 = int(0.15 * sr)
+    place(buf, sweep_sine(190, 80, 0.15, sr) * exp_decay(n2, sr, 0.04) * 0.9, 0)
+    place(buf, bandpass(noise(n2), sr, 800, 6000) * exp_decay(n2, sr, 0.012) * 0.6, 0)
+    S["hook_lock"] = buf
+    n = int(2.08 * sr)
+    tt = np.arange(n) / sr
+    w = bandpass(noise(n), sr, 250, 2400) * (0.55 + 0.45 * np.sin(2 * np.pi * tt / 1.04) ** 2)
+    w += 0.4 * bandpass(noise(n), sr, 1800, 5000) * (0.5 + 0.5 * np.sin(2 * np.pi * tt / 1.04 + 1.2)) ** 2
+    S["swing_wind"] = seamless(w, sr)
+    n = int(0.9 * sr)
+    tt = np.arange(n) / sr
+    x = 0.5 * glide(160, 720, 0.9, sr, 0.7, ((1, 1.0), (2, 0.4), (3, 0.2))) * np.minimum(1, tt / 0.05)
+    x *= np.minimum(1, (0.9 - tt) / 0.12)
+    t_click = 0.0
+    while t_click < 0.82:
+        rate = 18 + 70 * (t_click / 0.82) ** 1.3
+        c = bandpass(noise(int(0.008 * sr)), sr, 1500, 6000) * exp_decay(int(0.008 * sr), sr, 0.002)
+        place(x, c * 0.9, t_click * sr)
+        t_click += 1.0 / rate
+    S["zip_reel"] = x
+    n = int(2.45 * sr)
+    x = lowpass(noise(n), sr, 220) * 0.25
+    for t0, dur, f in ((0.15, 0.55, 38), (1.25, 0.65, 31)):
+        m = int(dur * sr)
+        tt = np.arange(m) / sr
+        pulses = (np.sin(2 * np.pi * np.cumsum(f * (1 + 0.4 * np.sin(np.pi * tt / dur))) / sr) > 0.92).astype(float)
+        creak = bandpass(pulses * noise(m) * 0.5 + pulses, sr, 350, 1800) * np.sin(np.pi * tt / dur) ** 0.6
+        place(x, creak * 1.4, t0 * sr)
+    S["rope_creak"] = seamless(x, sr, 0.05)
+    n = int(2.0 * sr)
+    tt = np.arange(n) / sr
+    x = np.zeros(n)
+    for f, a in ((220.0, 0.8), (220.5, 0.6), (330.0, 0.35), (440.0, 0.25), (661.5, 0.12), (1320.0, 0.05)):
+        x += a * np.sin(2 * np.pi * f * tt)          # frequências múltiplas de 0,5 Hz: laço perfeito de 2 s
+    x += 0.06 * bandpass(noise(n), sr, 2000, 7000)
+    S["cable_hum"] = x
+    # --- Bastão: o tom "canta" e sobe a cada golpe do combo
+    for i, (f, dur) in enumerate(((620, 0.24), (760, 0.26), (930, 0.4)), start=1):
+        n = int(dur * sr)
+        tt = np.arange(n) / sr
+        env = np.sin(np.pi * np.minimum(1, tt / dur)) ** 1.5
+        x = bandpass(noise(n), sr, 500 + 150 * i, 4200) * env
+        x += 0.45 * glide(f * 0.9, f * 1.12, dur, sr, 1.0, ((1, 1.0), (2, 0.25), (3, 0.1))) * env
+        if i == 3:
+            x += 0.5 * lowpass(noise(n), sr, 500) * env
+        S[f"staff_swing_{i}"] = x
+    n = int(0.6 * sr)
+    x = bandpass(noise(n), sr, 300, 1600) * exp_decay(n, sr, 0.018) * 1.2
+    x += 0.8 * sweep_sine(260, 170, 0.6, sr) * exp_decay(n, sr, 0.03)
+    place(x, fm_bell(2640, 0.55, sr, ratio=2.76, index=1.2, tau=0.22, partials=[(1.5, 0.3, 0.6)]), 0.004 * sr, 0.45)
+    S["staff_hit"] = x
+    n = int(0.25 * sr)
+    x = fm_bell(3300, 0.25, sr, ratio=1.73, index=2.0, tau=0.05) * 0.7
+    x += highpass(noise(n), sr, 4000) * exp_decay(n, sr, 0.003) * 0.6
+    S["tink"] = x
+    n = int(0.9 * sr)
+    x = sweep_sine(110, 38, 0.9, sr) * exp_decay(n, sr, 0.16) * 1.1
+    x += lowpass(noise(n), sr, 700) * exp_decay(n, sr, 0.09) * 0.8
+    for k in range(14):
+        at = rng.uniform(0.0, 0.45) ** 1.6 * sr
+        m = int(rng.uniform(0.004, 0.015) * sr)
+        place(x, bandpass(noise(m), sr, 900, 7000) * exp_decay(m, sr, 0.003) * rng.uniform(0.4, 1.0), at)
+    S["crack"] = x
+    # --- Lanterna
+    n = int(1.0 * sr)
+    tt = np.arange(n) / sr
+    x = lowpass(noise(n), sr, 700) * np.minimum(1, tt / 0.07) * exp_decay(n, sr, 0.16)
+    x += 0.5 * glide(196, 262, 1.0, sr, 0.3, ((1, 1.0), (2, 0.3))) * np.minimum(1, tt / 0.1) * exp_decay(n, sr, 0.3)
+    place(x, fm_bell(note_hz(91), 0.8, sr, ratio=2.0, index=0.6, tau=0.3), 0.06 * sr, 0.35)
+    S["lantern_on"] = x
+    n = int(2.1 * sr)
+    x = lowpass(noise(n), sr, 320) * 0.35 + bandpass(noise(n), sr, 1500, 5000) * 0.04
+    for k in range(34):
+        m = int(rng.uniform(0.002, 0.009) * sr)
+        pop = bandpass(noise(m), sr, rng.uniform(900, 2500), 8000) * exp_decay(m, sr, 0.0015)
+        place(x, pop * rng.uniform(0.3, 1.0), rng.uniform(0.0, 2.0) * sr)
+    S["lantern_loop"] = seamless(x, sr)
+    n = int(1.1 * sr)
+    tt = np.arange(n) / sr
+    roar = bandpass(noise(n), sr, 120, 2500) * np.minimum(1, tt / 0.09) ** 2 * exp_decay(n, sr, 0.35)
+    x = roar + 0.3 * highpass(noise(n), sr, 3000) * np.minimum(1, tt / 0.05) * exp_decay(n, sr, 0.12)
+    x += 0.35 * glide(220, 440, 1.1, sr, 0.4) * np.minimum(1, tt / 0.08) * exp_decay(n, sr, 0.25)
+    for k in range(18):
+        m = int(rng.uniform(0.002, 0.008) * sr)
+        place(x, bandpass(noise(m), sr, 1200, 8000) * exp_decay(m, sr, 0.0015) * rng.uniform(0.3, 0.9),
+              rng.uniform(0.05, 0.9) * sr)
+    S["ember_ignite"] = x
+    # --- Concha: nota grave e redonda, uma quinta acima da buzina do Hulvar ("call": Sol2 -> Ré3)
+    n = int(0.95 * sr)
+    tt = np.arange(n) / sr
+    f = note_hz(50) * (1 - 0.03 * np.exp(-tt / 0.06)) * (1 + 0.004 * np.sin(2 * np.pi * 4.5 * tt) * np.minimum(1, tt / 0.3))
+    ph = 2 * np.pi * np.cumsum(f) / sr
+    x = np.sin(ph) + 0.38 * np.sin(2 * ph) + 0.16 * np.sin(3 * ph) + 0.06 * np.sin(4 * ph)
+    x += 0.12 * bandpass(noise(n), sr, 200, 1400) * (0.6 + 0.4 * np.sin(ph))
+    x = lowpass(x, sr, 1400) * env_adsr(n, sr, 0.07, 0.12, 0.85, 0.3)
+    S["horn_blow"] = soft_room(x, sr, 0.25, 1.0)[: n + int(0.3 * sr)]
+    n = int(0.8 * sr)
+    tt = np.arange(n) / sr
+    env = np.minimum(1, tt / 0.08) ** 1.5 * exp_decay(n, sr, 0.22)
+    x = bandpass(noise(n), sr, 180, 1600) * env + 0.5 * bandpass(noise(n), sr, 1600, 6000) * env * np.exp(-tt / 0.15)
+    S["gust_whoosh"] = x
+    n = int(0.9 * sr)
+    x = bandpass(noise(n), sr, 1500, 8000) * exp_decay(n, sr, 0.25) * 0.35
+    for k in range(160):
+        at = rng.uniform(0.0, 0.7) ** 1.5 * sr
+        m = 240
+        g = bandpass(noise(m), sr, 2500, 9500) * np.hanning(m) * rng.uniform(0.2, 0.7)
+        place(x, g, at)
+    S["sand_scatter"] = x
+    n = int(1.4 * sr)
+    tt = np.arange(n) / sr
+    x = bandpass(noise(n), sr, 500, 5000) * np.minimum(1, tt / 0.1) * exp_decay(n, sr, 0.4)
+    x += 0.4 * lowpass(noise(n), sr, 300) * np.minimum(1, tt / 0.05) * exp_decay(n, sr, 0.2)
+    for k, m in enumerate((74, 79, 86)):
+        place(x, fm_bell(note_hz(m), 0.9, sr, ratio=2.0, index=0.6, tau=0.3), (0.25 + k * 0.08) * sr, 0.22)
+    S["veil_part"] = x
+    n = int(1.1 * sr)
+    tt = np.arange(n) / sr
+    x = bandpass(noise(n), sr, 400, 4500) * (tt / 1.1) ** 1.5 * np.minimum(1, (1.1 - tt) / 0.05)
+    place(x, sweep_sine(120, 50, 0.3, sr) * exp_decay(int(0.3 * sr), sr, 0.08), 0.92 * sr, 0.8)
+    place(x, lowpass(noise(int(0.25 * sr)), sr, 900) * exp_decay(int(0.25 * sr), sr, 0.05), 0.92 * sr, 0.6)
+    S["veil_close"] = x
+    # --- Sinos de cristal: mesmo acorde (Dó maior); falha desce
+    bell_p = [(2.76, 0.25, 0.4), (5.4, 0.12, 0.2)]
+    S["chime_low"] = fm_bell(note_hz(72), 2.2, sr, ratio=2.76, index=1.4, tau=0.85, partials=bell_p)
+    S["chime_high"] = fm_bell(note_hz(79), 2.0, sr, ratio=2.76, index=1.4, tau=0.75, partials=bell_p)
+    n = int(1.0 * sr)
+    tt = np.arange(n) / sr
+    x = glide(note_hz(76), note_hz(69), 1.0, sr, 0.5, ((1, 1.0), (2.76, 0.18))) * exp_decay(n, sr, 0.3)
+    S["chime_fail"] = lowpass(x * np.minimum(1, tt / 0.004), sr, 2500)
+    buf = np.zeros(int(2.6 * sr))
+    for k, m in enumerate((72, 76, 79, 84)):
+        place(buf, fm_bell(note_hz(m), 2.2, sr, ratio=2.76, index=1.1, tau=0.8, partials=bell_p), k * 0.09 * sr, 0.3)
+    for m in (84, 88, 91):
+        place(buf, fm_bell(note_hz(m), 1.8, sr, ratio=2.0, index=0.5, tau=0.7), 0.42 * sr, 0.16)
+    S["chord_solved"] = soft_room(buf, sr, 0.35, 1.6)[: len(buf)]
+    # --- item_get: fanfarra curta (harpa subindo + sinos no acorde final)
+    buf = np.zeros(int(2.0 * sr))
+    for k, m in enumerate((67, 72, 76, 79)):
+        place(buf, pluck(note_hz(m), 0.8, sr, tau=0.45, bright=1.2), k * 0.075 * sr, 0.4)
+    for m in (72, 76, 79, 84):
+        place(buf, pluck(note_hz(m), 1.6, sr, tau=0.9, bright=1.1), 0.34 * sr, 0.28)
+    for m in (84, 88, 91):
+        place(buf, fm_bell(note_hz(m), 1.5, sr, ratio=2.0, index=0.6, tau=0.55), 0.36 * sr, 0.2)
+    place(buf, bandpass(noise(int(0.5 * sr)), sr, 2000, 9000) * np.hanning(int(0.5 * sr)), 0.3 * sr, 0.12)
+    S["item_get"] = soft_room(buf, sr, 0.3, 1.4)[: len(buf)]
 
 
 # ----------------------------------------------------------------------------- music

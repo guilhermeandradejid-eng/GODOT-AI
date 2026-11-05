@@ -7,7 +7,7 @@ extends RefCounted
 class Relic extends Node3D:
 	## Pedra das Horas (relíquia). Cor e nome pelo id da receita. Com `veil_index`
 	## fica dentro de um véu de areia (visível, mas só pode ser pega com o véu aberto);
-	## com `pull` vira alvo de puxar do arpéu (grupo "hook_targets", 12 m).
+	## com `pull` vira alvo de puxar do arpéu (o HeroTools varre "relics", 12 m).
 	const RELIC_COLORS := {"tolvaren": Color(1.0, 0.62, 0.28), "saryth": Color(1.0, 0.55, 0.7), "kesrin": Color(0.45, 0.95, 1.0)}
 	const RELIC_NAMES := {"tolvaren": "Brasa de Tolvaren", "saryth": "Lágrima de Saryth", "kesrin": "Olho de Kesrin"}
 	var seed_id := "s1"
@@ -25,8 +25,6 @@ class Relic extends Node3D:
 
 	func _ready() -> void:
 		add_to_group(&"relics")
-		if pull:
-			add_to_group(&"hook_targets")
 		visual = PropLib.make("relic", ["glow"])
 		visual.scale = Vector3.ONE * 1.25
 		add_child(visual)
@@ -83,6 +81,9 @@ class Relic extends Node3D:
 
 	func can_hook(_by = null) -> bool:
 		return pull and not _pulling and can_take()
+
+	func can_target(by = null) -> bool:
+		return can_hook(by)
 
 	func hook_exclude() -> Array[RID]:
 		return []
@@ -490,6 +491,9 @@ class PressurePlate extends Node3D:
 			_prop.position.y = -0.08
 			changed.emit(true)
 		Fx.burst("ring_light", global_position + Vector3.UP * 0.2, Color(0.55, 1.0, 0.95), 1.0)
+
+	func net_event(kind: String) -> void:
+		apply_event(kind)
 
 	## Evento vindo da rede ("latched"): trava todas as placas com latch do grupo.
 	func apply_event(kind: String) -> void:

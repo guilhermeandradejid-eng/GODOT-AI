@@ -30,7 +30,7 @@ var show_swap := true
 var special_hint := false         ## pulsa o botão Dupla quando a dupla pode agir junta
 var show_use := false             ## o Sael tem o Arpéu (ou a Concha)
 var show_lamp := false            ## o Sael tem a Lanterna
-var use_icon := "empty"           ## "hook" (alvo destacado) | "shell" (Concha) | "empty" (arremesso vazio)
+var use_icon := "empty"           ## "hook" (alvo destacado) | "shell"/"concha" (Concha) | "empty" (arremesso vazio)
 var lamp_on := false              ## lanterna acesa: halo âmbar no chip
 var use_hint := false             ## pulsa o USAR: alvo de quebra-cabeça válido a até 10 m
 var _t := 0.0
@@ -225,7 +225,7 @@ func _draw_use_icon(c: Vector2, r: float, s: float) -> void:
 			d.append(d[0])
 			draw_polyline(d, Color(1, 1, 1, 0.95), 2.5 * s, true)
 			draw_circle(c, r * 0.16, Color(0.31, 0.89, 0.84))
-		"shell":
+		"shell", "concha":
 			# espiral de nácar (3 voltas) com bocal de latão
 			var pts := PackedVector2Array()
 			for i in 40:

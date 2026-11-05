@@ -171,6 +171,13 @@ class Sandfall extends Node3D:
 	func close() -> void:
 		_open_left = 0.0
 
+	## Ponto para a mira automática da rajada (meio do topo da cortina).
+	func gust_point() -> Vector3:
+		return global_position + Vector3.DOWN * 0.5
+
+	func net_event(kind: String) -> void:
+		apply_event(kind)
+
 	## Evento vindo da rede ("parted").
 	func apply_event(kind: String) -> void:
 		if kind == "parted":

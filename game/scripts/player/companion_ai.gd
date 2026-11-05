@@ -39,8 +39,6 @@ const AMARRA_ACCEL := 60.0
 
 ## Grupos que já foram resolvidos alguma vez (PuzzleGroups pode não existir).
 static var _solved_ever := {}
-static var _pg = null
-static var _pg_checked := false
 
 var leader: Hero
 var follow_dist := 2.4
@@ -376,7 +374,17 @@ func _chimes(me: Hero) -> Array:
 	for p in me.get_tree().get_nodes_in_group(&"plates"):
 		if lock_kind(p) == "chime":
 			out.append(p)
+			# golpe exato pelo sinal `struck` do sino (quando existir)
+			if p.has_signal("struck"):
+				var cb := _on_struck.bind(p)
+				if not p.is_connected("struck", cb):
+					p.connect("struck", cb)
 	return out
+
+
+func _on_struck(by, _kind, c) -> void:
+	if by == leader and _me != null and is_instance_valid(c):
+		_leader_struck(_me, c)
 
 
 func _size(c) -> float:
@@ -475,24 +483,32 @@ func _watch_leader_strikes(me: Hero) -> void:
 	_leader_pound = pounding
 	if not atk_edge and not pound_edge:
 		return
+	# sem o sinal `struck`: golpe do líder perto do sino (borda de subida)
 	var lp := leader.global_position
 	for c in _chimes(me):
-		if group_done(c.group_id):
+		if c.has_signal("struck") or group_done(c.group_id):
 			continue
 		var cp: Vector3 = c.global_position
 		var reach := 1.2 * _size(c) + (3.6 if atk_edge else 2.4)
 		if pound_edge and "slam" in _need(c):
 			var sr = c.get("slam_radius")
 			reach = maxf(reach, float(sr) if sr != null else 9.0)
-		if cp.distance_to(lp) > reach:
-			continue
-		if is_eco(c):
-			if _can_touch(me, c) and cp.distance_to(me.global_position) <= ECO_PARTNER:
-				_schedule_strike(c, ECO_DELAY, true)
+		if cp.distance_to(lp) <= reach:
+			_leader_struck(me, c)
 			return
-		if _chime != null and _chime != c and String(_chime.group_id) == String(c.group_id) and not _chime.pressed:
-			_schedule_strike(_chime, CHIME_DELAY, false)
-			return
+
+
+## O líder bateu no sino `c`: no Cristal-Eco o parceiro a até 9 m faz a sua
+## parte em 0,4 s; nos sinos comuns, a IA bate no seu 0,3 s depois.
+func _leader_struck(me: Hero, c) -> void:
+	if group_done(c.group_id):
+		return
+	if is_eco(c):
+		if _can_touch(me, c) and (c.global_position as Vector3).distance_to(me.global_position) <= ECO_PARTNER:
+			_schedule_strike(c, ECO_DELAY, true)
+		return
+	if _chime != null and _chime != c and String(_chime.group_id) == String(c.group_id) and not _chime.pressed:
+		_schedule_strike(_chime, CHIME_DELAY, false)
 
 
 func _schedule_strike(c, delay: float, eco: bool) -> void:
@@ -615,7 +631,7 @@ func _lamp_rule(intent: PlayerInput, me: Hero, delta: float) -> void:
 	var lit := _lamp_lit(me)
 	if _req_lamp:
 		_req_lamp = false
-		intent.press("lamp")
+		_set_lamp(intent, me, not lit)
 		_lamp_cd = 0.4
 		_lamp_auto = false
 		if lit:
@@ -628,15 +644,24 @@ func _lamp_rule(intent: PlayerInput, me: Hero, delta: float) -> void:
 	if _lamp_want:
 		_lamp_idle_t = 0.0
 		if not lit and _lamp_cd <= 0.0 and _lamp_block_t <= 0.0:
-			intent.press("lamp")
+			_set_lamp(intent, me, true)
 			_lamp_cd = 0.6
 			_lamp_auto = true
 	else:
 		_lamp_idle_t += delta
 		if lit and _lamp_auto and _lamp_idle_t >= LAMP_OFF_T and _lamp_cd <= 0.0:
-			intent.press("lamp")
+			_set_lamp(intent, me, false)
 			_lamp_cd = 0.6
 			_lamp_auto = false
+
+
+## Liga/desliga pela HeroTools (idempotente); sem ela, aperta o chip.
+func _set_lamp(intent: PlayerInput, me: Hero, on: bool) -> void:
+	var tools = me.get("tools")
+	if tools != null and tools.has_method("set_lamp"):
+		tools.set_lamp(on)
+	elif on != _lamp_lit(me):
+		intent.press("lamp")
 
 
 # =================================================================== Pedido
@@ -660,15 +685,19 @@ func _pedido(intent: PlayerInput, me: Hero, delta: float) -> void:
 			aim = d.normalized()
 		# Lançar a Luz precisa da lanterna acesa: acende antes e tenta de novo
 		if lock_kind(t) == "brazier" and not _lamp_lit(me) and has_item("lanterna"):
-			intent.press("lamp")
+			_set_lamp(intent, me, true)
 			_lamp_cd = 0.6
 			_lamp_auto = true
 			_req_wait = 0.2
 			return
+	_req_use = false
+	var tools = me.get("tools")
+	if tools != null and tools.has_method("request_use"):
+		tools.request_use(aim)
+		return
 	me.cam_yaw = atan2(-aim.x, -aim.z)
 	intent.move = Vector2.ZERO
 	intent.press("use")
-	_req_use = false
 
 
 func _pedido_target(me: Hero):
@@ -743,10 +772,14 @@ func _ring_rule(intent: PlayerInput, me: Hero) -> void:
 		var hv := Vector3(me.velocity.x, 0, me.velocity.z)
 		if hv.length() > 1.0 and hv.normalized().dot(flat) < cos(deg_to_rad(45.0)):
 			continue
+		_ring_used[r] = _clock
+		var tools = me.get("tools")
+		if tools != null and tools.has_method("request_use"):
+			tools.request_use(flat)
+			return
 		var local := Basis(Vector3.UP, me.cam_yaw).inverse() * (flat * 0.6)
 		intent.move = Vector2(local.x, local.z)
 		intent.press("use")
-		_ring_used[r] = _clock
 		return
 
 
@@ -934,6 +967,9 @@ static func is_plate(p) -> bool:
 static func lock_kind(n) -> String:
 	if is_plate(n):
 		return "plate"
+	for g in [["chimes", "chime"], ["braziers", "brazier"], ["drifts", "drift"], ["hook_rings", "ring"]]:
+		if n.is_in_group(StringName(g[0])):
+			return g[1]
 	if n.get("need") is Array:
 		return "chime"
 	if n.is_in_group(&"hook_targets") or (n.get("mode") is String and n.get("travel") != null):
@@ -945,25 +981,10 @@ static func lock_kind(n) -> String:
 	return "lock"
 
 
-static func _puzzle_groups():
-	if _pg_checked:
-		return _pg
-	_pg_checked = true
-	for c in ProjectSettings.get_global_class_list():
-		var cls := String(c.get("class", ""))
-		if cls == "PuzzleGroups":
-			_pg = load(String(c["path"]))
-		elif cls == "ToolPuzzles" and _pg == null:
-			var s = load(String(c["path"]))
-			if s is Script and (s as Script).get_script_constant_map().has("PuzzleGroups"):
-				_pg = (s as Script).get_script_constant_map()["PuzzleGroups"]
-	if _pg != null:
-		var names := []
-		for m in (_pg as Script).get_script_method_list():
-			names.append(String(m["name"]))
-		if not ("solved" in names):
-			_pg = null
-	return _pg
+## Nó PuzzleGroups da fase (ToolPuzzles; grupo "puzzle_groups"), ou null.
+static func _groups_node() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	return tree.get_first_node_in_group(&"puzzle_groups") if tree != null else null
 
 
 ## Grupo resolvido: PuzzleGroups.solved(group) quando existir; senão, todos os
@@ -976,10 +997,10 @@ static func group_done(group) -> bool:
 		_solved_ever.clear()
 		_solved_ever["@level"] = lid
 	if g == "" or g == "@level" or _solved_ever.has(g):
-		return _solved_ever.has(g)
-	var pg = _puzzle_groups()
+		return _solved_ever.has(g) and g != "@level"
 	var done := false
-	if pg != null:
+	var pg := _groups_node()
+	if pg != null and pg.has_method("solved"):
 		done = bool(pg.call("solved", g))
 	else:
 		var tree := Engine.get_main_loop() as SceneTree
@@ -999,11 +1020,9 @@ static func group_done(group) -> bool:
 
 ## Os outros membros do grupo de `node` estão feitos (para travas `last`).
 static func done_except(node) -> bool:
-	var pg = _puzzle_groups()
-	if pg != null:
-		for m in (pg as Script).get_script_method_list():
-			if String(m["name"]) == "done_except":
-				return bool(pg.call("done_except", node))
+	var pg := _groups_node()
+	if pg != null and pg.has_method("done_except"):
+		return bool(pg.call("done_except", node))
 	var tree := Engine.get_main_loop() as SceneTree
 	for p in tree.get_nodes_in_group(&"plates"):
 		if p != node and p.get("group_id") == node.get("group_id") and not p.pressed:

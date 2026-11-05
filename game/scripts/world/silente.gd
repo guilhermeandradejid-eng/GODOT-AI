@@ -314,6 +314,10 @@ func apply_hit(dmg: int) -> void:
 	_remote = false
 
 
+func net_hit(dmg: int) -> void:
+	apply_hit(dmg)
+
+
 ## Velado e no escuro: "tink", o herói quica e o aviso aparece.
 func _tink(by) -> void:
 	ToolPuzzles.sfx("tink", global_position, "plate_off", 1.6, -2.0)

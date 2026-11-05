@@ -311,7 +311,13 @@ func _update_target(delta: float) -> void:
 			or hero.is_remote:
 		target = {}
 		_cands = []
+		_highlight(null)
 		return
+	_update_target_inner(delta)
+	_highlight(target.get("node") if not target.is_empty() else null)
+
+
+func _update_target_inner(delta: float) -> void:
 	var best := find_target(chest(), aim_dir(), _touch())
 	var cur := {}
 	if not target.is_empty():
@@ -348,11 +354,26 @@ func _update_target(delta: float) -> void:
 
 
 func _on_new_target() -> void:
+	_highlight(target.get("node"))
 	# a IA do Hulvar para por 0,4 s quando é mirada
 	if target.get("kind", "") == "hulvar":
 		var hv: Hero = target["node"]
 		if hv.has_method("hook_aimed"):
 			hv.hook_aimed(0.4)
+
+
+## Destaque do alvo travado (set_highlight do ToolPuzzles); apaga o anterior.
+var _hl_node = null
+
+
+func _highlight(n) -> void:
+	if _hl_node == n:
+		return
+	if _hl_node != null and is_instance_valid(_hl_node) and _hl_node.has_method("set_highlight"):
+		_hl_node.set_highlight(false)
+	_hl_node = n
+	if n != null and is_instance_valid(n) and n.has_method("set_highlight"):
+		n.set_highlight(true)
 
 
 func _alive(t: Dictionary) -> bool:
@@ -409,9 +430,11 @@ func target_point(t: Dictionary) -> Vector3:
 		return t.get("pos", Vector3.ZERO)
 	match String(t.get("kind", "")):
 		"hulvar": return (n as Hero).saddle_transform().origin + Vector3.UP * 0.3
-		"enemy": return (n as Node3D).global_position + Vector3.UP * 0.5
-		"relic": return (n as Node3D).global_position + Vector3.UP * 0.5
 		"zipline": return t.get("pos", (n as Node3D).global_position)
+	if n.has_method("hook_point"):
+		return n.hook_point()
+	match String(t.get("kind", "")):
+		"enemy", "relic": return (n as Node3D).global_position + Vector3.UP * 0.5
 	return (n as Node3D).global_position
 
 
@@ -448,7 +471,7 @@ func find_target(origin: Vector3, dir: Vector3, touch: bool) -> Dictionary:
 		var rid := String(_prop(n, ["ring_id", "id"], ""))
 		var bonus := 0.4 if cur_chain != "" and rid == cur_chain else 0.0
 		var lo := 15.0 if kind in ["swing", "zip"] else -30.0
-		_consider(n, kind, (n as Node3D).global_position, origin, dir, half, lo, bonus, vel, airborne, rid)
+		_consider(n, kind, _point(n, Vector3.ZERO), origin, dir, half, lo, bonus, vel, airborne, rid)
 	# Cabo de Vidro
 	for z in tree.get_nodes_in_group(&"ziplines"):
 		_consider_zipline(z, origin)
@@ -467,9 +490,12 @@ func find_target(origin: Vector3, dir: Vector3, touch: bool) -> Dictionary:
 			continue
 		if not (r as Node3D).visible or bool(_prop(r, ["hidden_until_revealed"], false)):
 			continue
-		if r.has_method("can_take") and not r.can_take():
+		if r.has_method("can_target"):
+			if not r.can_target(hero):
+				continue
+		elif r.has_method("can_take") and not r.can_take():
 			continue
-		_consider(r, "relic", (r as Node3D).global_position + Vector3.UP * 0.5, origin, dir, half, -30.0, 0.0, vel, airborne)
+		_consider(r, "relic", _point(r, Vector3.UP * 0.5), origin, dir, half, -30.0, 0.0, vel, airborne)
 	# o Hulvar (Embarque Relâmpago)
 	var hv := Game.hero("strong") as Hero
 	if hv != null and hv != hero and not riding and hv.rider == null and hv.state in [Hero.S.GROUND, Hero.S.SWIM, Hero.S.SURF]:
@@ -480,7 +506,9 @@ func find_target(origin: Vector3, dir: Vector3, touch: bool) -> Dictionary:
 	for e in tree.get_nodes_in_group(&"enemies"):
 		if not (e is Node3D) or bool(_prop(e, ["dead"], false)):
 			continue
-		_consider(e, "enemy", (e as Node3D).global_position + Vector3.UP * 0.5, origin, dir, half, -30.0, 0.0, vel, airborne)
+		if e.has_method("can_target") and not e.can_target(hero):
+			continue
+		_consider(e, "enemy", _point(e, Vector3.UP * 0.5), origin, dir, half, -30.0, 0.0, vel, airborne)
 	var best := {}
 	for c in _cands:
 		if best.is_empty() or int(c["cls"]) < int(best["cls"]) \
@@ -492,7 +520,9 @@ func find_target(origin: Vector3, dir: Vector3, touch: bool) -> Dictionary:
 func _consider_brazier(b, origin: Vector3, dir: Vector3, half: float, vel: Vector3, airborne: bool) -> void:
 	if not (b is Node3D) or bool(_prop(b, ["pressed", "lit"], false)):
 		return
-	_consider(b, "brazier", (b as Node3D).global_position, origin, dir, half, -30.0, 0.0, vel, airborne)
+	if b.has_method("can_target") and not b.can_target(hero):
+		return
+	_consider(b, "brazier", _point(b, Vector3.ZERO), origin, dir, half, -30.0, 0.0, vel, airborne)
 
 
 ## Cabo de Vidro: perto do poste inicial (chão) ou a até 2 m do cabo no ar, nos primeiros 70%.
@@ -507,7 +537,15 @@ func _consider_zipline(z, origin: Vector3) -> void:
 	var off := 0.0
 	var p := start
 	var d := INF
-	if hero.state in [Hero.S.GROUND, Hero.S.SURF, Hero.S.RIDE]:
+	if z.has_method("can_grab") and z.has_method("grab_offset"):
+		# contrato do ToolPuzzles.Zipline: poste a até 6 m ou cabo a até 2 m (70%)
+		if not z.can_grab(hero):
+			return
+		var air: bool = not (hero.state in [Hero.S.GROUND, Hero.S.SURF, Hero.S.SWIM])
+		off = maxf(0.0, z.grab_offset(hero.global_position, air))
+		p = z.transform_at(off).origin
+		d = p.distance_to(hand)
+	elif hero.state in [Hero.S.GROUND, Hero.S.SURF, Hero.S.RIDE]:
 		var flat := Vector2(start.x - hero.global_position.x, start.z - hero.global_position.z).length()
 		if flat > ZIP_POLE_R or absf(start.y - hand.y) > 4.0:
 			return
@@ -611,6 +649,13 @@ func _los(origin: Vector3, p: Vector3, n) -> bool:
 	return false
 
 
+## Ponto de mira do alvo: hook_point() quando existe.
+func _point(n, off: Vector3) -> Vector3:
+	if n.has_method("hook_point"):
+		return n.hook_point()
+	return (n as Node3D).global_position + off
+
+
 func _prop(n, names: Array, def = null):
 	if n == null or not is_instance_valid(n):
 		return def
@@ -631,8 +676,9 @@ func use_pressed(_h: Hero = null) -> bool:
 	if arpeu and _can_fire():
 		_fire(target)
 		return true
-	if arpeu and not target.is_empty() and bool(target.get("pre", false)):
-		_use_buf = USE_BUFFER                 # argola quase no cone: espera até 0,20 s
+	if arpeu and not target.is_empty():
+		# argola quase no cone (pré-destaque) ou arpéu recarregando: espera até 0,20 s
+		_use_buf = maxf(USE_BUFFER, cooldown + 0.02)
 		_buf_empty = false
 		return true
 	if hero.state == Hero.S.SWING:
@@ -682,6 +728,47 @@ func request_use(dir := Vector3.ZERO) -> bool:
 	if has_item("concha") and hero.state in [Hero.S.GROUND, Hero.S.SURF, Hero.S.RIDE, Hero.S.SWIM]:
 		return blow(d)
 	return false
+
+
+## Prende num alvo específico sem depender do cone (IA: argolas `ai: true`, Pedido).
+## Confere alcance, faixa de elevação e linha de visão. Devolve true se lançou.
+func hook_to(n) -> bool:
+	if n == null or not is_instance_valid(n) or not has_item("arpeu") or cooldown > 0.0:
+		return false
+	if hero.state in [Hero.S.HOOK, Hero.S.SWING, Hero.S.ZIPLINE, Hero.S.HURT, Hero.S.CUTSCENE]:
+		return false
+	if n.has_method("can_target") and not n.can_target(hero):
+		return false
+	var kind := ""
+	if n == Game.hero("strong"):
+		kind = "hulvar"
+	elif (n as Node).is_in_group(&"hook_targets"):
+		kind = String(_prop(n, ["mode"], "swing"))
+		if kind == "pull" and bool(_prop(n, ["heavy"], false)):
+			kind = "heavy"
+	elif (n as Node).is_in_group(&"braziers"):
+		kind = "brazier"
+	elif (n as Node).is_in_group(&"relics"):
+		kind = "relic"
+	elif (n as Node).is_in_group(&"enemies"):
+		kind = "enemy"
+	if not RANGES.has(kind) or kind == "zipline":
+		return false
+	var t := {"node": n, "kind": kind, "score": 0.0, "cls": PRIORITY[kind], "pre": false,
+		"id": String(_prop(n, ["ring_id", "id"], ""))}
+	var p := target_point(t)
+	t["pos"] = p
+	var o := chest()
+	var lo := 15.0 if kind in ["swing", "zip"] else -30.0
+	var to := p - o
+	if _valid(p, o, Vector3(to.x, 0, to.z).normalized() if Vector2(to.x, to.z).length() > 0.01 else aim_dir(),
+			PI, lo, RANGES[kind]) < 0.0:
+		return false
+	if kind != "hulvar" and not _los(o, p, n):
+		return false
+	target = t
+	_fire(t)
+	return true
 
 
 ## Arremesso vazio: 8 m à frente, volta em 0,35 s.
@@ -898,13 +985,16 @@ func _update_lamp(delta: float) -> void:
 		lamp_on = false
 		_lamp_hand(false)
 	if not hero.is_remote:
-		var still := Vector2(hero.velocity.x, hero.velocity.z).length() < 0.3 and hero.state == Hero.S.GROUND
+		var still := lamp_on and Vector2(hero.velocity.x, hero.velocity.z).length() < 0.3 and hero.state == Hero.S.GROUND
 		_still_t = _still_t + delta if still else 0.0
 		lamp_raised = lamp_on and (hero.state == Hero.S.RIDE or _still_t >= LAMP_STILL)
 	light.visible = lamp_on
 	if not lamp_on:
-		Game.set("lantern_pos", Vector3.INF)
-		Game.set("lantern_radius", 0.0)
+		if Game.has_method("lantern_off"):
+			Game.call("lantern_off")
+		else:
+			Game.set("lantern_pos", Vector3.INF)
+			Game.set("lantern_radius", 0.0)
 		return
 	var r := LAMP_R_RAISED if lamp_raised else LAMP_R
 	var hours := 0
@@ -916,8 +1006,11 @@ func _update_lamp(delta: float) -> void:
 	light.light_energy = 1.8 * (1.0 + 0.6 * hours / 3.0) * flick
 	light.omni_range = r + 2.0
 	_halo.scale = Vector3.ONE * (0.5 + 0.05 * flick)
-	Game.set("lantern_pos", light.global_position)
-	Game.set("lantern_radius", r)
+	if Game.has_method("set_lantern"):
+		Game.call("set_lantern", light.global_position, r)
+	else:
+		Game.set("lantern_pos", light.global_position)
+		Game.set("lantern_radius", r)
 
 
 # =================================================================== corda

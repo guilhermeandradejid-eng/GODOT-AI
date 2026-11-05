@@ -11,10 +11,12 @@ extends RefCounted
 ## signal event_fired(kind) (evento local, para a rede), apply_event(kind)
 ## (evento vindo da rede, sem reemitir) e force_done() (testes).
 ##
-## Contrato dos alvos do arpéu (grupo "hook_targets"): hook_mode ("swing", "zip",
-## "pull", "light" ou "relic"), hook_range, hook_point(), can_hook(by),
-## hook_exclude() -> Array[RID] (colisores que não bloqueiam a linha de visão),
-## on_hook(by) -> bool (ao prender) e set_highlight(on).
+## Contrato dos alvos do arpéu: argolas no grupo "hook_targets" (mode swing | zip |
+## pull), olhos de brasa em "braziers", cabos em "ziplines" (o HeroTools varre também
+## "relics" e "enemies"). Todos têm hook_point(), can_target(by) / can_hook(by),
+## los_exclude (colisores que não bloqueiam a linha de visão), set_highlight(on) e o
+## efeito: on_hook_pull(by) (aro, relíquia, Silente) ou on_hook_light(by) (olho).
+## A rede chama net_event(kind) (= apply_event).
 
 const ITEM_INFO := {
 	"arpeu": {"name": "Arpéu de Rumo", "hint": ["USAR: puxe-se até a argola!", "Segure USAR para balançar; PULAR solta."]},
@@ -339,8 +341,13 @@ class Lock extends Node3D:
 		_on_event(kind)
 		_remote = false
 
-	func _on_event(_kind: String) -> void:
-		pass
+	func net_event(kind: String) -> void:
+		apply_event(kind)
+
+	## "latched" (grupo resolvido no anfitrião) vale para qualquer trava: fica feita.
+	func _on_event(kind: String) -> void:
+		if kind == "latched":
+			force_done()
 
 	func force_done() -> void:
 		_set_pressed(true)
@@ -366,6 +373,7 @@ class ToolPedestal extends Node3D:
 	var _holder: Node3D
 	var _t := 0.0
 	var _rising := false
+	var _body: StaticBody3D
 
 	func _ready() -> void:
 		add_to_group(&"tool_pedestals")
@@ -385,15 +393,21 @@ class ToolPedestal extends Node3D:
 		_item.position.y = item_h
 		_holder.add_child(_item)
 		if not find_floor:
-			ToolPuzzles.static_cylinder(_base, 0.36, 0.9)
+			_body = ToolPuzzles.static_cylinder(_base, 0.36, 0.9)
 		if Game.has_signal("item_collected"):
 			Game.connect("item_collected", _on_collected)
 		if ToolPuzzles.has_item(item_id):
 			_vanish(false)
 		elif hidden_until_revealed:
 			visible = false
+		_set_solid(not hidden_until_revealed)
 		if find_floor:
 			_drop_base.call_deferred()
+
+	## Escondido, o pedestal não pode virar um obstáculo invisível.
+	func _set_solid(on: bool) -> void:
+		if _body != null:
+			_body.collision_layer = 1 if on else 0
 
 	## Item absoluto (ex.: na palma do colosso): a base fica no chão logo abaixo, se houver.
 	func _drop_base() -> void:
@@ -408,7 +422,8 @@ class ToolPedestal extends Node3D:
 			_base.visible = false     # sem espaço para o pedestal: o item flutua sozinho
 			return
 		_base.position.y = floor_y - global_position.y
-		ToolPuzzles.static_cylinder(_base, 0.36, 0.9)
+		_body = ToolPuzzles.static_cylinder(_base, 0.36, 0.9)
+		_set_solid(not hidden_until_revealed)
 
 	static func _fallback_item(id: String) -> Node3D:
 		var n := Node3D.new()
@@ -451,6 +466,7 @@ class ToolPedestal extends Node3D:
 			return
 		hidden_until_revealed = false
 		visible = true
+		_set_solid(true)
 		_rising = true
 		_holder.position.y = -1.5
 		_holder.scale = Vector3.ONE * 0.01
@@ -526,7 +542,12 @@ class ToolPedestal extends Node3D:
 			_vanish(true)
 
 	func apply_event(kind: String) -> void:
-		if kind == "taken" and not is_taken:
+		if kind == "taken":
+			take_remote()
+
+	## O parceiro pegou (RPC `_item_taken`): some sem comemorar aqui.
+	func take_remote() -> void:
+		if not is_taken:
 			is_taken = true
 			_vanish(true)
 
@@ -567,6 +588,9 @@ class HookRing extends Lock:
 	var _poll := 0.0
 	var _exclude: Array[RID] = []
 	var _exclude_done := false
+	var los_exclude: Array[RID]:
+		get:
+			return hook_exclude()
 
 	func _ready() -> void:
 		hook_mode = mode
@@ -592,9 +616,23 @@ class HookRing extends Lock:
 				var a := TAU * k / 3.0 + PI * 0.5
 				_prop.add_child(ToolPuzzles.mesh_node(ToolPuzzles.sphere(0.06 if mode != "pull" else 0.05, 8), _mat, Vector3(cos(a) * r, sin(a) * r, 0)))
 		add_child(_prop)
+		# aro_puxar: a origem é o verso da placa; o ponto do arpéu é o "grab"
+		var grab := _prop.find_child("grab", true, false) as Node3D
+		if grab != null:
+			_prop.position = -PropLib.rel_xform(grab, _prop).origin
 		_glow = ToolPuzzles.glow_of(_prop)
 		if _glow != null:
 			_glow.set_shader_parameter("tint", ToolPuzzles.CYAN)
+		elif _mat == null:
+			# prop sem peça glow: um halo fino mostra quando o aro pode ser puxado
+			var t := TorusMesh.new()
+			t.inner_radius = 0.15
+			t.outer_radius = 0.17
+			_mat = ToolPuzzles.emissive(ToolPuzzles.CYAN, 0.25)
+			var halo := ToolPuzzles.mesh_node(t, _mat, Vector3(0, 0, 0.03))
+			halo.rotation.x = PI * 0.5
+			halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(halo)
 		_avail = not last
 		_apply_glow()
 
@@ -607,6 +645,9 @@ class HookRing extends Lock:
 		if mode == "pull":
 			return not pressed and not _pulling and (not last or _done_others())
 		return true
+
+	func can_target(by = null) -> bool:
+		return can_hook(by)
 
 	## Colisores do objeto em que o aro está preso (e do próprio aro): não bloqueiam a mira.
 	func hook_exclude() -> Array[RID]:
@@ -659,6 +700,8 @@ class HookRing extends Lock:
 		return true
 
 	## Puxar o aro. Devolve false se ainda não pode (last) ou se for pesado demais.
+	## No Reboque o herói faz o brace do Hulvar (1,2 s) e chama isto no fim: o aro só
+	## desliza e trava.
 	func on_hook_pull(by) -> bool:
 		if mode != "pull" or not can_hook(by):
 			return false
@@ -670,16 +713,12 @@ class HookRing extends Lock:
 			tw0.tween_property(_prop, "position", Vector3.ZERO, 0.25)
 			return false
 		_pulling = true
-		var dur := 1.2 if heavy else 0.45
+		var dur := 0.35 if heavy else 0.45
 		var dir := Vector3.FORWARD
 		if by != null and is_instance_valid(by):
 			dir = (by as Node3D).global_position - global_position
 			dir.y = 0.0
 			dir = dir.normalized() if dir.length() > 0.01 else Vector3.FORWARD
-			# o Hulvar faz força (brace) no Reboque
-			var strong = by.get("mount")
-			if heavy and strong != null and is_instance_valid(strong) and strong.visual != null and strong.visual.has_state("brace"):
-				strong.visual.restart_state("brace")
 		ToolPuzzles.sfx("rope_creak", global_position, "plate_on", 1.0)
 		var tw := create_tween()
 		tw.tween_property(self, "global_position", global_position + dir * travel, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -699,12 +738,15 @@ class HookRing extends Lock:
 		_fire("pulled")
 
 	func _on_event(kind: String) -> void:
-		if kind == "pulled":
+		if kind in ["pulled", "latched"]:
 			_finish_pull()
 
 	func force_done() -> void:
 		if mode == "pull":
 			_finish_pull()
+
+	func force_pull() -> void:
+		force_done()
 
 
 # ============================================================================ cabo de vidro
@@ -775,9 +817,13 @@ class Zipline extends Interactables.SandRail:
 		_beads.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_beads)
 
-	## Poste ("cabeco", 2,2 / 3,0 m) com colisão; o aro do topo segura o cabo.
+	## Poste ("cabeco" 3,0 m / "cabeco_baixo" 2,2 m) com colisão; o aro do topo segura o cabo.
 	func _add_post(g: Vector3, h: float, other: Vector3) -> void:
-		var post := ToolPuzzles.make_prop("cabeco")
+		var low := h < 2.6
+		var post := ToolPuzzles.make_prop("cabeco_baixo" if low else "cabeco")
+		if post == null and low:
+			post = ToolPuzzles.make_prop("cabeco")
+			low = false
 		if post == null:
 			post = Node3D.new()
 			post.add_child(ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.12, 0.16, h), PropLib.shared_material("bronze"), Vector3(0, h * 0.5, 0)))
@@ -786,7 +832,11 @@ class Zipline extends Interactables.SandRail:
 			t.outer_radius = 0.17
 			post.add_child(ToolPuzzles.mesh_node(t, ToolPuzzles.solid(ToolPuzzles.BRASS, 0.85, 0.3), Vector3(0, h, 0)))
 		else:
-			post.scale = Vector3.ONE * (h / 2.2)
+			var ph := 2.2 if low else 3.0
+			var cable := post.find_child("cable", true, false) as Node3D
+			if cable != null:
+				ph = maxf(PropLib.rel_xform(cable, post).origin.y, 0.5)
+			post.scale = Vector3.ONE * (h / ph)
 		add_child(post)
 		post.global_position = g + Vector3.DOWN * 0.05
 		var to := other - g
@@ -854,8 +904,15 @@ class Brazier extends Lock:
 	const LIGHT_T := 0.15
 	var mount := "floor"
 	var props_root: Node3D             ## onde procurar o prop anfitrião (mount "wall")
+	var mode := "light"
 	var hook_mode := "light"
 	var hook_range := 14.0
+	var lit: bool:
+		get:
+			return pressed
+	var los_exclude: Array[RID]:
+		get:
+			return hook_exclude()
 	var _near_t := 0.0
 	var _mat: StandardMaterial3D
 	var _glow: ShaderMaterial
@@ -869,7 +926,6 @@ class Brazier extends Lock:
 	func _ready() -> void:
 		super._ready()
 		add_to_group(&"braziers")
-		add_to_group(&"hook_targets")
 		_prop = ToolPuzzles.make_prop("braseiro", ["glow"])
 		_glow = ToolPuzzles.glow_of(_prop)
 		if _prop == null or _glow == null:
@@ -882,6 +938,8 @@ class Brazier extends Lock:
 			bowl.material_override = _mat
 			bowl.scale = Vector3(1.0, 0.7, 1.0)
 			_prop.add_child(bowl)
+		else:
+			_prop.position.y = -0.2     # origem do braseiro é o fundo da tigela
 		add_child(_prop)
 		_set_emission(0.0)
 
@@ -898,6 +956,9 @@ class Brazier extends Lock:
 	## Alvo de Lançar a Luz: só apagado e com a lanterna acesa.
 	func can_hook(_by = null) -> bool:
 		return not pressed and not _lighting and ToolPuzzles.lantern_on()
+
+	func can_target(by = null) -> bool:
+		return can_hook(by)
 
 	## mount "wall": o colisor do prop mais próximo (até 6 m) não bloqueia a mira.
 	func hook_exclude() -> Array[RID]:
@@ -935,12 +996,12 @@ class Brazier extends Lock:
 	func on_hook(by) -> bool:
 		return on_hook_light(by)
 
-	## Lançar a Luz: a chama corre pela corda em 0,4 s e acende o olho.
+	## Lançar a Luz: o herói corre a chama pela corda (0,4 s) e chama isto quando ela
+	## chega ao olho.
 	func on_hook_light(_by = null) -> bool:
-		if not can_hook():
+		if pressed:
 			return false
-		_lighting = true
-		get_tree().create_timer(0.4, false).timeout.connect(light)
+		light()
 		return true
 
 	func _physics_process(delta: float) -> void:
@@ -972,7 +1033,7 @@ class Brazier extends Lock:
 		_fire("lit")
 
 	func _on_event(kind: String) -> void:
-		if kind == "lit":
+		if kind in ["lit", "latched"]:
 			light()
 
 	func force_done() -> void:
@@ -1004,6 +1065,7 @@ class Chime extends Lock:
 	var _prop: Node3D
 	var _poll := 0.0
 	var _avail := true
+	var _crystal: ShaderMaterial
 
 	func _ready() -> void:
 		super._ready()
@@ -1011,24 +1073,31 @@ class Chime extends Lock:
 		add_to_group(&"breakable")
 		add_to_group(&"pound_listeners")
 		var eco := dark or size > 1.2
-		_prop = ToolPuzzles.make_prop("cristal_eco" if eco else "sino_cristal", ["glow"])
+		_prop = ToolPuzzles.make_prop("cristal_eco" if eco else "sino_cristal", ["glow", "crystal"])
 		_glow = ToolPuzzles.glow_of(_prop)
-		if _prop == null:
+		if _prop != null:
+			# o Cristal-Eco já é ~1,2× o sino: a escala completa o `size`
+			_prop.scale = Vector3.ONE * (size / (1.2 if eco else 1.0))
+			_crystal = (_prop.get_meta("materials", {}) as Dictionary).get("crystal")
+			if _glow != null:
+				_glow.set_shader_parameter("tint", ToolPuzzles.CYAN)
+		else:
 			_prop = Node3D.new()
 			var bronze := PropLib.shared_material("bronze")
 			for k in 3:
 				var a := TAU * k / 3.0
-				var leg := ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.03, 0.04, 0.95, 6), bronze, Vector3(cos(a) * 0.28, 0.45, sin(a) * 0.28))
-				leg.rotation = Vector3(sin(a) * 0.3, 0, -cos(a) * 0.3)
+				var foot := Vector3(cos(a) * 0.55, 0.0, sin(a) * 0.55)
+				var top := Vector3(0, 1.55, 0)
+				var leg := ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.025, 0.035, foot.distance_to(top), 6), bronze, (foot + top) * 0.5)
+				leg.basis = Basis(Quaternion(Vector3.UP, (top - foot).normalized()))
 				_prop.add_child(leg)
-			var col := Color(0.25, 0.3, 0.5) if eco else ToolPuzzles.LILAC
-			_mat = ToolPuzzles.emissive(ToolPuzzles.CYAN if eco else ToolPuzzles.LILAC, 0.2, col)
-			_mat.roughness = 0.1
-			_mat.metallic_specular = 1.0
-			var prism := ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.08, 0.32, 0.9, 6), _mat, Vector3(0, 1.25, 0))
-			_prop.add_child(prism)
-			var cap := ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.32, 0.12, 0.3, 6), _mat, Vector3(0, 0.65, 0))
-			_prop.add_child(cap)
+			# prisma de cristal pendurado no ápice do tripé (mesmo shader do kit)
+			_crystal = PropLib.shared_material("crystal").duplicate() as ShaderMaterial
+			if eco:
+				_crystal.set_shader_parameter("deep", Color(0.22, 0.16, 0.45))
+			_prop.add_child(ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.0, 0.15, 0.27, 6), _crystal, Vector3(0, 1.265, 0)))
+			_prop.add_child(ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.15, 0.0, 0.66, 6), _crystal, Vector3(0, 0.8, 0)))
+			_prop.add_child(ToolPuzzles.mesh_node(ToolPuzzles.cylinder(0.02, 0.02, 0.2, 6), bronze, Vector3(0, 1.45, 0)))
 			_prop.scale = Vector3.ONE * size
 		add_child(_prop)
 		ToolPuzzles.static_cylinder(self, 0.35 * size, 1.7 * size)
@@ -1036,13 +1105,16 @@ class Chime extends Lock:
 		_apply_glow(0.0)
 
 	func hit_center() -> Vector3:
-		return global_position + Vector3.UP * 0.9 * size
+		return global_position + Vector3.UP * 1.1 * size
 
+	## Brilho: 0 apagado, 1,5 durante a janela e fixo quando resolvido.
 	func _apply_glow(v: float) -> void:
 		_glow_v = v
 		var e := v if _avail else 0.0
 		if _glow != null:
-			_glow.set_shader_parameter("active", clampf(0.15 + e / 1.5, 0.0, 1.0))
+			_glow.set_shader_parameter("active", clampf(e / 1.5, 0.0, 1.0))
+		if _crystal != null:
+			_crystal.set_shader_parameter("glow", (0.15 if not _avail else 0.55) + e * 0.9)
 		if _mat != null:
 			_mat.emission_energy_multiplier = 0.15 + e
 
@@ -1167,6 +1239,13 @@ class Chime extends Lock:
 				_mark(t, 0.15)
 		elif kind == "rung" and not pressed:
 			_ring()
+		elif kind == "latched":
+			lock_solved()
+
+	## Barrigada do cliente (rede): marca "slam" no relógio local com tolerância.
+	func mark_slam(tolerance := 0.15) -> void:
+		if "slam" in need and not pressed:
+			_mark("slam", tolerance)
 
 	## Golpe direto (IA / testes): tipo de golpe como em on_attack.
 	func strike(kind := "spin", by = null) -> void:
@@ -1240,10 +1319,14 @@ class SandDrift extends Lock:
 				var b: Vector3 = grid[j][i + 1]
 				var c: Vector3 = grid[j + 1][i]
 				var d: Vector3 = grid[j + 1][i + 1]
-				st.add_vertex(a); st.add_vertex(c); st.add_vertex(b)
-				st.add_vertex(b); st.add_vertex(c); st.add_vertex(d)
+				st.add_vertex(a); st.add_vertex(b); st.add_vertex(c)
+				st.add_vertex(b); st.add_vertex(d); st.add_vertex(c)
 		st.generate_normals()
 		return st.commit()
+
+	## Ponto para a mira automática da rajada.
+	func gust_point() -> Vector3:
+		return global_position + Vector3.UP * 0.5
 
 	## Rajada da Concha (grupo "wind_listeners").
 	func on_gust(origin: Vector3, dir: Vector3, length := 10.0, half_angle := 25.0, _by = null) -> void:
@@ -1293,7 +1376,7 @@ class SandDrift extends Lock:
 		ToolPuzzles.toast_once("A areia volta a cobrir... precisa de vento.", 2.5, 10.0)
 
 	func _on_event(kind: String) -> void:
-		if kind == "blown":
+		if kind in ["blown", "latched"]:
 			_mesh.visible = false
 			_finish_blow()
 

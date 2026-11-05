@@ -31,15 +31,12 @@ var _send_t := 0.0
 var _started := false
 
 const PERMANENT_EVENTS := ["lit", "blown", "pulled", "latched"]
-const CLIENT_EVENTS := ["rung", "mark_slam"]
 const EVENT_REPEAT_MS := 800
 
 var _events := {}           ## "chave|tipo" -> msec (eventos já enviados/recebidos)
 var _applying := false
-var _hp_seen := {}          ## nome do Silente -> PV visto
+var _hp_seen := {}          ## nome do Silente -> PV visto (só sem o sinal `hit`)
 var _remote_item := false
-var _latched_seen := {}
-var _parted_seen := {}
 var _solved_sent := {}
 var _watch_t := 0.0
 var _mine_atk := false
@@ -270,40 +267,22 @@ func _do_catapult(v: Vector3) -> void:
 
 # =================================================================== estado das ferramentas
 ## [tool_bits, rope_to] do herói local: 1 = lanterna acesa, 2 = erguida (raio 9 m),
-## 4 = corda ativa. Usa `HeroTools.net_state()` quando existir; senão lê
-## `Game.lantern_pos`/`lantern_radius` e os campos da corda do HeroTools.
+## 4 = corda ativa. Vem do HeroTools (`tool_bits()`, `rope_to`); sem ele, da
+## luz em `Game.lantern_pos`/`lantern_radius`.
 static func tool_state(h: Hero) -> Array:
 	var tools = h.get("tools")
-	if tools != null and tools.has_method("net_state"):
-		var st = tools.net_state()
-		if st is Array and st.size() >= 2:
-			return st
+	if tools != null and tools.has_method("tool_bits"):
+		var to = tools.get("rope_to")
+		return [int(tools.tool_bits()), to if to is Vector3 else Vector3.ZERO]
 	var bits := 0
-	var rope := Vector3.ZERO
 	if h.hero_id == "agile":
 		var lp = Game.get("lantern_pos")
-		if lp is Vector3 and is_finite((lp as Vector3).x):
+		if lp is Vector3 and (lp as Vector3).is_finite():
 			bits |= 1
 			var lr = Game.get("lantern_radius")
 			if lr != null and float(lr) >= 8.5:
 				bits |= 2
-	if tools != null:
-		for k in ["rope_to", "rope_end", "hook_point"]:
-			var v = tools.get(k)
-			if v is Vector3:
-				rope = v
-				break
-		var active := false
-		for k in ["rope_active", "rope_on", "rope_visible"]:
-			if tools.get(k) == true:
-				active = true
-		if not active:
-			for k in ["HOOK", "SWING", "ZIPLINE"]:
-				if h.state == Hero.S.get(k, -1):
-					active = true
-		if active and rope != Vector3.ZERO:
-			bits |= 4
-	return [bits, rope]
+	return [bits, Vector3.ZERO]
 
 
 # =================================================================== itens
@@ -312,54 +291,73 @@ func _on_local_item(id) -> void:
 		_item_taken.rpc(String(id))
 
 
+## Item pego no outro aparelho. `Game.give_item` é idempotente e o pedestal some
+## pelo próprio `Game.item_collected`.
 @rpc("any_peer", "reliable", "call_remote")
 func _item_taken(id: String) -> void:
 	if Game.has_method("has_item") and bool(Game.call("has_item", id)):
-		return    # idempotente
+		return
 	_remote_item = true
-	for grp in [&"tool_pedestals", &"pedestals", &"items"]:
-		for n in get_tree().get_nodes_in_group(grp):
-			var nid = n.get("item_id")
-			if nid == null:
-				nid = n.get("tool_id")
-			if nid == null or String(nid) != id:
-				continue
-			if n.has_method("take_remote"):
-				n.take_remote()
-			elif n.get("taken") != null:
-				n.set("taken", true)
-				n.visible = false
 	if Game.has_method("give_item"):
 		Game.call("give_item", id)
 	_remote_item = false
 
 
 # =================================================================== travas
+## Liga os eventos das travas (grupo "puzzle_nodes": `event_fired(kind)`), o fim
+## dos grupos (PuzzleGroups.group_solved) e os golpes nos Silentes (`hit`).
+## Idempotente: roda de novo de tempos em tempos para nós criados depois.
 func _connect_locks() -> void:
-	for n in get_tree().get_nodes_in_group(&"plates"):
-		if CompanionAI.lock_kind(n) == "plate" or not n.has_signal("changed"):
-			continue
-		var cb := _on_lock_changed.bind(n)
-		if not n.is_connected("changed", cb):
-			n.connect("changed", cb)
+	var seen := {}
+	for grp in [&"puzzle_nodes", &"plates", &"sand_veils"]:
+		for n in get_tree().get_nodes_in_group(grp):
+			if seen.has(n):
+				continue
+			seen[n] = true
+			if n.has_signal("event_fired"):
+				var cb := _on_fired.bind(n)
+				if not n.is_connected("event_fired", cb):
+					n.connect("event_fired", cb)
+			elif CompanionAI.lock_kind(n) != "plate" and n.has_signal("changed"):
+				var cb2 := _on_lock_changed.bind(n)
+				if not n.is_connected("changed", cb2):
+					n.connect("changed", cb2)
+	var pg := get_tree().get_first_node_in_group(&"puzzle_groups")
+	if is_host and pg != null and pg.has_signal("group_solved") and not pg.is_connected("group_solved", _on_group_solved):
+		pg.connect("group_solved", _on_group_solved)
+	for e in get_tree().get_nodes_in_group(&"enemies"):
+		if e.has_signal("hit") and not e.is_connected("hit", _on_local_hit):
+			e.connect("hit", _on_local_hit)
 
 
-static func _event_kind(n) -> String:
-	match CompanionAI.lock_kind(n):
-		"brazier": return "lit"
-		"chime": return "rung"
-		"drift": return "blown"
-		"ring": return "pulled"
-	return "latched"
+## Do cliente o anfitrião só aceita golpes nos sinos (o Hulvar não tem itens).
+static func _client_kind(kind: String) -> bool:
+	return kind == "rung" or kind.begins_with("mark_")
 
 
+func _on_fired(kind: String, n: Node) -> void:
+	if _applying or not _started or kind == "taken":
+		return    # itens vão por _item_taken
+	if not is_host and not _client_kind(kind):
+		return
+	_send_event(n, kind)
+
+
+## Travas sem `event_fired`: o `changed(true)` vira o evento do tipo da trava.
 func _on_lock_changed(pressed: bool, n: Node) -> void:
 	if not pressed or _applying or not _started:
 		return
-	var kind := _event_kind(n)
-	if not is_host and not (kind in CLIENT_EVENTS):
+	var kind: String = {"brazier": "lit", "chime": "rung", "drift": "blown", "ring": "pulled"}.get(CompanionAI.lock_kind(n), "latched")
+	if not is_host and not _client_kind(kind):
 		return
 	_send_event(n, kind)
+
+
+## Anfitrião: grupo resolvido → o cliente resolve à força o mesmo grupo.
+func _on_group_solved(group: String) -> void:
+	if _started and not _solved_sent.has(group):
+		_solved_sent[group] = true
+		_puzzle_event.rpc("group:" + group, "latched")
 
 
 ## Chave estável da trava: caminho relativo à fase ou, para nós com nome
@@ -381,7 +379,7 @@ func _resolve(key: String) -> Node:
 	var p := Vector3(float(c[0]), float(c[1]), float(c[2]))
 	var best: Node = null
 	var bd := 0.35
-	for grp in [&"plates", &"wind_listeners", &"hook_targets", &"relics"]:
+	for grp in [&"puzzle_nodes", &"plates", &"sand_veils"]:
 		for n in get_tree().get_nodes_in_group(grp):
 			if n is Node3D:
 				var d := (n as Node3D).global_position.distance_to(p)
@@ -391,6 +389,8 @@ func _resolve(key: String) -> Node:
 	return best
 
 
+## Já enviado/recebido? Eventos permanentes valem uma vez; os outros (sinos,
+## marcas, véu) só se repetem depois de 0,8 s.
 func _seen(ek: String, kind: String) -> bool:
 	if not _events.has(ek):
 		return false
@@ -406,182 +406,126 @@ func _send_event(n: Node, kind: String) -> void:
 	_puzzle_event.rpc(key, kind)
 
 
-## Evento de quebra-cabeça: `lit`, `rung`, `mark_slam`, `blown`, `pulled`, `parted`, `latched`.
+## Evento de quebra-cabeça: `lit`, `rung`, `mark_slam` (e outras marcas), `blown`,
+## `pulled`, `parted`, `latched`; "group:<id>" + `latched` resolve o grupo.
 @rpc("any_peer", "reliable", "call_remote")
 func _puzzle_event(path: String, kind: String) -> void:
-	if is_host and not (kind in CLIENT_EVENTS):
+	if is_host and not _client_kind(kind):
 		return    # o anfitrião é autoritativo
 	var ek := path + "|" + kind
 	if _seen(ek, kind):
 		return
 	_events[ek] = Time.get_ticks_msec()
-	var n := _resolve(path)
-	if n == null:
-		return
 	_applying = true
-	_apply_event(n, kind)
+	if path.begins_with("group:"):
+		_force_group(path.substr(6))
+	else:
+		var n := _resolve(path)
+		if n != null:
+			if n.has_method("apply_event"):
+				n.apply_event(kind)    # a trava aplica sem reemitir
+			else:
+				_apply_fallback(n, kind)
 	_applying = false
 
 
-func _apply_event(n: Node, kind: String) -> void:
-	if n.has_method("net_event"):
-		n.net_event(kind)
-		return
-	match kind:
-		"rung":
-			if n.has_method("ring"):
-				n.ring()
-			else:
-				_strike(n)
-		"mark_slam":
-			# o anfitrião marca no próprio relógio (+0,15 s de tolerância se o sino aceitar)
-			if n.has_method("mark_slam"):
-				n.mark_slam(0.15)
-			elif n.has_method("on_pound"):
-				n.on_pound((n as Node3D).global_position, other)
-		"parted":
-			if n.has_method("part"):
-				var pt = n.get("part_time")
-				n.part(float(pt) if pt != null else 6.0)
-		"latched":
-			if CompanionAI.is_plate(n):
-				if n.get("latch") == true:
-					if n.has_method("force_latch"):
-						n.force_latch()
-					elif n.has_method("force_done"):
-						n.force_done()
-					else:
-						n.set("latched", true)
-			else:
-				_force_done(n)
-		_:
-			if n.get("pressed") == true:
-				return
-			var named := {"lit": ["ignite", "light_up"], "blown": ["blow"], "pulled": ["force_pull"]}
-			for m in named.get(kind, []):
-				if n.has_method(m):
-					n.call(m)
-					return
-			_force_done(n)
+## Grupo resolvido no anfitrião: as travas daqui ficam feitas (placas com latch
+## travam), o grupo resolve (revela itens/relíquias) e os portões do grupo abrem.
+func _force_group(g: String) -> void:
+	for n in get_tree().get_nodes_in_group(&"plates"):
+		if String(n.get("group_id")) != g:
+			continue
+		if CompanionAI.is_plate(n):
+			if n.get("latch") == true and n.has_method("apply_event"):
+				n.apply_event("latched")
+		elif n.get("pressed") != true and n.has_method("force_done"):
+			n.force_done()
+	var pg := get_tree().get_first_node_in_group(&"puzzle_groups")
+	if pg != null and pg.has_method("force_solve"):
+		pg.call("force_solve", g)
+	if level != null and level.content != null:
+		for n in level.content.get_children():
+			if n.get("opened") == false and String(n.get("group_id")) == g and n.has_method("open"):
+				n.open()
 
 
-## Golpe simulado do herói remoto num sino (reusa a janela do próprio sino).
-func _strike(n: Node) -> void:
-	var need = n.get("need")
-	if not (need is Array):
-		need = ["any"]
-	var p: Vector3 = (n as Node3D).global_position
-	if "slam" in need and n.has_method("on_pound"):
-		n.on_pound(p, other)
-	if n.has_method("on_attack"):
-		var kind := "staff1" if ("staff" in need and not ("any" in need)) else ("bump" if other != null and other.hero_id == "strong" else "spin")
-		n.on_attack(p + Vector3.UP * 0.5, 0.6, other, kind)
-
-
-func _force_done(n: Node) -> void:
-	if n.has_method("force_done"):
+## Travas sem `apply_event` (versões antigas): melhor esforço.
+func _apply_fallback(n: Node, kind: String) -> void:
+	if kind == "parted" and n.has_method("part"):
+		n.part()
+	elif kind == "rung" or kind.begins_with("mark_"):
+		if n.has_method("on_attack"):
+			n.on_attack((n as Node3D).global_position + Vector3.UP * 0.9, 0.6, other, "bump" if other.hero_id == "strong" else "spin")
+	elif n.has_method("force_done"):
 		n.force_done()
-	elif n.get("pressed") == false:
-		n.set("pressed", true)
-		if n.has_signal("changed"):
-			n.emit_signal("changed", true)
 
 
-## Barrigada local perto de um sino `slam` (pound_listeners): o cliente avisa o anfitrião.
+## Barrigada do Hulvar no cliente (pound_listeners): marca `slam` nos sinos ao
+## alcance. Garante o Eco mesmo se o cristal `dark` daqui não vir a luz a tempo;
+## o anfitrião marca no próprio relógio com +0,15 s de tolerância.
 func on_pound(p: Vector3, by) -> void:
 	if not _started or is_host or by != mine:
 		return
-	_mark_slam_near(p, 0.0)
+	_mark_slam_near(p, -1.0)
 
 
-## Aríete local do Hulvar (também vale como `slam`).
+## Aríete local do Hulvar (também conta como `slam`).
 func _watch_ram() -> void:
 	if is_host or mine == null or mine.hero_id != "strong":
 		return
 	var atk := mine.is_attacking() and mine.state != Hero.S.POUND
 	if atk and not _mine_atk:
 		var f := Vector3(sin(mine.facing), 0, cos(mine.facing))
-		_mark_slam_near(mine.global_position + f * 0.6, 1.1 + 1.0)
+		_mark_slam_near(mine.global_position + f * 0.6 + Vector3.UP * 0.4, 1.1)
 	_mine_atk = atk
 
 
 func _mark_slam_near(p: Vector3, reach: float) -> void:
 	for n in get_tree().get_nodes_in_group(&"plates"):
-		if CompanionAI.lock_kind(n) != "chime" or not ("slam" in CompanionAI._need(n)):
+		if CompanionAI.lock_kind(n) != "chime" or not ("slam" in CompanionAI._need(n)) or n.get("pressed") == true:
 			continue
+		var sz = n.get("size")
 		var sr = n.get("slam_radius")
-		var r := reach + 1.2 * float(n.get("size") if n.get("size") != null else 1.0) if reach > 0.0 else (float(sr) if sr != null else 9.0)
-		if (n as Node3D).global_position.distance_to(p) <= r:
+		var r := (reach + 1.2 * (float(sz) if sz != null else 1.0)) if reach >= 0.0 else (float(sr) if sr != null else 9.0)
+		if (n as Node3D).global_position.distance_to(p) <= r + 0.6:
 			_send_event(n, "mark_slam")
 
 
-## Varredura periódica: travas novas, placas que travaram (`latch`), véus de
-## areia abertos, grupos resolvidos (anfitrião) e PV dos Silentes (os dois lados).
+## Varredura periódica: liga nós novos; Silentes sem o sinal `hit` pelo PV.
 func _watch_world() -> void:
 	_connect_locks()
-	if is_host:
-		var groups := {}
-		for n in get_tree().get_nodes_in_group(&"plates"):
-			groups[String(n.get("group_id"))] = true
-			if CompanionAI.is_plate(n) and n.get("latched") == true and not _latched_seen.has(n):
-				_latched_seen[n] = true
-				_send_event(n, "latched")
-		for g in groups:
-			if g != "" and not _solved_sent.has(g) and CompanionAI.group_done(g):
-				_solved_sent[g] = true
-				for n in get_tree().get_nodes_in_group(&"plates"):
-					if String(n.get("group_id")) == g:
-						_send_event(n, "latched")
-		for n in get_tree().get_nodes_in_group(&"wind_listeners"):
-			if not n.has_method("part"):
-				continue
-			var open := _is_open(n)
-			if open and not _parted_seen.get(n, false):
-				_send_event(n, "parted")
-			_parted_seen[n] = open
-	_track_hp()
-
-
-static func _is_open(n: Node) -> bool:
-	if n.has_method("is_open"):
-		return bool(n.is_open())
-	for k in ["parted", "is_parted", "opened", "open"]:
-		var v = n.get(k)
-		if v is bool:
-			return v
-	var t = n.get("part_t")
-	return t != null and float(t) > 0.0
-
-
-# =================================================================== golpes em Silentes
-## Cada golpe local num Silente com PV vira `_enemy_hit` (lido pela queda do PV).
-func _track_hp() -> void:
 	for e in get_tree().get_nodes_in_group(&"enemies"):
+		if e.has_signal("hit"):
+			continue
 		var hp = e.get("hp")
 		if hp == null or e.get("dead") == true:
 			continue
 		var k := String(e.name)
-		if not _hp_seen.has(k):
-			_hp_seen[k] = int(hp)
-			continue
-		var dmg := int(_hp_seen[k]) - int(hp)
+		var dmg := int(_hp_seen.get(k, hp)) - int(hp)
 		_hp_seen[k] = int(hp)
 		if dmg > 0:
 			_enemy_hit.rpc(k, dmg)
 
 
+# =================================================================== golpes em Silentes
+func _on_local_hit(who: Node, dmg: int) -> void:
+	if _started and not _remote_enemy and who != null:
+		_enemy_hit.rpc(String(who.name), dmg)
+
+
+## Golpe num Silente com PV feito no outro aparelho (`Silente.apply_hit` não reemite).
 @rpc("any_peer", "reliable", "call_remote")
 func _enemy_hit(enemy_name: String, dmg: int) -> void:
+	if dmg <= 0:
+		return
 	for e in get_tree().get_nodes_in_group(&"enemies"):
 		if String(e.name) != enemy_name:
 			continue
-		if e.get("dead") == true or dmg <= 0:
+		if e.get("dead") == true:
 			return
 		_remote_enemy = true
-		if e.has_method("net_hit"):
-			e.net_hit(dmg)
-		elif e.has_method("apply_damage"):
-			e.apply_damage(dmg)
+		if e.has_method("apply_hit"):
+			e.apply_hit(dmg)
 		elif e.get("hp") != null:
 			e.set("hp", int(e.get("hp")) - dmg)
 			if int(e.get("hp")) <= 0:

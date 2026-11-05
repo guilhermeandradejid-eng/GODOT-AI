@@ -19,13 +19,13 @@ const QUALITY_NAMES := ["Baixa", "Média", "Alta"]
 const ITEM_IDS := ["arpeu", "bastao", "lanterna", "concha"]
 const ITEM_INFO := {
 	"arpeu": {"name": "Arpéu de Rumo", "color": Color(0.83, 0.64, 0.25),
-		"lines": ["USAR: puxe-se até a argola!", "Segure USAR para manter o balanço."]},
+		"lines": ["USAR: puxe-se até a argola!", "Segure USAR para balançar; PULAR solta."]},
 	"bastao": {"name": "Bastão de Quilha", "color": Color(0.93, 0.86, 0.70),
-		"lines": ["AÇÃO, AÇÃO, AÇÃO: combo de 3 golpes!", "No ar, o Rodopio acerta e quica (Ricochete)."]},
+		"lines": ["AÇÃO, AÇÃO, AÇÃO: combo de 3 golpes!", "No ar, o Rodopio quica nos Silentes."]},
 	"lanterna": {"name": "Lanterna de Brasa", "color": Color(1.0, 0.71, 0.35),
-		"lines": ["Toque a lanterna para acender ou apagar.", "A luz revela os Silentes e acende os Olhos de Brasa."]},
+		"lines": ["Toque no chip da lanterna para acender.", "A luz revela o que se esconde na névoa."]},
 	"concha": {"name": "Concha dos Ventos", "color": Color(0.98, 0.72, 0.74),
-		"lines": ["USAR sem alvo: rajada de vento!", "No ar, USAR dá a Lufada."]},
+		"lines": ["USAR sem alvo: uma rajada de vento.", "No ar, USAR dá a Lufada."]},
 }
 
 enum Mode { SOLO, LOCAL_COOP, NET_HOST, NET_CLIENT }

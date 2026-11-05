@@ -104,7 +104,7 @@ WOOD = hexcol("E6C38F")
 WOOD_DK = hexcol("C99A5E")
 INDIGO = hexcol("2B3A87")
 DECK = hexcol("26305F")         # fix pass: dark outward deck (the cream deck matched the sand)
-GOGGLE_LENS = hexcol("E89A2E")  # âmbar
+GOGGLE_LENS = hexcol("B9561B")  # âmbar escuro (lê como vidro contra o latão)
 GOGGLE_STRAP = hexcol("3A2418")
 NOSE_HI = hexcol("F2BE96")
 
@@ -179,9 +179,9 @@ SCARF_HALF_T = 0.0052
 
 # prancha de areia nas costas (diagonal: ponta de cima atrás do ombro esquerdo dele)
 BOARD_C = V3(0.0, 0.150, 0.448)
-BOARD_ANG = 28.0
+BOARD_ANG = 38.0          # fix pass: steeper diagonal (more jacket visible from behind)
 BOARD_LEN = 0.500
-BOARD_HW = 0.090
+BOARD_HW = 0.080
 BOARD_HALF_T = 0.0085
 
 
@@ -252,6 +252,14 @@ def make_rig() -> Rig:
             B(f"shin_{s}", t(mx(KNEE_L, sx)), t(mx(ANKLE_L, sx)), f"thigh_{s}"),
             B(f"foot_{s}", t(mx(ANKLE_L, sx)), t(mx(TOE_L, sx)), f"shin_{s}"),
         ]
+    # open jacket (Feedback 4): spring chains for the two front panels and the back hem (parent chest)
+    for side, sx in (("L", 1.0), ("R", -1.0)):
+        pts = [mx(p, sx) for p in JACKET_CHAIN_F]
+        for i in range(3):
+            bones.append(B(f"jacket_{side}_{i + 1}", t(pts[i]), t(pts[i + 1]), "chest" if i == 0 else f"jacket_{side}_{i}"))
+    for i in range(2):
+        bones.append(B(f"jacket_B_{i + 1}", t(JACKET_CHAIN_B[i]), t(JACKET_CHAIN_B[i + 1]),
+                       "chest" if i == 0 else "jacket_B_1"))
     hb = [h2w(p) for p in tuft_points()]
     bones += [
         B("hair_B_1", t(hb[0]), t(hb[1]), "head"),
@@ -276,6 +284,8 @@ def make_rig() -> Rig:
     return Rig(bones)
 
 
+JACKET_CHAIN_F = [V3(0.050, -0.074, 0.432), V3(0.053, -0.079, 0.400), V3(0.055, -0.082, 0.369), V3(0.057, -0.084, 0.334)]
+JACKET_CHAIN_B = [V3(0.0, 0.074, 0.405), V3(0.0, 0.080, 0.370), V3(0.0, 0.085, 0.334)]
 HAND_DIR = nrm(HAND_TIP_L - WRIST_L)
 GRIP_AXIS = nrm(np.cross(V3(-1.0, 0.0, 0.0), HAND_DIR))     # thumb side: forward and a little up
 BELT_L = V3(0.101, 0.006, 0.322)
@@ -602,16 +612,16 @@ def build_head(q: float):
     mouth = Prim(mouth_region, (-0.04, -0.25, 0.68), (0.04, -0.08, 0.74))
     # fix pass: a continuous darker smirk line (~2.5 cm), his left corner up
     del mouth
-    mpts = surface_line(base, [(-0.0125, 0.7045), (-0.004, 0.7025), (0.005, 0.7030), (0.0120, 0.7065), (0.0155, 0.7105)],
-                        lift=0.0004)
-    face.add(stroke(mpts, [0.0019, 0.0024, 0.0024, 0.0021, 0.0015], 0.0015), "head", MOUTH, k=0.0)
+    mpts = surface_line(base, [(-0.0150, 0.7055), (-0.0060, 0.7036), (0.0035, 0.7036), (0.0110, 0.7056), (0.0170, 0.7098)],
+                        lift=0.0011)
+    face.add(stroke(mpts, [0.0015, 0.0019, 0.0019, 0.0017, 0.0012], 0.0010), "head", MOUTH, k=0.0)
     face.detail(everywhere(), 0.5)
 
     # ---- brows: thick, the inner end a little lower (determined, friendly)
     brows = XShape("SaelBrows", "hair", voxel=0.0016 * q, tris=200, color_soft=0.002, weight_sigma=0.02,
                    ao_strength=0.0)
     for sx in (1.0, -1.0):
-        pts = surface_line(base, [(0.022 * sx, 0.839), (0.050 * sx, 0.8475), (0.083 * sx, 0.8435)], lift=0.0010)
+        pts = surface_line(base, [(0.022 * sx, 0.8425), (0.050 * sx, 0.8490), (0.083 * sx, 0.8440)], lift=0.0010)
         brows.add(stroke(pts, [0.0060, 0.0066, 0.0040], 0.003), "head", BROW, k=0.0)
 
     face.cull_by = [head]
@@ -694,7 +704,7 @@ def tuft_points():
 
 
 def build_hair(q: float, head_base):
-    hair = XShape("SaelHair", "hair", voxel=0.0030 * q, tris=1450, color_soft=0.004, weight_sigma=0.02,
+    hair = XShape("SaelHair", "hair", voxel=0.0030 * q, tris=1900, color_soft=0.004, weight_sigma=0.02,
                   ao_strength=0.18)
     hair.add(ellipsoid(HEAD_C, HEAD_R + 0.013), "head", HAIR, k=0.0)
     hair.add(ellipsoid(HEAD_C + V3(0, 0.016, 0.040), (0.148, 0.152, 0.136)), "head", HAIR, k=0.03)
@@ -742,6 +752,121 @@ def build_hair(q: float, head_base):
     return hair, tuft
 
 
+GOG_DIR = (0.31, -0.74, 0.60)          # lens centre direction (normalized skull space), mirrored in u
+GOG_R = 1.235                           # radial factor: resting on the front locks
+
+
+def build_goggles(q: float):
+    """Óculos de aviador apoiados no cabelo (Feedback 4): aros de latão (metal), lentes âmbar (glass),
+    ponte e tira de couro em volta da cabeça (leather). Tudo no osso head."""
+    rims = XShape("SaelGoggleRims", "metal", voxel=0.0016 * q, tris=420, color_soft=0.002, weight_sigma=0.02,
+                  ao_strength=0.0)
+    lens = XShape("SaelGoggleLens", "glass", voxel=0.0016 * q, tris=160, color_soft=0.002, weight_sigma=0.02,
+                  ao_strength=0.0)
+    strap = XShape("SaelGoggleStrap", "leather", voxel=0.0024 * q, tris=300, color_soft=0.003, weight_sigma=0.02,
+                   ao_strength=0.10)
+    cs = []
+    for sx in (1.0, -1.0):
+        u, v, w = GOG_DIR
+        c = hp(u * sx, v, w, GOG_R)
+        n = nrm(c - HEAD_C)
+        n = nrm(n + V3(0, -0.35, 0.10))            # lenses look forward-up a bit (resting on the brow of the hair)
+        R = look_basis(n, up=(0, 0, 1))
+        cs.append((c, n, R))
+        rims.add(torus(c + n * 0.006, 0.0250, 0.0046, R), "head", BRASS, k=0.0)
+        strap.add(cylinder(c - n * 0.002, 0.0285, 0.0080, R, rounding=0.003), "head", GOGGLE_STRAP, k=0.0)
+        lens.add(ellipsoid(c + n * 0.0060, (0.0222, 0.0222, 0.0060), R), "head", GOGGLE_LENS, k=0.0)
+        lens.paint(ellipsoid(c + n * 0.011 + R @ V3(-0.009 * sx, 0.009, 0.0), (0.0065, 0.0055, 0.004)),
+                   hexcol("FFD9A0"), soft=0.003)
+    (cl, nl, _), (cr, nr_, _) = cs
+    mid = 0.5 * (cl + cr) + nrm(0.5 * (nl + nr_)) * 0.006
+    rims.add(stroke([cl + nl * 0.002, mid, cr + nr_ * 0.002], [0.0050, 0.0058, 0.0050], 0.002), "head", BRASS_D, k=0.003)
+    # strap: a band on a shell of the hair around the skull, tilted (high at the front, low at the back)
+    band_n = nrm(V3(0.0, -0.42, 1.0))
+    band_c = HEAD_C + V3(0.0, 0.0, 0.0)
+    off = float((0.5 * (cl + cr) - band_c) @ band_n)
+    shellR = HEAD_R * 1.17
+
+    def strap_f(P):
+        d = (P - HEAD_C) / shellR
+        r = np.linalg.norm(d, axis=1)
+        sh = np.abs((r - 1.0) * shellR.min()) - 0.0042
+        sl = np.abs((P - band_c) @ band_n - off) - 0.0105
+        return np.maximum(sh, sl)
+    strap.add(Prim(strap_f, HEAD_C - shellR - 0.02, HEAD_C + shellR + 0.02), "head", GOGGLE_STRAP, k=0.0)
+    for c, n, R in cs:
+        strap.carve(cylinder(c + n * 0.03, 0.026, 0.022, R), k=0.002)
+    lens.cull_by = [rims]
+    lens.cull_margin = 0.0004
+    strap.cull_by = [rims]
+    strap.cull_margin = 0.0008
+    return [strap, rims, lens]
+
+
+def hair_uv(obj, shapes_paths):
+    """UV0 do cabelo (Feedback 4): u = através da mecha (0..1), v = ao longo (no Godot 0 = raiz, 1 = ponta;
+    o glTF inverte v, então aqui v_blender = 1 - fração). Cada vértice pega a mecha mais próxima."""
+    S, F, Rr, Tn, Sd = [], [], [], [], []
+    for pts, radii in shapes_paths:
+        pts = [V3(p) for p in pts]
+        seg = []
+        for i in range(len(pts) - 1):
+            for k in range(10):
+                a = k / 10.0
+                seg.append((pts[i] * (1 - a) + pts[i + 1] * a, radii[i] * (1 - a) + radii[i + 1] * a))
+        seg.append((pts[-1], radii[-1]))
+        P = np.array([x[0] for x in seg])
+        L = arclen(P)
+        T = np.gradient(P, axis=0)
+        T /= np.linalg.norm(T, axis=1)[:, None] + 1e-12
+        Nn = np.array([nrm(p - h2w(HEAD_C)) for p in P])
+        side = np.cross(T, Nn)
+        S.append(P)
+        F.append(L / max(L[-1], 1e-6))
+        Rr.append(np.array([x[1] for x in seg]))
+        Tn.append(T)
+        Sd.append(side)
+    S, F, Rr, Sd = (np.concatenate(x) for x in (S, F, Rr, Sd))
+    me = obj.data
+    V = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", V)
+    V = V.reshape(-1, 3)
+    mw = np.array(obj.matrix_world)
+    V = V @ mw[:3, :3].T + mw[:3, 3]
+    uv = np.zeros((len(V), 2))
+    for i0 in range(0, len(V), 2000):
+        blk = V[i0:i0 + 2000]
+        d2 = ((blk[:, None, :] - S[None]) ** 2).sum(-1)
+        j = d2.argmin(1)
+        lat = ((blk - S[j]) * Sd[j]).sum(1) / (Rr[j] * HS + 0.004)
+        uv[i0:i0 + 2000, 0] = np.clip(0.5 + 0.5 * lat, 0.0, 1.0)
+        dd = (blk - h2w(HEAD_C)) / (HEAD_R * HS)
+        dd /= np.linalg.norm(dd, axis=1)[:, None] + 1e-9
+        flow = np.arccos(np.clip(dd @ FLOW_POLE, -1.0, 1.0)) / math.pi       # 0 at the front-top whorl .. 1
+        uv[i0:i0 + 2000, 1] = 1.0 - np.clip(flow * 1.35, 0.0, 1.0)
+    uvl = me.uv_layers[0] if len(me.uv_layers) else me.uv_layers.new(name="UVMap")
+    li = np.empty(len(me.loops), np.int32)
+    me.loops.foreach_get("vertex_index", li)
+    uvl.data.foreach_set("uv", uv[li].astype(np.float32).ravel())
+
+
+FLOW_POLE = nrm(V3(0.10, -0.62, 0.78))
+
+
+def hair_paths():
+    """Linhas centrais (mundo) das mechas + capa + topete, para o UV0 do cabelo."""
+    out = [([h2w(hp(*q)) for q in path], radii) for path, radii in HAIR_LOCKS]
+    tp = [h2w(p) for p in tuft_points()]
+    out.append((tp, [0.040, 0.030, 0.004]))
+    for tip in TUFT_SIDE:
+        out.append(([tp[0], h2w(hp(*tip))], [0.032, 0.004]))
+    # cap: meridians from the crown down to the hairline (front, sides, back)
+    for az in np.linspace(0.0, 2 * math.pi, 12, endpoint=False):
+        out.append(([h2w(hp(0.0, 0.0, 1.0, 1.08)), h2w(hp(0.7 * math.sin(az), -0.7 * math.cos(az), 0.55, 1.08)),
+                     h2w(hp(math.sin(az), -math.cos(az), 0.0, 1.08))], [0.05, 0.05, 0.02]))
+    return out
+
+
 def smooth01(x: float) -> float:
     x = 0.0 if x < 0.0 else (1.0 if x > 1.0 else x)
     return x * x * (3.0 - 2.0 * x)
@@ -759,7 +884,7 @@ STRAP_B = V3(-0.098, 0.0, 0.326)
 
 def build_body(q: float):
     # ---- jacket (torso + sleeves)
-    jk = FShape("SaelJacket", "cloth", voxel=0.0038 * q, tris=1650, color_soft=0.0035, weight_sigma=0.022,
+    jk = FShape("SaelJacket", "leather", voxel=0.0038 * q, tris=1650, color_soft=0.0035, weight_sigma=0.022,
                 ao_strength=0.45)
     jk.add(ellipsoid((0, 0.004, 0.384), (0.097, 0.083, 0.062)), "spine", JACKET, k=0.0)
     jk.add(ellipsoid((0, 0.000, 0.450), (0.104, 0.087, 0.086)), "chest", JACKET, k=0.05)
@@ -772,28 +897,69 @@ def build_body(q: float):
         jk.add(round_cone(S, E, 0.040, 0.0355), f"upperarm_{s_}", JACKET, k=0.030)
         end = W + (E - W) * 0.13
         jk.add(round_cone(E, end, 0.0355, 0.0335), f"forearm_{s_}", JACKET, k=0.012)
+    # open front (Feedback 4): a V opening from the collar to the hem shows the shirt; its edges show the
+    # cream shearling lining (wool slot)
+    def open_w(z):
+        return 0.016 + (0.515 - z) * 0.26
+
+    def opening(P):
+        return np.maximum(np.maximum(np.abs(P[:, 0]) - open_w(P[:, 2]), P[:, 1] + 0.030), P[:, 2] - 0.512)
+    jk.carve(Prim(opening, (-0.08, -0.15, 0.28), (0.08, 0.0, 0.53)), k=0.003)
+
+    def lining(P):
+        return np.maximum(np.maximum(np.abs(P[:, 0]) - open_w(P[:, 2]) - 0.0065, P[:, 1] + 0.040), P[:, 2] - 0.512)
+    jk.paint(Prim(lining, (-0.10, -0.15, 0.28), (0.10, 0.0, 0.53)), SHEARLING, soft=0.002)
+    jk.mat_split = [(JACKET, "leather"), (SHEARLING, "wool")]
+    # free lower parts of the jacket -> spring chains (nested regions: smooth weights down the chain)
+    for side, sx in (("L", 1.0), ("R", -1.0)):
+        for i, zt in enumerate((0.446, 0.392, 0.360)):
+            def reg(P, sx=sx, zt=zt):
+                return np.maximum.reduce([0.008 - sx * P[:, 0], sx * P[:, 0] - 0.084, P[:, 1] + 0.005, P[:, 2] - zt])
+            jk.weight_overrides.append((Prim(reg, (-0.2, -0.2, 0.2), (0.2, 0.1, 0.5)), f"jacket_{side}_{i + 1}", 0.026))
+    for i, zt in enumerate((0.405, 0.366)):
+        def regb(P, zt=zt):
+            return np.maximum.reduce([np.abs(P[:, 0]) - 0.086, 0.020 - P[:, 1], P[:, 2] - zt])
+        jk.weight_overrides.append((Prim(regb, (-0.2, -0.1, 0.2), (0.2, 0.2, 0.5)), f"jacket_B_{i + 1}", 0.026))
     jbase = snapshot(jk)
 
+    # ---- shirt torso under the open jacket (fitted cream t-shirt with the indigo 3-dot glyph)
+    shirt = FShape("SaelShirt", "shirt", voxel=0.0026 * q, tris=520, color_soft=0.003, weight_sigma=0.03,
+                   ao_strength=0.30)
+    shirt.add(ellipsoid((0, 0.004, 0.452), (0.094, 0.079, 0.080)), "chest", SHIRT, k=0.0)
+    shirt.add(ellipsoid((0, 0.006, 0.384), (0.088, 0.076, 0.062)), "spine", SHIRT, k=0.05)
+    shirt.add(ellipsoid((0, 0.008, 0.330), (0.092, 0.080, 0.024)), "hips", SHIRT, k=0.03)
+    sbase = snapshot(shirt)
+    gx, gz = 0.014, 0.392                     # below the board strap, inside the opening
+    for dx, dz in ((0.0, 0.0085), (-0.0074, -0.0043), (0.0074, -0.0043)):
+        dot = Prim(lambda P, dx=dx, dz=dz: np.maximum(np.hypot(P[:, 0] - gx - dx, P[:, 2] - gz - dz) - 0.0046,
+                                                      P[:, 1] + 0.03), (gx - 0.03, -0.12, gz - 0.03), (gx + 0.03, -0.03, gz + 0.03))
+        shirt.add(plate(sbase, dot, 0.0012, 0.0030, 0.0008), "spine", INDIGO, k=0.0)
+    ring = Prim(lambda P: np.maximum(np.abs(np.hypot(P[:, 0] - gx, P[:, 2] - gz) - 0.0165) - 0.0018, P[:, 1] + 0.03),
+                (gx - 0.03, -0.12, gz - 0.03), (gx + 0.03, -0.03, gz + 0.03))
+    shirt.add(plate(sbase, ring, 0.0012, 0.0030, 0.0008), "spine", INDIGO, k=0.0)
+    shirt.mat_split = [(SHIRT, "shirt"), (INDIGO, "shirt")]
+
+    def strap_base(P):
+        return np.minimum(jbase(P), sbase(P))
+
     # ---- dark panels (shoulder yoke, hem band, placket) + the board's diagonal strap
-    panels = FShape("SaelPanels", "cloth", voxel=0.0024 * q, tris=560, color_soft=0.003, weight_sigma=0.03,
+    panels = FShape("SaelPanels", "leather", voxel=0.0024 * q, tris=560, color_soft=0.003, weight_sigma=0.03,
                     ao_strength=0.40)
     yoke = tight(plane((0, 0, 0.486), (0, 0, -1)), (-0.19, -0.13, 0.46), (0.19, 0.13, 0.58))
     panels.add(plate(jbase, yoke, 0.0018, 0.0040, 0.0016), "chest", JACKET_DK, k=0.0)
     hem = tight(plane((0, 0, 0.346), (0, 0, 1)), (-0.13, -0.11, 0.31), (0.13, 0.11, 0.36))
     panels.add(plate(jbase, hem, 0.0018, 0.0040, 0.0016), "hips", JACKET_DK, k=0.0)
-    plk = box((-0.011, -0.10, 0.405), (0.0080, 0.06, 0.078))
-    panels.add(plate(jbase, plk, 0.0018, 0.0040, 0.0016), "chest", JACKET_DK, k=0.0)
     s_dir = nrm(STRAP_B - STRAP_A)
     s_n = nrm(np.cross(s_dir, V3(0, 1, 0)))
 
     def strap_region(P):
         return np.abs((P - STRAP_A) @ s_n) - 0.0145
     strap = Prim(strap_region, (-0.15, -0.13, 0.30), (0.15, 0.13, 0.58))
-    panels.add(plate(jbase, strap, 0.0040, 0.0030, 0.0016), "chest", STRAP, k=0.0)
+    panels.add(plate(strap_base, strap, 0.0040, 0.0030, 0.0016), "chest", STRAP, k=0.0)
     panels.weight_fn = jk.weights_at
 
     # ---- shearling collar + cuffs
-    sh = FShape("SaelShearling", "cloth", voxel=0.0024 * q, tris=620, color_soft=0.004, weight_sigma=0.02,
+    sh = FShape("SaelShearling", "wool", voxel=0.0024 * q, tris=620, color_soft=0.004, weight_sigma=0.02,
                 ao_strength=0.35)
     col_c = V3(0, 0.006, 0.524)
     col_R = sdfkit.euler(15, 0, 0)
@@ -810,13 +976,9 @@ def build_body(q: float):
     sh.paint(Prim(lambda P: np.abs(np.linalg.norm((P - col_c)[:, :2], axis=1) - 0.068) - 0.0055,
                   (-0.2, -0.2, 0.45), (0.2, 0.2, 0.62)), SHEAR_SH, soft=0.01)
 
-    # ---- shirt hem under the jacket
-    shirt = FShape("SaelShirt", "cloth", voxel=0.0028 * q, tris=150, color_soft=0.004, weight_sigma=0.03,
-                   ao_strength=0.45)
-    shirt.add(ellipsoid((0, 0.008, 0.321), (0.095, 0.082, 0.018)), "hips", SHIRT, k=0.0)
 
     # ---- trousers + boots
-    legs = FShape("SaelLegs", "cloth", voxel=0.0034 * q, tris=1200, color_soft=0.003, weight_sigma=0.022,
+    legs = FShape("SaelLegs", "denim", voxel=0.0034 * q, tris=1200, color_soft=0.003, weight_sigma=0.022,
                   ao_strength=0.45)
     legs.add(ellipsoid((0, 0.010, 0.290), (0.092, 0.080, 0.060)), "hips", TROUSERS, k=0.0)
     for sx, s_ in ((1.0, "L"), (-1.0, "R")):
@@ -829,6 +991,9 @@ def build_body(q: float):
         legs.add(ellipsoid(mx((0.071, -0.024, 0.034), sx), (0.047, 0.082, 0.036)), f"foot_{s_}", BOOT, k=0.024)
         legs.add(ellipsoid(mx((0.071, -0.080, 0.031), sx), (0.042, 0.035, 0.031)), f"foot_{s_}", BOOT, k=0.016)
     legs.clip(plane((0, 0, 0.0), (0, 0, -1)), k=0.0)
+    # per-face material split (by the base colour): trousers -> denim, boots -> leather, sole -> sole
+    legs.mat_split = [(TROUSERS, "denim"), (TROUSERS_DK, "denim"), (BOOT, "leather"), (BOOT_CUFF, "leather"),
+                      (SOLE, "sole")]
     legs.paint(plane((0, 0, 0.012), (0, 0, 1)), SOLE, soft=0.002)
     for sx in (1.0, -1.0):
         legs.paint(ellipsoid(mx((0.070, -0.042, 0.170), sx), (0.038, 0.028, 0.028)), TROUSERS_DK, soft=0.02)
@@ -867,6 +1032,7 @@ def build_body(q: float):
     legs.cull_margin = 0.0012
     skin.cull_by = [jk, sh]
     skin.cull_margin = 0.0012
+    jk.strap_base = strap_base
     return [jk, panels, sh, shirt, legs, skin], jk
 
 
@@ -930,7 +1096,7 @@ def build_board(q: float):
     o, e1, e2, n = board_frame()
     bd = FShape("SaelBoard", "cloth", voxel=0.0026 * q, tris=360, color_soft=0.003, weight_sigma=0.03,
                 ao_group="board", ao_strength=0.30)
-    bd.add(board_prim(), "board", WOOD, k=0.0)
+    bd.add(board_prim(), "board", DECK, k=0.0)          # fix pass: dark indigo outward deck, wood base
 
     def base_side(P):
         return ((P - o) @ n) + 0.002                # negative on the base (toward his back)
@@ -949,7 +1115,7 @@ def build_board(q: float):
         x, y, z = qv @ e1, qv @ e2, qv @ n
         return np.maximum(glyph_sdf2d(x, y), -z)
     gr = Prim(glyph_region, o - 0.09, o + 0.09)
-    marks.add(plate(bbase, gr, 0.0015, 0.0030, 0.0012), "board", INDIGO, k=0.0)
+    marks.add(plate(bbase, gr, 0.0015, 0.0030, 0.0012), "board", WOOD, k=0.0)
     # deck stripes along the nose/tail (indigo)
     for sgn in (1.0, -1.0):
         def stripe_region(P, sgn=sgn):
@@ -957,7 +1123,7 @@ def build_board(q: float):
             x, y, z = qv @ e1, qv @ e2, qv @ n
             return np.maximum(np.maximum(np.abs(y) - 0.0075, np.abs(sgn * x - 0.205) - 0.034), -z)
         bp = board_prim(0.01)
-        marks.add(plate(bbase, Prim(stripe_region, bp.lo, bp.hi), 0.0015, 0.0030, 0.0012), "board", INDIGO,
+        marks.add(plate(bbase, Prim(stripe_region, bp.lo, bp.hi), 0.0015, 0.0030, 0.0012), "board", WOOD,
                   k=0.0)
     # two foot straps (bindings) across the deck
     for xb in (-0.115, 0.115):
@@ -968,7 +1134,7 @@ def build_board(q: float):
         marks.add(blade([p0, pm, p1], [0.0115, 0.0125, 0.0115], flat=0.42, normal=tuple(e1)), "board", STRAP,
                   k=0.0)
     marks.add(plate(bbase, Prim(caps_region, board_prim(0.01).lo, board_prim(0.01).hi), 0.0012, 0.0030, 0.0012),
-              "board", INDIGO, k=0.0)
+              "board", WOOD_DK, k=0.0)
     marks.cull_by = [bd]
     marks.cull_margin = 0.0005
 
@@ -987,16 +1153,17 @@ def build_brass(q: float, jk_field, scarf_field):
     """Botões da carcela, fivela da correia e o broche do glifo no nó do cachecol."""
     br = FShape("SaelBrass", "metal", voxel=0.0016 * q, tris=320, color_soft=0.002, weight_sigma=0.02,
                 ao_strength=0.15)
-    for z in (0.468, 0.356):
-        p = surf_hit(jk_field, (-0.011, -0.30, z), (0, 1, 0))
+    for z in (0.470, 0.420):
+        x = 0.016 + (0.515 - z) * 0.26 + 0.015
+        p = surf_hit(jk_field, (x, -0.30, z), (0, 1, 0))
         nn = field_n(jk_field, p)
-        br.add(cylinder(p + nn * 0.0030, 0.0080, 0.0026, look_basis(nn), rounding=0.0020),
-               "chest" if z > 0.42 else "spine", BRASS, k=0.0)
+        br.add(cylinder(p + nn * 0.0030, 0.0072, 0.0024, look_basis(nn), rounding=0.0018),
+               "chest" if z > 0.44 else "jacket_L_1", BRASS, k=0.0)
     # strap buckle where the strap crosses the placket
     zc = 0.418
     tpar = (zc - STRAP_A[2]) / (STRAP_B[2] - STRAP_A[2])
     xc = STRAP_A[0] + (STRAP_B[0] - STRAP_A[0]) * tpar
-    p = surf_hit(jk_field, (xc, -0.30, zc), (0, 1, 0))
+    p = surf_hit(jk_field, (xc, -0.30, zc), (0, 1, 0)) + V3(0, -0.0035, 0)
     nn = field_n(jk_field, p)
     sd = nrm(STRAP_B - STRAP_A)
     Rb = np.stack([nrm(np.cross(nn, sd)), sd, nn], axis=1)
@@ -1152,11 +1319,14 @@ def build_shapes():
     body_parts, jk = build_body(q)
     scarf = build_scarf(q)
     board_parts = build_board(q)
-    brass = build_brass(q, snapshot(jk), scarf.field)
+    brass = build_brass(q, jk.strap_base, scarf.field)
     skin = body_parts[-1]
     skin.cull_by = list(skin.cull_by) + [scarf]
     scarf.cull_by = []
-    return [head, face, brows, hair, tuft] + body_parts + [scarf] + board_parts + [brass]
+    goggles = build_goggles(q)
+    hair.cull_by = list(hair.cull_by) + [goggles[0]]
+    goggles[0].cull_by = list(goggles[0].cull_by) + [hair]
+    return [head, face, brows, hair, tuft] + goggles + body_parts + [scarf] + board_parts + [brass]
 
 
 def build_eyes(bones):
@@ -1193,6 +1363,23 @@ def assemble(name, rig, shapes, extras):
         o = sdfkit.build_object(sh, bones, log=log, ao_field=ao_fields[sh.ao_group] if sh.ao_strength > 0 else None,
                                 ao_strength=sh.ao_strength)
         sdfchar._assign_material(o, sh.material)
+        split = getattr(sh, "mat_split", None)
+        if split:
+            names = []
+            for _c, mn in split:
+                if mn not in names:
+                    names.append(mn)
+            o.data.materials.clear()
+            for mn in names:
+                o.data.materials.append(bpy.data.materials[mn])
+            pal = np.array([c for c, _ in split])
+            idx = np.array([names.index(mn) for _, mn in split])
+            cen = np.array([tuple(o.matrix_world @ p.center) for p in o.data.polygons])
+            C = np.asarray(sh.colors_at(cen))[:, :3]
+            near = ((C[:, None, :] - pal[None]) ** 2).sum(-1).argmin(1)
+            o.data.polygons.foreach_set("material_index", idx[near].astype(np.int32))
+        if sh.name in ("SaelHair", "SaelTuft"):
+            hair_uv(o, hair_paths())
         if o.data.validate(verbose=False, clean_customdata=False):
             log(f"    {sh.name}: malha corrigida por validate()")
         objs.append(o)
@@ -2003,7 +2190,7 @@ def c_glide(t, ph):
     for s in "LR":
         sx = sxs(s)
         dihedral = bank * sx * 0.5
-        arm(P, s, swing=38 + 2.0 * wv(ph, 0.3), out=26 + dihedral, twist=14, flex=8, hand=(-10, 0, -4))
+        arm(P, s, swing=54 + 2.0 * wv(ph, 0.3), out=17 + dihedral, twist=16, flex=8, hand=(-12, 0, -4))
         curl(P, s, 8)
     for s, o_ in (("L", 0.0), ("R", 0.5)):
         foot(P, s, (-0.010, 0.040, 0.016 + 0.006 * wv(ph, o_)), pitch=46, yaw=0, rel=True)
@@ -2483,8 +2670,10 @@ def start_at_zero(act):
 
 
 # ============================================================================= main
-MATERIALS = (("skin", (0.82, 0.47, 0.26, 1)), ("hair", (0.10, 0.04, 0.02, 1)), ("cloth", (0.19, 0.07, 0.02, 1)),
-             ("scarf", (0.67, 0.03, 0.02, 1)), ("metal", (0.66, 0.37, 0.05, 1)), ("eye", (1, 1, 1, 1)))
+MATERIALS = (("skin", (0.82, 0.47, 0.26, 1)), ("hair", (0.10, 0.04, 0.02, 1)), ("leather", (0.19, 0.07, 0.02, 1)),
+             ("wool", (0.89, 0.77, 0.56, 1)), ("shirt", (0.86, 0.75, 0.52, 1)), ("denim", (0.03, 0.06, 0.15, 1)),
+             ("sole", (0.58, 0.29, 0.10, 1)), ("scarf", (0.67, 0.03, 0.02, 1)), ("metal", (0.66, 0.37, 0.05, 1)),
+             ("glass", (0.80, 0.32, 0.03, 1)), ("eye", (1, 1, 1, 1)), ("cloth", (0.66, 0.50, 0.30, 1)))
 
 
 def strip_partial_channels(glb: Path) -> None:

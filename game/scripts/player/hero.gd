@@ -462,8 +462,8 @@ func _st_air(delta: float) -> void:
 	var g: float = cfg["gravity"]
 	if velocity.y < 0.0:
 		g *= cfg["fall_mult"]
-	elif not intent.jump:
-		g *= cfg["low_jump"]
+	elif not intent.jump and _lufada_t <= 0.0:
+		g *= cfg["low_jump"]             # pulo variável (a Lufada não é cortada)
 	if absf(velocity.y) < 2.5 and intent.jump:
 		g *= 0.55
 	velocity.y = maxf(velocity.y - g * delta, -cfg["max_fall"])
@@ -699,7 +699,7 @@ func _attack(center: Vector3, radius: float, kind: String, dmg := 1, push := Vec
 			if seen.has(n) or not is_instance_valid(n) or not n.has_method("on_attack"):
 				continue
 			seen[n] = true
-			var was_dead := n.get("dead") == true
+			var was_dead: bool = n.get("dead") == true
 			var r = null
 			if n.get_method_argument_count(&"on_attack") >= 5:
 				r = n.on_attack(center, radius, self, kind, dmg)
@@ -745,12 +745,12 @@ func _has_item(id: String) -> bool:
 
 
 # ------------------------------------------------------------------- staff combo (agile)
-## AÇÃO no chão com o bastão: 3 golpes. O toque vale a partir de 0,10 s do golpe (fica no
-## buffer e sai quando os quadros ativos acabam); depois do clipe o combo continua por 0,45 s.
+## AÇÃO no chão com o bastão: 3 golpes. Durante o golpe o toque fica no buffer e vale a
+## partir de 0,10 s (sai quando os quadros ativos acabam); depois do clipe o combo continua
+## por 0,45 s. O hit-stop não conta no relógio do golpe.
 func _staff_combo() -> void:
 	if _striking():
-		if combo_t >= COMBO_BUFFER_FROM:
-			_combo_buf = true
+		_combo_buf = true
 		return
 	var next := 1
 	if combo_step > 0 and combo_step < 3 and _combo_idle <= COMBO_RESET:
@@ -813,7 +813,7 @@ func _combo_tick(delta: float) -> void:
 		if not _combo_hit and combo_t >= float(s["on"]):
 			_combo_hit = true
 			_strike_hit(s)
-		if _combo_buf and combo_t >= float(s["off"]):
+		if _combo_buf and combo_t >= maxf(float(s["off"]), COMBO_BUFFER_FROM):
 			_strike(combo_step % 3 + 1)
 		return
 	_combo_idle += delta
@@ -1108,6 +1108,525 @@ func _st_grind(delta: float) -> void:
 		visual.restart_state("jump")
 		Sfx.play_at("jump_" + hero_id, global_position)
 
+# ------------------------------------------------------------------- arpéu (agile)
+## Começa um verbo do arpéu no alvo t (de HeroTools.find_target). O gancho voa a 60 m/s e
+## prende em max(0,08, d/60) s; no cesto, os verbos de puxar não tiram o Sael do RIDE.
+func start_hook(t: Dictionary, chain := false) -> void:
+	if tools == null or t.is_empty():
+		return
+	var kind := String(t.get("kind", ""))
+	var p := tools.target_point(t)
+	if state == S.RIDE and kind in ["swing", "zip", "zipline"]:
+		dismount(velocity)
+	hook = t
+	hook["t"] = 0.0
+	hook["phase"] = "throw"
+	hook["chain"] = chain
+	hook["lock_t"] = maxf(0.08, tools.hand_pos().distance_to(p) / HeroTools.HOOK_SPEED)
+	hook["start"] = global_position
+	var to := p - global_position
+	if Vector2(to.x, to.z).length() > 0.2:
+		facing = atan2(to.x, to.z)
+	tools.rope_throw()
+	play_clip("grapple_throw", "jump", 0.18)
+	Sfx.play_at("hook_throw" if Sfx.has("hook_throw") else "whoosh", global_position, 1.3)
+	if state != S.RIDE:
+		set_state(S.HOOK)
+
+
+## Verbo em curso pode ser processado no RIDE (Reboque) ou no HOOK.
+func _hook_tick(delta: float) -> void:
+	hook["t"] = float(hook["t"]) + delta
+	var p := tools.target_point(hook)
+	var phase := String(hook["phase"])
+	if hook.get("node") == null or not is_instance_valid(hook["node"]):
+		_hook_end()
+		return
+	if phase == "throw":
+		tools.rope_to = tools.hand_pos().lerp(p, clampf(float(hook["t"]) / float(hook["lock_t"]), 0.0, 1.0))
+		if float(hook["t"]) >= float(hook["lock_t"]):
+			_hook_lock(p)
+		return
+	tools.rope_to = p
+	if phase == "tug":
+		var dur := float(hook["dur"])
+		var k := String(hook["kind"])
+		if k == "brazier":
+			tools.flame_t = clampf(float(hook["t"]) / dur, 0.0, 1.0)
+		if k == "relic" and hook.has("relic_from"):
+			# a relíquia vem até 1,0 m na frente do Sael em 0,4 s (ease-out)
+			var r: Node3D = hook["node"]
+			var f := Vector3(sin(facing), 0, cos(facing))
+			var dest := global_position + f * 1.0
+			var e := clampf(float(hook["t"]) / 0.4, 0.0, 1.0)
+			e = 1.0 - (1.0 - e) * (1.0 - e)
+			r.global_position = (hook["relic_from"] as Vector3).lerp(dest, e)
+		if float(hook["t"]) >= dur:
+			_hook_effect()
+			_hook_end()
+
+
+func _hook_lock(p: Vector3) -> void:
+	var k := String(hook["kind"])
+	var n = hook["node"]
+	tools.rope_lock(p)
+	hook["t"] = 0.0
+	if k in ["swing", "zip"] and n.has_method("on_hook"):
+		n.on_hook(self)                 # a argola responde (brilho, som)
+	match k:
+		"swing":
+			_swing_start(p)
+		"zip", "hulvar", "zipline":
+			hook["phase"] = "pull"
+			var to := (p - (global_position + Vector3.UP * 0.6)).normalized()
+			hook["speed"] = maxf(0.0, velocity.dot(to))
+			hook["best"] = INF
+			hook["stuck"] = 0.0
+			play_clip("swing", "fall")
+		_:
+			hook["phase"] = "tug"
+			hook["dur"] = PULL_T
+			play_clip("pull", "brace", PULL_T)
+			match k:
+				"relic":
+					hook["dur"] = 0.45
+					if n.has_method("on_hook_pull"):
+						n.on_hook_pull(self)
+					else:
+						hook["relic_from"] = (n as Node3D).global_position
+				"enemy", "pull":
+					if n.has_method("on_hook_pull"):
+						n.on_hook_pull(self)
+				"heavy":
+					if is_heavy() and mount != null:
+						# Reboque: o Sael no cesto puxa, o Hulvar firma (brace) e recua 0,6 m
+						hook["dur"] = TOW_T
+						play_clip("pull", "brace", TOW_T)
+						var away: Vector3 = mount.global_position - p
+						away.y = 0.0
+						mount.brace_pull(away.normalized() if away.length() > 0.05 else -Vector3(sin(mount.facing), 0, cos(mount.facing)),
+							TOW_RECOIL, TOW_T)
+						Sfx.play_at("rope_creak" if Sfx.has("rope_creak") else "bump", p, 0.8)
+					else:
+						hook["fail"] = true
+						if n.has_method("on_hook_pull"):
+							n.on_hook_pull(self)        # o aro recusa e mostra o aviso
+						else:
+							Game.show_toast("Pesado demais... puxe do cesto do Hulvar!", 2.5)
+				"brazier":
+					hook["dur"] = LIGHT_RUN_T
+					tools.flame_t = 0.0
+
+
+## Fim do puxão: aplica o efeito no alvo.
+func _hook_effect() -> void:
+	var n = hook.get("node")
+	if n == null or not is_instance_valid(n):
+		return
+	match String(hook["kind"]):
+		"heavy":
+			if not hook.get("fail", false) and n.has_method("on_hook_pull"):
+				n.on_hook_pull(self)
+		"brazier":
+			# Lançar a Luz: a chama chegou ao olho
+			for m in ["on_hook_light", "ignite", "light_up"]:
+				if n.has_method(m):
+					n.call(m, self) if n.get_method_argument_count(m) >= 1 else n.call(m)
+					break
+			Fx.burst("sparkle", (n as Node3D).global_position, Color(1.0, 0.6, 0.25), 0.8)
+		"relic":
+			if hook.has("relic_from") and n.get("taken") == false and n.has_method("_take"):
+				n.call("_take", self)
+
+
+## Solta a corda e volta ao estado normal (chão ou ar).
+func _hook_end(next_id := "") -> void:
+	var was_ride := state == S.RIDE
+	hook = {}
+	tools.rope_release(next_id)
+	if was_ride:
+		return
+	if state == S.HOOK:
+		set_state(S.GROUND if is_on_floor() else S.AIR)
+		visual.set_state("loco" if state == S.GROUND else "fall", 0.15)
+
+
+## Saída de HOOK/SWING/ZIPLINE por fora (dano, respawn, água, cutscene, teleporte da IA).
+func _hook_cleanup() -> void:
+	hook = {}
+	_swing = {}
+	zipline = null
+	if tools != null:
+		tools.flame_t = -1.0
+		if tools.rope_active:
+			tools.rope_release()
+
+
+func _st_hook(delta: float) -> void:
+	var phase := String(hook.get("phase", ""))
+	if hook.is_empty():
+		set_state(S.AIR)
+		return
+	var g: float = cfg["gravity"]
+	if phase == "pull":
+		_hook_pull(delta)
+		return
+	# arremesso e puxões: no ar, gravidade ×0,5 e a velocidade horizontal se mantém
+	if is_on_floor() and velocity.y <= 0.0:
+		var hv := Vector2(velocity.x, velocity.z).move_toward(Vector2.ZERO, 30.0 * delta)
+		velocity = Vector3(hv.x, -2.0, hv.y)
+	else:
+		velocity.y = maxf(velocity.y - g * 0.5 * delta, -cfg["max_fall"])
+	_fall_speed = velocity.y
+	move_and_slide()
+	if state != S.HOOK:
+		return
+	_hook_tick(delta)
+
+
+## Puxar-se (zip), Embarque Relâmpago e ir ao Cabo de Vidro: corre pela corda até o alvo.
+func _hook_pull(delta: float) -> void:
+	var k := String(hook["kind"])
+	var n = hook["node"]
+	if n == null or not is_instance_valid(n):
+		_hook_abort()
+		return
+	var p := tools.target_point(hook)
+	var stop := ZIP_STOP
+	var aim := p
+	if k == "hulvar":
+		var hv := n as Hero
+		if hv.rider != null or not (hv.state in [S.GROUND, S.SWIM, S.SURF]):
+			_hook_abort()
+			return
+		stop = BOARD_STOP
+	elif k == "zipline":
+		aim = p - Vector3.UP * (float(n.get("hang")) if n.get("hang") != null else 1.15) + Vector3.UP * 0.6
+		stop = 0.5
+	elif k == "zip":
+		# os pés miram um pouco acima da argola: o Sael passa por cima dela no pulo final
+		aim = p + Vector3.UP * 0.25
+		stop = 0.35
+	hook["t"] = float(hook["t"]) + delta
+	tools.rope_to = p
+	var ch := global_position + (Vector3.ZERO if k == "zip" else Vector3.UP * 0.6)
+	var to := aim - ch
+	var d := to.length()
+	# zip: para a 1,2 m da argola (peito) quando os pés já chegaram à altura dela
+	var zip_done := k == "zip" and (global_position + Vector3.UP * 0.6).distance_to(p) <= ZIP_STOP \
+		and global_position.y >= p.y - 0.1
+	if d <= stop or zip_done:
+		_hook_arrive(p)
+		return
+	var sp := float(hook["speed"])
+	if k == "hulvar":
+		sp = BOARD_SPEED
+	else:
+		sp = move_toward(sp, ZIP_SPEED, ZIP_ACCEL * delta)
+	hook["speed"] = sp
+	var step := minf(sp * delta, d - stop + 0.01)
+	velocity = to / d * sp
+	var col := move_and_collide(to / d * step)
+	if col != null:
+		# raspou numa parede: desliza ao longo dela; se não avança, solta
+		var rest := col.get_remainder().slide(col.get_normal())
+		move_and_collide(rest)
+	if d < float(hook["best"]) - 0.02:
+		hook["best"] = d
+		hook["stuck"] = 0.0
+	else:
+		hook["stuck"] = float(hook["stuck"]) + delta
+	if float(hook["stuck"]) > 0.15 or float(hook["t"]) > 2.5:
+		_hook_abort()
+
+
+func _hook_arrive(p: Vector3) -> void:
+	var k := String(hook["kind"])
+	var n = hook["node"]
+	match k:
+		"zip":
+			# pulo final: horizontal ×14 + 9 para cima (ápice ≈ 1,6 m acima da argola)
+			var hd: Vector3 = p - (hook["start"] as Vector3)
+			hd.y = 0.0
+			hd = hd.normalized() if hd.length() > 0.1 else Vector3(sin(facing), 0, cos(facing))
+			var v := hd * ZIP_EXIT_H + Vector3.UP * ZIP_EXIT_UP
+			_hook_end()
+			_release_air(v)
+			set_state(S.LAUNCH)
+			state_t = 0.0
+			_launch_t = 0.25
+			play_clip("double_jump", "jump")
+			Fx.burst("ring_light", global_position + Vector3.UP * 0.3, Color(0.55, 1.0, 0.95), 0.8)
+			Sfx.play_at("jump2", global_position, 1.1)
+		"hulvar":
+			hook = {}
+			tools.rope_release()
+			set_state(S.AIR)
+			mount_on(n as Hero)
+		"zipline":
+			var off := float(hook.get("offset", 0.0))
+			var sp := float(hook["speed"])
+			hook = {}
+			tools.rope_release()
+			start_zipline(n, off, sp)
+
+
+func _hook_abort() -> void:
+	_hook_end()
+	if state == S.HOOK:
+		set_state(S.AIR)
+
+
+## Soltura no ar (arpéu ou cabo): pulo duplo, Rodopio e Lufada de volta e a janela da carona.
+func _release_air(v: Vector3) -> void:
+	velocity = v
+	air_jumps = 1
+	air_spin = true
+	_carry_t = CARRY_WINDOW
+	if tools != null:
+		tools.recharge_lufada()
+	set_state(S.AIR)
+	if v.x != 0.0 or v.z != 0.0:
+		facing = atan2(v.x, v.z)
+
+
+# ------------------------------------------------------------------- swing (agile)
+## Balanço: pêndulo plano (swing3.py). Corda L = clamp(d, 6, 10) recolhida em 0,15 s,
+## g = 30, entrada 8..22 m/s, ω até ±22/L. O plano segue a velocidade de entrada.
+func _swing_start(a: Vector3) -> void:
+	var c := global_position + Vector3.UP * 0.55
+	var d := c - a
+	var hv := Vector3(velocity.x, 0, velocity.z)
+	var sdir := hv.normalized() if hv.length() > 1.0 else Vector3(-d.x, 0, -d.z).normalized()
+	if sdir.length() < 0.5:
+		sdir = Vector3(sin(facing), 0, cos(facing))
+	var horiz := Vector3(d.x, 0, d.z).dot(sdir)
+	var dist := d.length()
+	var L := clampf(dist, SWING_LMIN, SWING_LMAX)
+	var sp := clampf(velocity.length(), SWING_VMIN, SWING_VMAX)
+	_swing = {"a": a, "sdir": sdir, "L": L, "Lc": dist, "reel": maxf(0.0, dist - L), "th": atan2(horiz, -d.y),
+		"om": sp / L, "t": 0.0, "next": String(hook.get("node").get("chain_next")) if hook.get("node") != null \
+			and hook["node"].get("chain_next") != null else ""}
+	hook["phase"] = "swing"
+	set_state(S.SWING)
+	play_clip("swing", "fall")
+	get_tree().call_group(&"cameras", &"fov_kick", 6.0, 0.2)
+	Sfx.play_at("hook_lock" if Sfx.has("hook_lock") else "bump", a, 1.3)
+
+
+func _st_swing(delta: float) -> void:
+	if _swing.is_empty() or hook.is_empty() or not is_instance_valid(hook.get("node")):
+		_hook_cleanup()
+		set_state(S.AIR)
+		return
+	var sw := _swing
+	sw["t"] = float(sw["t"]) + delta
+	var a: Vector3 = (hook["node"] as Node3D).global_position
+	sw["a"] = a
+	var L := float(sw["L"])
+	var Lc := float(sw["Lc"])
+	if Lc > L:
+		Lc = maxf(L, Lc - float(sw["reel"]) / SWING_REEL * delta)
+	var th := float(sw["th"])
+	var om := float(sw["om"])
+	om += -(SWING_G / Lc) * sin(th) * delta
+	om = clampf(om, -SWING_VMAX / Lc, SWING_VMAX / Lc)
+	th += om * delta
+	# o analógico gira o plano em ±35°/s
+	var sdir: Vector3 = sw["sdir"]
+	var wish := wish_dir()
+	if wish.length() > 0.2:
+		var ang := sdir.signed_angle_to(Vector3(wish.x, 0, wish.z).normalized(), Vector3.UP)
+		if absf(ang) < PI * 0.75:
+			sdir = sdir.rotated(Vector3.UP, clampf(ang, -1.0, 1.0) * deg_to_rad(SWING_STEER) * delta)
+	sw["Lc"] = Lc
+	sw["th"] = th
+	sw["om"] = om
+	sw["sdir"] = sdir
+	var want := a + sdir * (Lc * sin(th)) + Vector3.DOWN * (Lc * cos(th)) - Vector3.UP * 0.55
+	velocity = sdir * (om * Lc * cos(th)) + Vector3.UP * (om * Lc * sin(th))
+	facing = rotate_toward(facing, atan2(sdir.x, sdir.z), 10.0 * delta)
+	tools.rope_to = a
+	var col := move_and_collide(want - global_position)
+	if col != null:
+		if col.get_normal().y > 0.6 and float(sw.get("drag", 0.0)) < 0.25:
+			# raspando no chão (balanço que começa de pé): desliza e a corda levanta
+			sw["drag"] = float(sw.get("drag", 0.0)) + delta
+			move_and_collide(col.get_remainder().slide(col.get_normal()))
+		else:
+			# bateu (penhasco, colosso): segue no ar com a velocidade atual
+			_hook_end()
+			_release_air(velocity)
+			return
+	var thd := rad_to_deg(th)
+	var held: bool = intent.get("use") == true
+	if jump_buffer > 0.0:
+		jump_buffer = 0.0
+		_swing_release()
+		return
+	# USAR de novo com outra argola na mira: solta e prende nela (cadeia)
+	if intent.take("use") and tools.has_target():
+		_swing_release()
+		tools.use_pressed(self)
+		return
+	if float(sw["t"]) >= SWING_MAX_T or thd > 95.0 or (not held and thd >= SWING_REL and om > 0.0):
+		_swing_release()
+
+
+## Soltura do balanço: v × 1,08 + 4 m/s para cima. Perfeita (θ entre 35° e 55°): +2 m/s ao
+## longo de v, brilho dourado e um "ding" que sobe 1 semitom por argola encadeada (máx. +4).
+func _swing_release() -> void:
+	var perfect := swing_perfect_now()
+	var next := String(_swing.get("next", ""))
+	var v := velocity * 1.08
+	if perfect:
+		v += v.normalized() * 2.0
+		Fx.burst("ring_light", global_position + Vector3.UP * 0.5, Color(1.0, 0.82, 0.35), 1.0)
+		var semis := mini(_chain_n, 4)
+		Sfx.play_at("chime", global_position, pow(2.0, semis / 12.0), -3.0)
+	v.y += 4.0
+	_chain_n += 1
+	hook = {}
+	_swing = {}
+	tools.rope_release(next)
+	_release_air(v)
+	play_clip("double_jump", "jump")
+
+
+## Na janela de soltura perfeita (o retículo do HUD pisca dourado).
+func swing_perfect_now() -> bool:
+	if state != S.SWING or _swing.is_empty():
+		return false
+	var thd := rad_to_deg(float(_swing["th"]))
+	return thd >= SWING_PERFECT.x and thd <= SWING_PERFECT.y and float(_swing["om"]) > 0.0
+
+
+# ------------------------------------------------------------------- Cabo de Vidro (agile)
+## Pendura no cabo (SandRail com hang/min_speed/max_speed/brake). Velocidade começa em
+## max(entrada, mínima), ganha 30·senθ·0,78 por s, perde 4%/s; freia até 6 m/s nos últimos m.
+func start_zipline(rail, offset := 0.0, entry := 0.0) -> void:
+	if rail == null or not is_instance_valid(rail) or not rail.has_method("transform_at"):
+		return
+	if state == S.RIDE:
+		dismount()
+	zipline = rail
+	zip_offset = clampf(offset, 0.0, rail.length())
+	var mn := float(rail.get("min_speed")) if rail.get("min_speed") != null else 10.0
+	var e := maxf(entry, Vector3(velocity.x, 0, velocity.z).length())
+	zip_speed = rail.start_speed(e) if rail.has_method("start_speed") else maxf(e, mn)
+	_zip_brake_v = -1.0
+	set_state(S.ZIPLINE)
+	if tools != null:
+		tools.rope_active = true
+		tools.rope_attached = true
+	play_clip("swing", "fall")
+	Sfx.play_at("cable_hum" if Sfx.has("cable_hum") else "grind_start", global_position)
+	Fx.burst("ring_light", global_position + Vector3.UP * 1.1, Color(0.4, 1.0, 0.9), 0.6)
+
+
+func _st_zipline(delta: float) -> void:
+	var rail = zipline
+	if rail == null or not is_instance_valid(rail):
+		set_state(S.AIR)
+		return
+	var length: float = rail.length()
+	var mn := float(rail.get("min_speed")) if rail.get("min_speed") != null else 10.0
+	var mx := float(rail.get("max_speed")) if rail.get("max_speed") != null else 19.0
+	var brake := float(rail.get("brake")) if rail.get("brake") != null else 8.0
+	var hang := float(rail.get("hang")) if rail.get("hang") != null else 1.15
+	var tan: Vector3 = rail.tangent_at(zip_offset)
+	var left := length - zip_offset
+	if rail.has_method("advance"):
+		zip_speed = rail.advance(zip_speed, zip_offset, delta)      # modelo do ToolPuzzles.Zipline
+	elif left > brake:
+		zip_speed += SWING_G * maxf(-tan.y, -1.0) * 0.78 * delta
+		zip_speed *= 1.0 - 0.04 * delta
+		zip_speed = clampf(zip_speed, mn, mx)
+	else:
+		# freio: v² cai linear até 6² no fim do cabo
+		if _zip_brake_v < 0.0:
+			_zip_brake_v = zip_speed
+		zip_speed = sqrt(36.0 + maxf(_zip_brake_v * _zip_brake_v - 36.0, 0.0) * clampf(left / brake, 0.0, 1.0))
+	zip_offset += zip_speed * delta
+	if zip_offset >= length:
+		var exit_tan: Vector3 = rail.tangent_at(length)
+		var exit_v: Vector3 = rail.exit_velocity(zip_speed) if rail.has_method("exit_velocity") \
+			else exit_tan * zip_speed + Vector3.UP * 6.0
+		zipline = null
+		_carry_t = CARRY_WINDOW
+		launch(exit_v, 0.2)
+		if tools != null:
+			tools.rope_release()
+			tools.recharge_lufada()
+		return
+	var cp: Vector3 = rail.transform_at(zip_offset).origin
+	global_position = cp - Vector3.UP * hang
+	velocity = tan * zip_speed
+	if Vector2(tan.x, tan.z).length() > 0.05:
+		facing = atan2(tan.x, tan.z)
+	if tools != null:
+		tools.rope_to = cp
+	Sfx.loop("surf", true, global_position, -18.0 + zip_speed * 0.4)
+	if jump_buffer > 0.0:
+		jump_buffer = 0.0
+		zipline = null
+		_release_air(tan * zip_speed + Vector3.UP * 4.0)
+		play_clip("jump", "jump")
+		Sfx.play_at("jump_" + hero_id, global_position)
+		if tools != null:
+			tools.rope_release()
+
+
+# ------------------------------------------------------------------- item helpers
+func _tick_item_timers(delta: float) -> void:
+	_carry_t = maxf(0.0, _carry_t - delta)
+	_lufada_t = maxf(0.0, _lufada_t - delta)
+	_root_t = maxf(0.0, _root_t - delta)
+	_tailwind_t = maxf(0.0, _tailwind_t - delta)
+	_ai_pause_t = maxf(0.0, _ai_pause_t - delta)
+	_brace_t = maxf(0.0, _brace_t - delta)
+	_clip_t = maxf(0.0, _clip_t - delta)
+
+
+## Lufada: +v m/s no teto horizontal/do planeio, decaindo até 0 em t s.
+func lufada_boost(v: float, t: float) -> void:
+	_lufada_v = v
+	_lufada_t = t
+	_lufada_dur = maxf(t, 0.01)
+
+
+func lufada_bonus() -> float:
+	return _lufada_v * clampf(_lufada_t / _lufada_dur, 0.0, 1.0) if _lufada_t > 0.0 else 0.0
+
+
+## Fica parado no lugar por t s (sopro da Concha no chão).
+func root_for(t: float) -> void:
+	_root_t = maxf(_root_t, t)
+	velocity.x = 0.0
+	velocity.z = 0.0
+
+
+## Vento de Popa: a Concha soprou no Hulvar (velocidade ×1,4 por t s).
+func tailwind(t: float) -> void:
+	_tailwind_t = maxf(_tailwind_t, t)
+	Fx.burst("ring_light", global_position + Vector3.UP * 0.8, Color(0.85, 1.0, 0.95), 0.9)
+
+
+## O arpéu mirou neste herói: a IA para por t s (Embarque Relâmpago).
+func hook_aimed(t: float) -> void:
+	_ai_pause_t = maxf(_ai_pause_t, t)
+
+
+## Reboque: firma (brace) e recua dist m na direção away durante dur s.
+func brace_pull(away: Vector3, dist: float, dur: float) -> void:
+	if is_remote:
+		play_clip("brace", "brace", dur)
+		return
+	_brace_t = dur
+	_brace_v = away.normalized() * (dist / maxf(dur, 0.01))
+	play_clip("brace", "brace", dur)
+	_ai_pause_t = maxf(_ai_pause_t, dur)
+
 
 # ------------------------------------------------------------------- water
 func _check_water() -> void:
@@ -1283,16 +1802,23 @@ func _update_visual(delta: float) -> void:
 	visual.set_locomotion(speed01, cps)
 	match state:
 		S.GROUND:
-			if visual.state in ["fall", "glide", "swim", "double_jump", "hurt", "flop", "slam", "launch", "surf"] \
-					or (visual.state in ["spin", "ram"] and action_t <= 0.0):
-				visual.set_state("loco")
+			if visual.state in ["fall", "glide", "swim", "double_jump", "hurt", "flop", "slam", "launch", "surf", "swing"] \
+					or (visual.state in ["spin", "ram"] and action_t <= 0.0) \
+					or (visual.state in ONESHOTS and _clip_t <= 0.0 and action_t <= 0.0):
+				visual.set_state("loco", 0.12 if visual.state in ONESHOTS else -1.0)
 			elif visual.state == "jump" and state_t > 0.2:
 				visual.set_state("loco")
 		S.AIR, S.LAUNCH:
-			if velocity.y < -1.5 and visual.state in ["loco", "jump", "land"] and state_t > 0.15:
+			if velocity.y < -1.5 and visual.state in ["loco", "jump", "land", "swing"] and state_t > 0.15:
 				visual.set_state("fall", 0.25)
-			if visual.state == "spin" and action_t <= 0.0:
+			if (visual.state == "spin" and action_t <= 0.0) or (visual.state in ONESHOTS and _clip_t <= 0.0):
 				visual.set_state("fall", 0.2)
+		S.HOOK:
+			if String(hook.get("phase", "")) == "pull" and _clip_t <= 0.0:
+				visual.set_state("swing" if visual.has_state("swing") else "fall", 0.1)
+		S.SWING, S.ZIPLINE:
+			if not (visual.state in ["swing", "fall"]) or _clip_t <= 0.0:
+				visual.set_state("swing" if visual.has_state("swing") else "fall", 0.12)
 		S.GLIDE:
 			visual.set_state("glide", 0.18)
 		S.RIDE:

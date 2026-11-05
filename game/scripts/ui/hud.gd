@@ -179,21 +179,15 @@ func _process(delta: float) -> void:
 
 
 # ------------------------------------------------------------------ itens
-## Item novo: ícone ao lado das Pedras, faixa de 4 s e os dois heróis comemoram.
+## Item novo: ícone ao lado das Pedras e faixa de 4 s. O som, as faíscas e o
+## `celebrate` dos dois heróis ficam com o pedestal (ToolPuzzles.ToolPedestal.take).
 func _on_item(id: String) -> void:
 	var ic: _ItemIcon = _item_icons.get(id)
 	if ic != null:
 		ic.visible = true
 		ic.pop = 1.0
-	_banner_queue.append(id)
-	Sfx.play("item_get" if Sfx.has("item_get") else "relic")
-	if party == null:
-		return
-	for h in [party.agile, party.strong]:
-		if h == null or not is_instance_valid(h) or h.visual == null or h.is_remote:
-			continue
-		if h.state == Hero.S.GROUND and h.visual.has_state("celebrate"):
-			h.visual.restart_state("celebrate")
+	if not id in _banner_queue:
+		_banner_queue.append(id)
 
 
 func _build_banner() -> void:
@@ -226,6 +220,8 @@ func _build_banner() -> void:
 
 
 func _update_banner(delta: float) -> void:
+	if get_tree().paused:
+		return                      # a faixa espera a pausa acabar
 	delta = minf(delta, 0.1)        # um engasgo de carregamento não engole a faixa
 	if _banner_t <= 0.0 and not _banner_queue.is_empty():
 		var id: String = _banner_queue.pop_front()
@@ -282,30 +278,44 @@ func _update_tools(_delta: float) -> void:
 	var su := mine and (Game.has_item("arpeu") or Game.has_item("concha"))
 	var sl := mine and Game.has_item("lanterna")
 	var icon := "hook" if not tgt.is_empty() else ("shell" if Game.has_item("concha") else "empty")
+	if tools != null and tools.has_method("use_icon"):
+		icon = str(tools.call("use_icon"))
 	var lit := Game.lantern_lit()
 	if tools != null and tools.get("lamp_on") is bool:
 		lit = tools.get("lamp_on")
 	var hint := false
-	if tools != null and tools.get("puzzle_hint") is bool:
-		hint = tools.get("puzzle_hint")
+	if tools != null and tools.has_method("puzzle_hint"):
+		hint = bool(tools.call("puzzle_hint"))
 	elif not tgt.is_empty():
 		hint = float(tgt.get("dist", INF)) <= 10.0 and not (str(tgt.get("kind", "")) in ["hulvar", "strong", "hero", "enemy", "silente"])
+	hint = su and hint
 	if su != touch.show_use or sl != touch.show_lamp or icon != touch.use_icon or lit != touch.lamp_on or hint != touch.use_hint:
 		touch.show_use = su
 		touch.show_lamp = sl
 		touch.use_icon = icon
 		touch.lamp_on = lit
-		touch.use_hint = su and hint
+		touch.use_hint = hint
 		touch.queue_redraw()
 
 
-## Lê o alvo travado do HeroTools sem depender da forma exata: aceita um método
-## `reticle_target()` / `get_target()`, ou a propriedade `target` como Dictionary
-## (`pos`/`point`/`position`/`node`, `kind`, `range`) ou Node3D.
-## Devolve {} sem alvo, ou {pos, dist, range, kind, perfect}.
+## Lê o alvo travado do HeroTools: `target_pos()` (INF sem alvo) + `target_kind()`
+## e o alcance em `RANGES`; sem esses métodos, aceita `reticle_target()` /
+## `get_target()` ou a propriedade `target` como Dictionary (`pos`/`node`, `kind`,
+## `range`) ou Node3D. Devolve {} sem alvo, ou {pos, dist, range, kind}.
 func _tool_target(sael: Hero, tools: Object) -> Dictionary:
 	if sael == null or tools == null:
 		return {}
+	if tools.has_method("target_pos"):
+		var tp: Variant = tools.call("target_pos")
+		if not (tp is Vector3) or not (tp as Vector3).is_finite():
+			return {}
+		var kind := str(tools.call("target_kind")) if tools.has_method("target_kind") else ""
+		var scr: Script = tools.get_script()
+		var ranges: Variant = scr.get_script_constant_map().get("RANGES") if scr != null else null
+		var rng := 14.0
+		if ranges is Dictionary and (ranges as Dictionary).has(kind):
+			rng = float(ranges[kind])
+		return {"pos": tp, "kind": kind, "range": rng, "dist": sael.global_position.distance_to(tp)}
 	var t: Variant = null
 	for m in ["reticle_target", "get_target"]:
 		if tools.has_method(m):
@@ -356,8 +366,9 @@ func _perfect_window(sael: Hero, tools: Object) -> bool:
 	for o in [tools, sael]:
 		if o == null:
 			continue
-		if o.has_method("in_perfect_window"):
-			return bool(o.call("in_perfect_window"))
+		for m in ["perfect_window", "in_perfect_window"]:
+			if o.has_method(m):
+				return bool(o.call(m))
 		var v: Variant = o.get("perfect_window")
 		if v is bool:
 			return v
