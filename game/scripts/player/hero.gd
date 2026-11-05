@@ -289,6 +289,8 @@ func set_state(s: int) -> void:
 			_glide_cap = hs
 	if s == S.GROUND:
 		_chain_n = 0
+	if s == S.LAUNCH:
+		_launch_t = 0.0
 	if s != S.GROUND and combo_step > 0:
 		_combo_cancel()
 
