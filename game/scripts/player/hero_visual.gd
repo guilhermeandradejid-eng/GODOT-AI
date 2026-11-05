@@ -311,10 +311,169 @@ func _setup_tree() -> void:
 	bt.add_node("state", tr)
 	for i in states.size():
 		bt.connect_node("state", i, "loco_speed" if states[i] == "loco" else "a_" + states[i])
-	bt.connect_node("output", 0, "state")
+	# camada de tronco da lanterna acesa (clipe "lantern_hold" por cima de qualquer estado)
+	var top := "state"
+	if anim.has_animation("lantern_hold"):
+		anim.get_animation("lantern_hold").loop_mode = Animation.LOOP_LINEAR
+		var b2 := AnimationNodeBlend2.new()
+		b2.filter_enabled = true
+		for p in _lantern_mask_paths():
+			b2.set_filter_path(p, true)
+		bt.add_node("lantern", b2)
+		bt.add_node("a_lantern_hold", _anim_node("lantern_hold"))
+		bt.connect_node("lantern", 0, "state")
+		bt.connect_node("lantern", 1, "a_lantern_hold")
+		top = "lantern"
+	# velocidade geral da animação (hit-stop local: 0 congela a pose)
+	bt.add_node("speed", AnimationNodeTimeScale.new())
+	bt.connect_node("speed", 0, top)
+	bt.connect_node("output", 0, "speed")
 	tree.tree_root = bt
 	tree.active = true
 	anim.active = false
+
+
+## Trilhas do clipe "lantern_hold" que a camada da lanterna usa: os ossos a partir de
+## "spine_2" (rig com coluna de 3 ossos) ou, no rig do Sael, só a cadeia do braço esquerdo
+## (a corrida continua no tronco e no braço direito). Molas e tecido ficam de fora.
+func _lantern_mask_paths() -> Array[NodePath]:
+	var out: Array[NodePath] = []
+	var a := anim.get_animation("lantern_hold")
+	if a == null or skeleton == null:
+		return out
+	var root := "spine_2" if skeleton.find_bone("spine_2") >= 0 else "upperarm_L"
+	var ri := skeleton.find_bone(root)
+	if ri < 0:
+		return out
+	for i in a.get_track_count():
+		var p := a.track_get_path(i)
+		var bone := String(p.get_concatenated_subnames())
+		var bi := skeleton.find_bone(bone)
+		if bi < 0 or bone.begins_with("scarf") or bone.begins_with("hair") or bone.begins_with("eye") or bone == "board":
+			continue
+		var cur := bi
+		while cur >= 0 and cur != ri:
+			cur = skeleton.get_bone_parent(cur)
+		if cur == ri and not out.has(p):
+			out.append(p)
+	return out
+
+
+## Lanterna erguida na mão esquerda: mistura a camada "lantern_hold" (0,15 s para entrar,
+## 0,1 s para sair durante golpe, arremesso ou sopro).
+func set_lantern_hold(on: bool, blend := 0.15) -> void:
+	_lantern_want = 1.0 if on else 0.0
+	_lantern_rate = 1.0 / maxf(blend, 0.01)
+
+
+func has_lantern_layer() -> bool:
+	return tree != null and (tree.tree_root as AnimationNodeBlendTree).has_node("lantern")
+
+
+## Velocidade da animação inteira (hit-stop: 0 congela a pose, 1 normal).
+func anim_speed(s: float) -> void:
+	if tree != null:
+		tree.set("parameters/speed/scale", s)
+
+
+# ------------------------------------------------------------------ itens (props nos ossos)
+## Encaixe nos ossos (BoneAttachment3D): grip_R, grip_L, back_slot, belt_L, belt_R. Num rig
+## sem o osso de encaixe, usa o osso mais próximo (mão, peito, quadril) com um deslocamento.
+const SLOT_FALLBACK := {
+	"grip_R": [["hand_R", Vector3(0.0, 0.07, 0.0)]], "grip_L": [["hand_L", Vector3(0.0, 0.07, 0.0)]],
+	"back_slot": [["chest", Vector3(0.0, 0.05, -0.12)], ["spine", Vector3(0.0, 0.1, -0.12)]],
+	"belt_L": [["hips", Vector3(0.11, 0.0, 0.02)]], "belt_R": [["hips", Vector3(-0.11, 0.0, 0.02)]],
+}
+var _slots := {}          ## nome do encaixe -> BoneAttachment3D (ou Node3D de reserva)
+var _props := {}          ## id do item -> {node, slot, offsets}
+var _lantern_w := 0.0
+var _lantern_want := 0.0
+var _lantern_rate := 6.7
+
+
+func _slot(slot: String) -> Node3D:
+	if _slots.has(slot) and is_instance_valid(_slots[slot]):
+		return _slots[slot]
+	var n: Node3D = null
+	if skeleton != null:
+		var bone := slot
+		var off := Vector3.ZERO
+		if skeleton.find_bone(bone) < 0:
+			bone = ""
+			for c in SLOT_FALLBACK.get(slot, []):
+				if skeleton.find_bone(c[0]) >= 0:
+					bone = c[0]
+					off = c[1]
+					break
+		if bone != "":
+			var ba := BoneAttachment3D.new()
+			ba.name = "Encaixe_" + slot
+			ba.bone_name = bone
+			skeleton.add_child(ba)
+			n = Node3D.new()
+			n.name = "Ponto"
+			n.position = off
+			ba.add_child(n)
+	if n == null:
+		# sem esqueleto: pontos fixos no corpo
+		n = Node3D.new()
+		n.name = "Encaixe_" + slot
+		n.position = {"grip_R": Vector3(-0.2, 0.55, 0.1), "grip_L": Vector3(0.2, 0.55, 0.1),
+			"back_slot": Vector3(0, 0.7, -0.15), "belt_L": Vector3(0.12, 0.45, 0), "belt_R": Vector3(-0.12, 0.45, 0)}.get(slot, Vector3(0, 0.6, 0))
+		add_child(n)
+	_slots[slot] = n
+	return n
+
+
+## Prende o modelo de um item. offsets: {encaixe: Transform3D} (deslocamento local em cada osso).
+func attach_prop(id: String, node: Node3D, slot: String, offsets := {}) -> void:
+	if _props.has(id) and is_instance_valid(_props[id]["node"]):
+		_props[id]["node"].queue_free()
+	_props[id] = {"node": node, "slot": slot, "offsets": offsets}
+	var s := _slot(slot)
+	s.add_child(node)
+	node.transform = offsets.get(slot, Transform3D.IDENTITY)
+
+
+## Troca o item de encaixe (ex.: bastão das costas para a mão); blend > 0 desliza até lá.
+func set_prop_slot(id: String, slot: String, blend := 0.0) -> void:
+	if not _props.has(id):
+		return
+	var p: Dictionary = _props[id]
+	var node: Node3D = p["node"]
+	if not is_instance_valid(node) or p["slot"] == slot:
+		return
+	p["slot"] = slot
+	var want: Transform3D = p["offsets"].get(slot, Transform3D.IDENTITY)
+	var s := _slot(slot)
+	if blend <= 0.0 or not node.is_inside_tree():
+		node.reparent(s, false)
+		node.transform = want
+		return
+	node.reparent(s, true)
+	var tw := node.create_tween()
+	tw.tween_property(node, "transform", want, blend).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+func prop_slot(id: String) -> String:
+	return String(_props[id]["slot"]) if _props.has(id) else ""
+
+
+func prop_node(id: String) -> Node3D:
+	if _props.has(id) and is_instance_valid(_props[id]["node"]):
+		return _props[id]["node"]
+	return null
+
+
+func set_prop_visible(id: String, v: bool) -> void:
+	var n := prop_node(id)
+	if n != null:
+		n.visible = v
+
+
+## Posição global de um encaixe (para a corda sair da mão, por exemplo).
+func slot_position(slot: String) -> Vector3:
+	return _slot(slot).global_position
 
 
 ## speed01: 0 idle .. 0.3 walk .. 1 run.  cycles: locomotion cycles per second.
@@ -517,6 +676,9 @@ func set_happy(v: float) -> void:
 
 func _process(delta: float) -> void:
 	_update_wind(delta)
+	if _lantern_w != _lantern_want and has_lantern_layer():
+		_lantern_w = move_toward(_lantern_w, _lantern_want, _lantern_rate * delta)
+		tree.set("parameters/lantern/blend_amount", _lantern_w)
 	if state == "loco" and _loco_cps > 0.0:
 		_advance_contacts(delta)
 	if _oneshot_left > 0.0:

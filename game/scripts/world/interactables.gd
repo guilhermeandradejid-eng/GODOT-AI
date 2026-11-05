@@ -5,7 +5,9 @@ extends RefCounted
 
 # ============================================================================ Pedra das Horas (relíquia)
 class Relic extends Node3D:
-	## Pedra das Horas (relíquia). Cor e nome pelo id da receita.
+	## Pedra das Horas (relíquia). Cor e nome pelo id da receita. Com `veil_index`
+	## fica dentro de um véu de areia (visível, mas só pode ser pega com o véu aberto);
+	## com `pull` vira alvo de puxar do arpéu (grupo "hook_targets", 12 m).
 	const RELIC_COLORS := {"tolvaren": Color(1.0, 0.62, 0.28), "saryth": Color(1.0, 0.55, 0.7), "kesrin": Color(0.45, 0.95, 1.0)}
 	const RELIC_NAMES := {"tolvaren": "Brasa de Tolvaren", "saryth": "Lágrima de Saryth", "kesrin": "Olho de Kesrin"}
 	var seed_id := "s1"
@@ -14,9 +16,17 @@ class Relic extends Node3D:
 	var _t := 0.0
 	var taken := false
 	var hidden_until_revealed := false
+	var veil_index := -1
+	var veil_node: Node = null          ## cascata com veil (SandFx.Sandfall); o world_content liga
+	var pull := false
+	var hook_mode := "relic"
+	var hook_range := 12.0
+	var _pulling := false
 
 	func _ready() -> void:
 		add_to_group(&"relics")
+		if pull:
+			add_to_group(&"hook_targets")
 		visual = PropLib.make("relic", ["glow"])
 		visual.scale = Vector3.ONE * 1.25
 		add_child(visual)
@@ -44,14 +54,64 @@ class Relic extends Node3D:
 		_t += delta
 		visual.rotation.y += delta * 1.2
 		visual.position.y = 0.4 + sin(_t * 2.0) * 0.15
-		if taken or not visible or hidden_until_revealed:
+		if taken or _pulling or not visible or hidden_until_revealed:
 			return
 		for h in Game.heroes:
 			if is_instance_valid(h) and h.global_position.distance_to(global_position + Vector3.UP * 0.5) < 1.5:
+				if not can_take():
+					ToolPuzzles.toast_once("Algo brilha dentro do véu de areia...", 2.5, 8.0)
+					return
 				_take(h)
 				return
 
+	## Véu fechado bloqueia o toque (e o puxão).
+	func veil_open() -> bool:
+		if veil_index < 0:
+			return true
+		if veil_node == null or not is_instance_valid(veil_node):
+			for v in get_tree().get_nodes_in_group(&"sand_veils"):
+				if int(v.get("veil_id")) == veil_index:
+					veil_node = v
+		return veil_node == null or not veil_node.has_method("is_open") or veil_node.is_open()
+
+	func can_take() -> bool:
+		return not taken and visible and not hidden_until_revealed and veil_open()
+
+	# ---- alvo do arpéu (puxar)
+	func hook_point() -> Vector3:
+		return global_position + Vector3.UP * 0.5
+
+	func can_hook(_by = null) -> bool:
+		return pull and not _pulling and can_take()
+
+	func hook_exclude() -> Array[RID]:
+		return []
+
+	func set_highlight(_on: bool) -> void:
+		pass
+
+	func on_hook(by) -> bool:
+		return on_hook_pull(by)
+
+	## Puxão do arpéu: vem até 1,0 m na frente do Sael em 0,4 s (ease-out) e é coletada.
+	func on_hook_pull(by) -> bool:
+		if not can_hook(by) or by == null or not is_instance_valid(by):
+			return false
+		_pulling = true
+		var to: Vector3 = (by as Node3D).global_position + Vector3.UP * 0.2
+		var f: float = by.get("facing") if by.get("facing") != null else 0.0
+		to += Vector3(sin(f), 0, cos(f)) * 1.0
+		var tw := create_tween()
+		tw.tween_property(self, "global_position", to, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_callback(func():
+			_pulling = false
+			if not taken:
+				_take(by))
+		return true
+
 	func _take(h: Hero) -> void:
+		if taken:
+			return
 		taken = true
 		Game.collect_relic(seed_id)
 		Fx.burst("relic", global_position + Vector3.UP * 0.6)
@@ -339,16 +399,26 @@ class Updraft extends Area3D:
 
 # ============================================================================ placa de pressão
 class PressurePlate extends Node3D:
+	## Placa de pressão. Só ela tem is_plate = true no grupo "plates" (as travas das
+	## ferramentas também entram nele). Com latch, trava quando todas as placas do
+	## grupo descem juntas; blocked_by (duna-tampão) impede que desça até ser soprada.
 	signal changed(pressed: bool)
+	signal event_fired(kind: String)
 	var heavy := false
 	var group_id := "g1"
 	var pressed := false
+	var is_plate := true
+	var latch := false
+	var latched := false
+	var blocked_by: Node = null
 	var _prop: Node3D
 	var _glow: ShaderMaterial
 	var _on: Array = []
+	var _remote := false
 
 	func _ready() -> void:
 		add_to_group(&"plates")
+		add_to_group(&"puzzle_nodes")
 		_prop = PropLib.make("plate_heavy" if heavy else "plate", ["glow"])
 		add_child(_prop)
 		_glow = (_prop.get_meta("materials") as Dictionary)["glow"]
@@ -358,8 +428,13 @@ class PressurePlate extends Node3D:
 	func occupied_by(h) -> bool:
 		return h in _on
 
+	func _blocked() -> bool:
+		return blocked_by != null and is_instance_valid(blocked_by) and not blocked_by.pressed
+
 	func _physics_process(_delta: float) -> void:
 		_on.clear()
+		if latched:
+			return
 		var r := 1.35 if heavy else 1.0
 		for h in Game.heroes:
 			if not is_instance_valid(h):
@@ -368,6 +443,8 @@ class PressurePlate extends Node3D:
 			if Vector2(d.x, d.z).length() < r and d.y > -0.3 and d.y < 0.9 and h.state in [Hero.S.GROUND, Hero.S.SWIM, Hero.S.POUND, Hero.S.CUTSCENE]:
 				if not heavy or h.is_heavy():
 					_on.append(h)
+		if _blocked():
+			_on.clear()
 		var now := not _on.is_empty()
 		if now != pressed:
 			pressed = now
@@ -377,11 +454,56 @@ class PressurePlate extends Node3D:
 			changed.emit(now)
 			if now and heavy:
 				Fx.burst("dust_ring", global_position + Vector3.UP * 0.2, Color(0, 0, 0, 0), 1.2)
+			if now and latch:
+				_try_latch()
 		if heavy and not now:
 			for h in Game.heroes:
 				if is_instance_valid(h) and h.hero_id == "agile" and h.global_position.distance_to(global_position) < 1.2 and h.state == Hero.S.GROUND:
 					if Engine.get_physics_frames() % 120 == 0:
 						Game.show_toast("Essa placa é pesada... precisa de %s!" % HeroDefs.display_name("strong"), 2.0)
+
+
+	## Todas as placas (is_plate) do grupo com latch descidas juntas: travam ("clunk").
+	func _try_latch() -> void:
+		var plates: Array = []
+		for p in get_tree().get_nodes_in_group(&"plates"):
+			if p.get("is_plate") == true and p.group_id == group_id:
+				if not p.pressed:
+					return
+				plates.append(p)
+		for p in plates:
+			if p.latch:
+				p._do_latch()
+		if not _remote:
+			event_fired.emit("latched")
+		get_tree().call_group(&"cameras", &"shake", 0.25)
+		ToolPuzzles.sfx("latched", global_position, "gate_open", 1.3, -2.0)
+
+	func _do_latch() -> void:
+		if latched:
+			return
+		latched = true
+		_on.clear()
+		if not pressed:
+			pressed = true
+			_glow.set_shader_parameter("active", 1.0)
+			_prop.position.y = -0.08
+			changed.emit(true)
+		Fx.burst("ring_light", global_position + Vector3.UP * 0.2, Color(0.55, 1.0, 0.95), 1.0)
+
+	## Evento vindo da rede ("latched"): trava todas as placas com latch do grupo.
+	func apply_event(kind: String) -> void:
+		if kind != "latched":
+			return
+		_remote = true
+		for p in get_tree().get_nodes_in_group(&"plates"):
+			if p.get("is_plate") == true and p.group_id == group_id and p.latch:
+				p._do_latch()
+		_remote = false
+
+	## Testes: trava pressionada (como se alguém ficasse em cima para sempre).
+	func force_done() -> void:
+		_do_latch()
 
 
 # ============================================================================ portão de pedra

@@ -5,6 +5,9 @@ extends Node
 ## câmera. Solo: um herói é seu e o outro segue pela IA (botão Trocar alterna).
 ## Co-op local: aperte START/A num controle para o jogador 2 entrar (o forte).
 ## Co-op em rede: cada aparelho controla um herói (NetCoop sincroniza).
+## Itens (itens.md 7.2): TROCAR numa placa ou perto de um sino faz o herói
+## deixado Segurar Posto; jogando de Hulvar no solo, o USAR e o chip da
+## Lanterna viram Pedido para o Sael da IA; DUPLA do líder chama quem segura.
 
 signal controlled_changed(hero: Hero)
 signal p2_joined
@@ -17,6 +20,7 @@ var p1: InputSources
 var p2: InputSources
 var p2_hero: Hero
 var _join_prev := {}
+var _raw_prev := {}
 
 
 func setup(parent: Node3D, spawn: Vector3, spawn_yaw: float) -> void:
@@ -110,13 +114,89 @@ func assign_network(mine: Hero, remote_controller: Object) -> void:
 func swap() -> void:
 	if Game.mode != Game.Mode.SOLO:
 		return
+	var old := active
 	var other := strong if active == agile else agile
 	if active.state == Hero.S.RIDE or other.state == Hero.S.RIDE:
 		pass
+	var post := _post_of(old)
 	_assign_solo(other)
 	Fx.burst("ring_light", other.global_position + Vector3.UP * 0.4, Color(0.8, 0.7, 1.0), 0.8)
 	Sfx.play("swap")
-	Game.show_toast("Agora você é %s" % HeroDefs.display_name(other.hero_id), 1.6)
+	# Segurar Posto: o herói deixado numa placa (ou perto de um sino) fica lá
+	if not post.is_empty() and old.controller is CompanionAI:
+		(old.controller as CompanionAI).hold_at(old.global_position, String(post["group"]))
+		Game.show_toast("Agora você é %s · %s segura o posto" % [HeroDefs.display_name(other.hero_id),
+				HeroDefs.display_name(old.hero_id)], 2.2)
+	else:
+		Game.show_toast("Agora você é %s" % HeroDefs.display_name(other.hero_id), 1.6)
+
+
+## Posto do herói: placa ocupada (`occupied_by`) ou sino a até 2 m, de grupo
+## ainda não resolvido. Devolve {"group": ...} ou {} quando não há posto.
+func _post_of(h: Hero) -> Dictionary:
+	if h == null or h.state == Hero.S.RIDE:
+		return {}
+	for p in get_tree().get_nodes_in_group(&"plates"):
+		var kind := CompanionAI.lock_kind(p)
+		var g := String(p.get("group_id"))
+		if CompanionAI.group_done(g):
+			continue
+		if kind == "plate" and p.occupied_by(h):
+			return {"group": g}
+		if kind == "chime":
+			var d: Vector3 = p.global_position - h.global_position
+			var sz = p.get("size")
+			var r := 2.0 + 1.2 * (float(sz) - 1.0 if sz != null else 0.0)
+			if Vector2(d.x, d.z).length() <= r:
+				return {"group": g}
+	return {}
+
+
+## Controlador IA do herói que não é o ativo (solo), ou null.
+func companion() -> CompanionAI:
+	if active == null:
+		return null
+	var other := strong if active == agile else agile
+	return other.controller as CompanionAI if other.controller is CompanionAI else null
+
+
+## Borda de subida de um botão lido direto das fontes do P1 (teclado/controle
+## pelo estado de `_prev` e toque pelos eventos pendentes). Não depende de o
+## herói consumir ou não a intenção (a HeroParty roda antes dos heróis).
+func _raw_edge(kind: String, keys: Array) -> bool:
+	if p1 == null:
+		return false
+	var now := false
+	var prev = p1.get("_prev")
+	if prev is Dictionary:
+		for k in prev:
+			for suffix in keys:
+				if String(k).ends_with(suffix) and prev[k]:
+					now = true
+	var was: bool = _raw_prev.get(kind, false)
+	_raw_prev[kind] = now
+	return (now and not was) or (p1.has_scheme("touch") and kind in InputSources.touch_events)
+
+
+## Solo: DUPLA do líder chama quem segura o posto; de Hulvar, USAR e chip
+## viram Pedido para o Sael da IA.
+func _solo_requests() -> void:
+	var ai := companion()
+	var call := _raw_edge("special", ["kb1_special", "_b"])
+	var use := _raw_edge("use", ["kb1_use", "_rb"])
+	var lamp := _raw_edge("lamp", ["kb1_lamp", "_lb"])
+	if ai == null:
+		return
+	if call:
+		ai.on_leader_call()
+	if active == strong:
+		# o Hulvar não tem itens: limpa a intenção e repassa ao Sael da IA
+		active.intent.take("use")
+		active.intent.take("lamp")
+		if use:
+			ai.request_use()
+		if lamp:
+			ai.request_lamp()
 
 
 func _on_joy(_device: int, _connected: bool) -> void:
@@ -132,6 +212,8 @@ func _physics_process(_delta: float) -> void:
 		return
 	if active.intent.take("swap"):
 		swap()
+	if Game.mode == Game.Mode.SOLO:
+		_solo_requests()
 	# local drop-in: START/A on a pad that isn't driving player 1 alone
 	if Game.mode == Game.Mode.SOLO:
 		var pads := Input.get_connected_joypads()

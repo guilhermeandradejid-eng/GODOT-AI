@@ -1,11 +1,13 @@
 """build_world_props.py — props do mundo de Ylvaar, modelados por SDF (sdfkit) e bmesh.
 
     blender -b --factory-startup --python game/blender/build_world_props.py [-- --only agulha,arco]
+        [--out /tmp/prev_props --lift]      (prévias: outra pasta, itens apoiados no chão)
 
 Saída: game/assets/props/<nome>.glb. Convenção: Blender Z-up; a FRENTE do prop é -Y
 do Blender (= +Z do Godot, para onde a rotação "rot" da receita aponta). Origem no
-chão, no centro da base. Materiais pelo nome (PropLib troca pelos shaders do jogo):
-stone, bronze, glow, crystal, seam, jelly.
+chão, no centro da base (itens de mão: origem na empunhadura, ver item_*). Materiais
+pelo nome (PropLib troca pelos shaders do jogo): stone, wood, bronze, cloth, nacre, glow,
+crystal, seam, jelly.
 
 Cultura "Vael": arenito claro gasto pelo vento, inlays de latão e glifos ciano.
 """
@@ -24,7 +26,8 @@ from mathutils import Matrix, Vector  # noqa: E402
 
 import sdfprop  # noqa: E402
 from bhelpers import ASSETS, export_glb, log, material, reset_scene, select_only  # noqa: E402
-from sdfkit import (Shape, box, capsule, cone, cylinder, ellipsoid, hexcol, plane, round_cone,  # noqa: E402
+from sdfkit import project as sdfkit_project  # noqa: E402
+from sdfkit import (Shape, box, look_basis, capsule, cone, cylinder, ellipsoid, hexcol, plane, round_cone,  # noqa: E402
                     sphere, srgb_to_linear, torus, tube, blade)
 
 OUT = ASSETS / "props"
@@ -64,11 +67,53 @@ def sand_drift(shape: Shape, c, radii, seed=5):
               k=min(radii) * 0.6)
 
 
+def despike(obj, shapes) -> int:
+    """A decimação (collapse) às vezes joga um vértice longe da superfície em peças
+    finas (garras, hastes). Devolve esses vértices para a média dos vizinhos e depois
+    para a superfície exata do SDF. Só vale para objetos feitos só de `shapes`."""
+    me = obj.data
+    n = len(me.vertices)
+    co = np.empty(n * 3, np.float64)
+    me.vertices.foreach_get("co", co)
+    V = co.reshape(-1, 3)
+
+    def field(P):
+        return np.min([sh.field(P) for sh in shapes], axis=0)
+    tol = 2.5 * max(sh.voxel for sh in shapes)
+    bad = np.abs(field(V)) > tol
+    if not bad.any():
+        return 0
+    ev = np.empty(len(me.edges) * 2, np.int64)
+    me.edges.foreach_get("vertices", ev)
+    ev = ev.reshape(-1, 2)
+    for _ in range(4):
+        acc = np.zeros((n, 3))
+        cnt = np.zeros(n)
+        good = ~bad
+        for a, b in ((0, 1), (1, 0)):
+            m = good[ev[:, b]]
+            np.add.at(acc, ev[m, a], V[ev[m, b]])
+            np.add.at(cnt, ev[m, a], 1)
+        fix = bad & (cnt > 0)
+        V[fix] = acc[fix] / cnt[fix][:, None]
+        V[fix] = sdfkit_project(field, V[fix], min(sh.voxel for sh in shapes), 8)
+        bad = np.abs(field(V)) > tol
+        if not bad.any():
+            break
+    me.vertices.foreach_set("co", V.astype(np.float32).ravel())
+    me.update()
+    return int(fix.sum())
+
+
 def build_parts(parts: dict, ao=True):
     """parts = {nome_do_objeto: ([shapes], [extras], pivot_or_None)} -> objetos Blender."""
     objs = []
     for name, (shapes, extras, pivot) in parts.items():
         o = sdfprop.build_prop(name, shapes, extras, ao=ao) if shapes else None
+        if o is not None and not extras:
+            k = despike(o, shapes)
+            if k:
+                log(f"  {name}: {k} vértices fora da superfície corrigidos")
         if o is None:
             select_only(list(extras))
             bpy.context.view_layer.objects.active = extras[0]
@@ -84,7 +129,13 @@ def build_parts(parts: dict, ao=True):
     return objs
 
 
+LIFT = False      # --lift (só para prévias): apoia o prop no chão (itens de mão têm origem na empunhadura)
+
+
 def export(name: str, objs) -> None:
+    if LIFT:
+        zmin = min(min(v.co.z for v in o.data.vertices) for o in objs if o.type == "MESH")
+        recenter(objs, (0, 0, zmin))
     export_glb(OUT / f"{name}.glb", objs)
 
 
@@ -502,18 +553,446 @@ def pedra_hora():
     export("relic", [o])
 
 
+# ============================================================================= itens e travas (itens.md 8.4)
+# Itens de mão (item_*): origem na EMPUNHADURA (onde a mão/osso segura), eixo longo em
+# +Z do Blender (= +Y do Godot), frente em -Y. Peças separadas por nome para o jogo
+# poder esconder/acender partes (ex.: "Rolo" do arpéu, "Vidro" da lanterna).
+ROPE = hexcol("A3543C")
+ROPE_D = hexcol("7A3A2A")
+WOOD_L = hexcol("DCA862")
+WOOD = hexcol("C38C4E")
+WOOD_D = hexcol("8A5E34")
+LEATHER = hexcol("6B4330")
+INDIGO = hexcol("2B3A87")
+INDIGO_D = hexcol("1E2A66")
+AMBER = hexcol("FFB45A")
+AMBER_HOT = hexcol("FFE7B0")
+CYAN = hexcol("4FE3D6")
+NACRE = hexcol("F9D6C4")
+NACRE_L = hexcol("FFEFE4")
+NACRE_D = hexcol("E39C8E")
+BRONZE = hexcol("B9813F")
+SAILCLOTH = hexcol("F3E6CC")
+
+
+def recenter(objs, pivot) -> None:
+    """Move a geometria (e os empties) para a origem ficar em `pivot` (empunhadura)."""
+    m = Matrix.Translation(-Vector(pivot))
+    for o in objs:
+        if o.type == "MESH":
+            o.data.transform(m)
+        else:
+            o.location = o.location - Vector(pivot)
+
+
+def helix(c, radius, z0, z1, turns, n_per_turn=18, phase=0.0):
+    """Pontos de uma hélice em volta do Z (rolo de corda)."""
+    n = max(2, int(turns * n_per_turn))
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        a = phase + 2 * math.pi * turns * t
+        pts.append((c[0] + math.cos(a) * radius, c[1] + math.sin(a) * radius, z0 + (z1 - z0) * t))
+    return pts
+
+
+def item_arpeu():
+    """Arpéu de Rumo (0,30 m): haste de latão com três garras curvas (pontas voltadas
+    para a corda) e um rolo de corda de vela com 4 voltas em volta da haste.
+    Empunhadura = centro do rolo (origem). Peças: "Garras" (latão), "Rolo" (corda),
+    "Conta" (glow ciano); "hook_point" = coroa (ponta que prende)."""
+    br = Shape("Garras", "bronze", voxel=0.002, tris=2600, color_soft=0.003)
+    br.add(round_cone((0, 0, -0.045), (0, 0, 0.2), 0.0105, 0.0125), "root", BRASS, k=0)
+    br.add(torus((0, 0, -0.06), 0.015, 0.005, (90, 0, 0)), "root", BRASS_D, k=0.002)         # olhal da corda
+    br.add(sphere((0, 0, 0.212), 0.02), "root", BRASS, k=0.006)                               # coroa
+    br.add(cylinder((0, 0, 0.178), 0.0155, 0.0055, rounding=0.002), "root", BRASS_D, k=0.002) # anéis da haste
+    br.add(cylinder((0, 0, 0.05), 0.0135, 0.004, rounding=0.0015), "root", BRASS_D, k=0.002)
+    for i in range(3):
+        a = 2 * math.pi * i / 3 + math.pi / 2
+        ca, sa = math.cos(a), math.sin(a)
+        prof = [(0.0, 0.212), (0.04, 0.232), (0.074, 0.218), (0.093, 0.186), (0.094, 0.152), (0.082, 0.124)]
+        pts = [(ca * r, sa * r, z) for r, z in prof]
+        br.add(blade(pts, [0.0125, 0.0118, 0.0108, 0.0094, 0.0072, 0.0026], flat=0.7, normal=(-sa, ca, 0), k=0.004),
+               "root", BRASS, k=0.005)
+        br.add(round_cone((ca * 0.086, sa * 0.086, 0.13), (ca * 0.074, sa * 0.074, 0.139), 0.005, 0.0015),
+               "root", BRASS, k=0.002)                                                        # farpa
+        br.paint(sphere((ca * 0.083, sa * 0.083, 0.13), 0.02), hexcol("F6DD8E"), soft=0.012)   # pontas gastas, claras
+    br.paint(cylinder((0, 0, 0.12), 0.02, 0.035), hexcol("B8892F"), soft=0.004)
+    br.detail(sphere((0, 0, 0.19), 0.1), 0.8)
+    rope = Shape("Rolo", "cloth", voxel=0.002, tris=2000, color_soft=0.003)
+    pts = helix((0, 0), 0.027, -0.038, 0.036, 4.0, 22)
+    rope.add(tube(pts, 0.0108, k=0.002), "root", ROPE, k=0)
+    rope.add(tube([pts[0], (0.03, -0.005, -0.055), (0.012, -0.012, -0.064), (0.0, 0.0, -0.06)], 0.008, k=0.003),
+             "root", ROPE, k=0.003)                                                           # ponta amarrada no olhal
+    for k in range(5):                                                                        # fios trançados (listras)
+        rope.paint(tube(helix((0, 0), 0.027, -0.038 + k * 0.004, 0.036 + k * 0.004, 4.0, 22), 0.0045), ROPE_D, soft=0.002)
+    gl = Shape("Conta", "glow", voxel=0.0015, tris=200)
+    gl.add(sphere((0, 0, 0.236), 0.0085), "root", CYAN, k=0)
+    objs = build_parts({"Garras": ([br], [], None), "Rolo": ([rope], [], None), "Conta": ([gl], [], None)})
+    objs.append(empty("hook_point", (0, 0, 0.235)))
+    export("item_arpeu", objs)
+
+
+def item_bastao():
+    """Bastão de Quilha (0,95 m): haste de madeira clara que se achata como uma quilha
+    na parte de golpe, veios longitudinais, ponteira de latão, empunhadura de couro e 3
+    anéis entalhados logo acima dela. Empunhadura = origem; ponta em +Z ("tip").
+    Peças: "Haste" (madeira), "Ponteira" (latão), "Veio" (filete ciano, glow)."""
+    wd = Shape("Haste", "wood", voxel=0.0028, tris=2600, color_soft=0.004)
+    wd.add(round_cone((0, 0, -0.135), (0, 0, 0.3), 0.0215, 0.0235), "root", WOOD, k=0)
+    keel = blade([(0, 0, 0.25), (0, 0, 0.4), (0, 0, 0.56), (0, 0, 0.7), (0, 0, 0.765)],
+                 [0.024, 0.035, 0.041, 0.035, 0.026], flat=0.6, normal=(1, 0, 0), k=0.01)
+    wd.add(keel, "root", WOOD_L, k=0.025)
+    for z in (0.088, 0.116, 0.144):                                                           # 3 anéis entalhados
+        wd.carve(torus((0, 0, z), 0.0235, 0.0038), k=0.0015, color=WOOD_D)
+    wd.add(round_cone((0, 0, -0.072), (0, 0, 0.066), 0.0243, 0.0243), "root", LEATHER, k=0.002)   # couro
+    for i in range(7):                                                                        # tiras do couro
+        z = -0.064 + i * 0.0195
+        wd.paint(torus((0, 0, z), 0.0246, 0.0024, (8, 0, 0)), hexcol("4E2F22"), soft=0.002)
+    for i in range(12):                                                                       # veios da quilha
+        a = 2 * math.pi * i / 12 + 0.2
+        rr = 0.024 if i % 3 else 0.03
+        wd.paint(box((math.cos(a) * rr, math.sin(a) * rr, 0.42), (0.0022, 0.0022, 0.33), (0, 0, math.degrees(a))),
+                 WOOD_D if i % 2 else hexcol("B48A57"), soft=0.004)
+    wd.detail(box((0, 0, 0.1), (0.035, 0.035, 0.08)), 0.8)
+    br = Shape("Ponteira", "bronze", voxel=0.0026, tris=900, color_soft=0.003)
+    br.add(cone((0, 0, 0.782), 0.03, 0.022, 0.026, rounding=0.003), "root", BRASS, k=0)
+    br.add(sphere((0, 0, 0.82), 0.025), "root", BRASS, k=0.008)
+    br.add(torus((0, 0, 0.758), 0.029, 0.0045), "root", BRASS_D, k=0.002)
+    br.add(cylinder((0, 0, 0.262), 0.026, 0.008, rounding=0.003), "root", BRASS_D, k=0)         # colar da quilha
+    br.add(cylinder((0, 0, -0.142), 0.0235, 0.009, rounding=0.003), "root", BRASS_D, k=0)       # tampa do cabo
+    gl = Shape("Veio", "glow", voxel=0.0016, tris=400)
+    for sx in (1, -1):                                                                        # quilha "afinada": filete ciano
+        gl.add(blade([(sx * 0.0205, 0, 0.36), (sx * 0.0247, 0, 0.5), (sx * 0.0257, 0, 0.6), (sx * 0.0222, 0, 0.7)],
+                     [0.003, 0.0042, 0.0042, 0.0026], flat=0.35, normal=(1, 0, 0)), "root", CYAN, k=0)
+    objs = build_parts({"Haste": ([wd], [], None), "Ponteira": ([br], [], None), "Veio": ([gl], [], None)})
+    objs.append(empty("tip", (0, 0, 0.84)))
+    export("item_bastao", objs)
+
+
+def item_lanterna():
+    """Lanterna de Brasa (0,22 m): gaiola de latão de 4 hastes, vidro âmbar (glow, com o
+    núcleo quente mais claro no centro) e alça de arco. Origem = topo da alça (pendura
+    em belt_L/grip_L); o corpo fica abaixo (-Z). Peças: "Gaiola" (latão), "Vidro" (glow)."""
+    H = 0.22
+    cg = Shape("Gaiola", "bronze", voxel=0.0018, tris=1800, color_soft=0.003)
+    cg.add(cylinder((0, 0, 0.009), 0.05, 0.009, rounding=0.003), "root", BRASS_D, k=0)          # base
+    cg.add(cylinder((0, 0, -0.001), 0.04, 0.004, rounding=0.0015), "root", BRASS_D, k=0.002)    # pé
+    cg.add(torus((0, 0, 0.02), 0.047, 0.004), "root", BRASS, k=0.002)
+    cg.add(cylinder((0, 0, 0.128), 0.047, 0.006, rounding=0.002), "root", BRASS, k=0)           # aro do teto
+    cg.add(cone((0, 0, 0.148), 0.046, 0.016, 0.016, rounding=0.003), "root", BRASS_D, k=0.003)  # telhado
+    cg.add(sphere((0, 0, 0.168), 0.011), "root", BRASS, k=0.004)                                # pináculo
+    for i in range(4):                                                                         # 4 hastes da gaiola
+        a = 2 * math.pi * i / 4 + math.pi / 4
+        c, s = math.cos(a), math.sin(a)
+        cg.add(tube([(c * 0.048, s * 0.048, 0.018), (c * 0.054, s * 0.054, 0.07), (c * 0.048, s * 0.048, 0.126)],
+                    [0.0042, 0.0046, 0.0042], k=0.002), "root", BRASS, k=0.002)
+    # alça de arco: meia-volta de toro no plano XZ, presa nos lados do pináculo
+    arc = torus((0, 0, 0.17), 0.042, 0.0038, (90, 0, 0)).clip(plane((0, 0, 0.168), (0, 0, -1)))
+    cg.add(arc, "root", BRASS, k=0.002)
+    for sx in (1, -1):
+        cg.add(sphere((sx * 0.042, 0, 0.168), 0.0062), "root", BRASS_D, k=0.002)
+    cg.detail(sphere((0, 0, 0.17), 0.05), 0.6)
+    gl = Shape("Vidro", "glow", voxel=0.0018, tris=700, color_soft=0.01)
+    gl.add(cylinder((0, 0, 0.073), 0.041, 0.05, rounding=0.016), "root", AMBER, k=0)
+    gl.paint(ellipsoid((0, 0, 0.07), (0.034, 0.034, 0.044)), AMBER_HOT, soft=0.03)              # núcleo quente
+    objs = build_parts({"Gaiola": ([cg], [], None), "Vidro": ([gl], [], None)})
+    objs.append(empty("light", (0, 0, 0.075)))
+    recenter(objs, (0, 0, 0.212))
+    export("item_lanterna", objs)
+
+
+def item_concha():
+    """Concha dos Ventos (0,24 m): espiral cônica de nácar rosado com 3 voltas (raio do
+    tubo cresce em progressão geométrica), espinhos no ombro, boca aberta em sino com
+    lábio claro e bocal de latão no ápice (+Z). Origem = meio do corpo."""
+    sh = Shape("Concha", "nacre", voxel=0.0018, tris=3000, color_soft=0.004)
+    turns, r0, r1 = 3.0, 0.0045, 0.03
+    kk = math.log(r1 / r0) / (2 * math.pi * turns)
+    pts, rads, outs = [], [], []
+    n = 60
+    for i in range(n + 1):
+        th = 2 * math.pi * turns * i / n
+        r = r0 * math.exp(kk * th)
+        R = 0.95 * r
+        z = 0.112 - (r - r0) / (math.pi * kk) * 1.1
+        pts.append(np.array([math.cos(th) * R, -math.sin(th) * R, z]))     # gira para a boca abrir na frente (-Y)
+        rads.append(r)
+        outs.append(np.array([math.cos(th), -math.sin(th), 0.0]))
+    sh.add(tube([tuple(p) for p in pts], rads, k=0.004), "root", NACRE, k=0)
+    # boca em sino: continua a última volta pela tangente, abrindo e descendo
+    end = pts[-1]
+    d = pts[-1] - pts[-3]
+    d = d / np.linalg.norm(d) + np.array([0, 0, -0.35])
+    d = d / np.linalg.norm(d)
+    bell = [end, end + d * 0.022, end + d * 0.04, end + d * 0.052]
+    br_r = [r1, r1 * 1.15, r1 * 1.5, r1 * 1.9]
+    sh.add(tube([tuple(p) for p in bell], br_r, k=0.004), "root", NACRE, k=0.004)
+    sh.carve(tube([tuple(p) for p in [end - d * 0.01, end + d * 0.026, end + d * 0.045, end + d * 0.08]],
+                  [r1 * 0.55, r1 * 1.0, r1 * 1.38, r1 * 1.9]), k=0.003, color=hexcol("FFB8AE"))
+    lip = end + d * 0.05
+    sh.add(torus(tuple(lip), r1 * 1.82, 0.0042, look_basis(tuple(d))), "root", NACRE_L, k=0.003)   # lábio claro
+    # canal (sifão) descendo do corpo
+    sh.add(round_cone(tuple(end + np.array([0.012, 0.0, -0.01])), tuple(end + np.array([0.01, -0.006, -0.06])), 0.016, 0.006),
+           "root", NACRE, k=0.012)
+    # espinhos no ombro de cada volta
+    for i in range(14, n - 2, 6):
+        t = i / n
+        p, r, o = pts[i], rads[i], outs[i]
+        base = p + o * r * 0.6 + np.array([0, 0, r * 0.6])
+        tip = base + o * (0.004 + 0.014 * t) + np.array([0, 0, 0.006 + 0.008 * t])
+        sh.add(round_cone(tuple(base), tuple(tip), r * 0.38, 0.0015), "root", NACRE_L, k=0.003)
+    # faixas espirais coral e linha da sutura
+    stripe = [tuple(p + o * r * 0.98) for p, r, o in zip(pts, rads, outs)]
+    sh.paint(tube(stripe[6:], [r * 0.2 for r in rads[6:]]), NACRE_D, soft=0.004)
+    suture = [tuple(p + o * r * 0.55 + np.array([0, 0, r * 0.85])) for p, r, o in zip(pts, rads, outs)]
+    sh.paint(tube(suture[4:], [r * 0.12 for r in rads[4:]]), hexcol("C98A86"), soft=0.003)
+    sh.detail(sphere(tuple(end + d * 0.03), 0.06), 0.8)
+    br = Shape("Bocal", "bronze", voxel=0.0016, tris=700, color_soft=0.003)
+    br.add(cylinder((0, 0, 0.122), 0.0068, 0.012, rounding=0.002), "root", BRASS, k=0)
+    br.add(cone((0, 0, 0.14), 0.0075, 0.0115, 0.006, rounding=0.002), "root", BRASS, k=0.002)
+    br.add(torus((0, 0, 0.111), 0.0075, 0.0026), "root", BRASS_D, k=0.002)
+    br.carve(cylinder((0, 0, 0.146), 0.0055, 0.006), k=0.001, color=hexcol("4A3418"))
+    objs = build_parts({"Concha": ([sh], [], None), "Bocal": ([br], [], None)})
+    objs.append(empty("mouth", (0, 0, 0.146)))
+    export("item_concha", objs)
+
+
+def relicario():
+    """Relicário de Ferramenta (0,9 m): pedestal de arenito em degraus, glifos ciano,
+    pano índigo caído na frente e atrás e aro de latão no topo (o item flutua a 1,0 m)."""
+    st = Shape("Pedestal", "stone", voxel=0.012, tris=1600, color_soft=0.03)
+    st.add(box((0, 0, 0.07), (0.4, 0.4, 0.07), rounding=0.03).displace(0.006, 6.0, 2, 3), "root", STONE_D, k=0)
+    st.add(box((0, 0, 0.18), (0.31, 0.31, 0.05), rounding=0.025), "root", STONE, k=0)
+    st.add(box((0, 0, 0.49), (0.19, 0.19, 0.3), (0, 0, 45), rounding=0.03).displace(0.006, 5.0, 2, 4), "root", STONE_L, k=0.02)
+    st.add(cone((0, 0, 0.79), 0.2, 0.32, 0.05, rounding=0.02), "root", STONE, k=0.02)
+    st.add(cylinder((0, 0, 0.855), 0.33, 0.025, rounding=0.012), "root", STONE_L, k=0.01)
+    st.carve(sphere((0, 0, 1.12), 0.26), k=0.02, color=STONE_D)                                # concavidade do topo
+    for sy in (1, -1):
+        st.paint(box((0, sy * 0.135, 0.5), (0.025, 0.06, 0.16)), GLYPH, soft=0.012)
+        st.paint(box((0, sy * 0.135, 0.31), (0.05, 0.06, 0.012)), GLYPH, soft=0.01)
+    strata(st, 0.0, 0.9, 0.09, (STONE_L, STONE, STONE_L), soft=0.03)
+    sand_drift(st, (0.12, 0.08, -0.04), (0.55, 0.48, 0.1))
+    br = Shape("Aro", "bronze", voxel=0.008, tris=500)
+    br.add(torus((0, 0, 0.88), 0.315, 0.017), "root", BRASS, k=0)
+    for i in range(4):
+        a = 2 * math.pi * i / 4 + math.pi / 4
+        br.add(sphere((math.cos(a) * 0.315, math.sin(a) * 0.315, 0.885), 0.026), "root", BRASS_D, k=0.004)
+    cl = Shape("Pano", "cloth", voxel=0.007, tris=1100, color_soft=0.01)
+    for sy in (1, -1):                                                                          # aba frente/trás
+        pts = [(0, sy * 0.18, 0.905), (0, sy * 0.3, 0.89), (0, sy * 0.335, 0.8), (0, sy * 0.325, 0.68),
+               (0, sy * 0.31, 0.58)]
+        cl.add(blade(pts, [0.12, 0.13, 0.115, 0.095, 0.03], flat=0.08, normal=(0, 1, 0.25 * sy), k=0.02)
+               .displace(0.004, 18.0, 2, 5 if sy > 0 else 6), "root", INDIGO, k=0)
+        cl.paint(box((0, sy * 0.33, 0.66), (0.2, 0.06, 0.012)), BRASS, soft=0.008)              # barra bordada
+    cl.add(box((0, 0, 0.9), (0.14, 0.19, 0.012), rounding=0.01).displace(0.003, 20.0, 2, 7), "root", INDIGO, k=0.02)
+    cl.paint(box((0, 0, 0.9), (0.15, 0.2, 0.05)), INDIGO_D, soft=0.03)
+    for sy in (1, -1):
+        cl.add(sphere((0, sy * 0.31, 0.56), 0.017), "root", BRASS, k=0.004)                      # pingente
+    objs = build_parts({"Pedestal": ([st], [], None), "Aro": ([br], [], None), "Pano": ([cl], [], None)})
+    objs.append(empty("item", (0, 0, 1.0)))
+    export("relicario", objs)
+
+
+def argola():
+    """Argola (1,1 m de Ø): aro de latão vertical (plano XZ do Blender) com cintas, uma
+    presilha no topo e 3 contas de vidro ciano (peça "Contas", glow 0,25 -> 1,0) das
+    quais pendem 3 bandeirolas de pano de vela. Origem = centro do aro (ponto do arpéu)."""
+    R = 0.5
+    br = Shape("Aro", "bronze", voxel=0.006, tris=1600, color_soft=0.008)
+    br.add(torus((0, 0, 0), R, 0.042, (90, 0, 0)), "root", BRASS, k=0)
+    for a in (20, 160, 60, 120):                                                                # cintas
+        r = math.radians(a)
+        br.add(torus((math.cos(r) * R, 0, math.sin(r) * R), 0.05, 0.012, (0, -a, 0)), "root", BRASS_D, k=0.004)
+    br.add(cylinder((0, 0, R + 0.06), 0.035, 0.05, rounding=0.012), "root", BRASS_D, k=0.01)      # presilha
+    br.add(torus((0, 0, R + 0.14), 0.04, 0.012, (90, 0, 0)), "root", BRASS, k=0.004)
+    br.paint(torus((0, 0, 0), R, 0.05, (90, 0, 0)).clip(plane((0, 0, -0.1), (0, 0, 1))), hexcol("E8BC55"), soft=0.08)
+    gl = Shape("Contas", "glow", voxel=0.004, tris=600)
+    cl = Shape("Bandeirolas", "cloth", voxel=0.005, tris=1300, color_soft=0.01)
+    for i, a in enumerate((-90, -135, -45)):
+        r = math.radians(a)
+        p = np.array([math.cos(r) * R, 0, math.sin(r) * R])
+        gl.add(ellipsoid(tuple(p), (0.062, 0.062, 0.062)), "root", CYAN, k=0)
+        ln = 0.42 if a == -90 else 0.32
+        top = p + np.array([0, 0, -0.05])
+        sway = 0.04 * (1 if i % 2 else -1)
+        pts = [tuple(top), tuple(top + np.array([sway * 0.3, 0.01, -ln * 0.35])),
+               tuple(top + np.array([sway, 0.0, -ln * 0.7])), tuple(top + np.array([sway * 1.4, -0.01, -ln]))]
+        cl.add(blade(pts, [0.05, 0.065, 0.055, 0.012], flat=0.12, normal=(0, 1, 0), k=0.01)
+               .displace(0.004, 14.0, 2, 10 + i), "root", SAILCLOTH, k=0)
+        cl.paint(box(tuple(top + np.array([0, 0, -ln * 0.55])), (0.2, 0.2, 0.025)), ROPE, soft=0.012)   # faixa
+    objs = build_parts({"Aro": ([br], [], None), "Contas": ([gl], [], None), "Bandeirolas": ([cl], [], None)})
+    export("argola", objs)
+
+
+def aro_puxar():
+    """Aro de puxar (0,6 m): placa índigo vertical (frente -Y) com rebites e glifo, um
+    olhal e 2 elos de corrente segurando um aro grosso de latão. Origem = centro do
+    verso da placa (encosta no objeto); "grab" = centro do aro."""
+    pl = Shape("Placa", "stone", voxel=0.006, tris=900, color_soft=0.01)
+    pl.add(box((0, -0.03, 0.0), (0.21, 0.03, 0.21), rounding=0.02), "root", INDIGO, k=0)
+    pl.add(box((0, -0.064, 0.0), (0.17, 0.006, 0.17), rounding=0.006), "root", INDIGO_D, k=0.004)
+    pl.paint(torus((0, -0.07, -0.02), 0.085, 0.008, (90, 0, 0)), GLYPH, soft=0.006)
+    br = Shape("Aro", "bronze", voxel=0.0045, tris=1500, color_soft=0.006)
+    frame = box((0, -0.035, 0.0), (0.226, 0.032, 0.226), rounding=0.012).cut(box((0, -0.07, 0.0), (0.19, 0.05, 0.19)), 0.004)
+    br.add(frame, "root", BRASS_D, k=0)                                                         # moldura
+    for sx in (1, -1):
+        for sz in (1, -1):
+            br.add(sphere((sx * 0.172, -0.064, sz * 0.172), 0.016), "root", BRASS, k=0.003)        # rebites
+    br.add(torus((0, -0.07, 0.1), 0.03, 0.011, (90, 0, 90)), "root", BRASS_D, k=0.004)           # olhal (plano YZ)
+    br.add(cylinder((0, -0.066, 0.1), 0.034, 0.006, (90, 0, 0), rounding=0.004), "root", BRASS_D, k=0.004)
+    br.add(torus((0, -0.098, 0.05), 0.034, 0.009, (90, 0, 0)), "root", BRASS_D, k=0)             # elo 1 (XZ)
+    br.add(torus((0, -0.098, -0.004), 0.034, 0.009, (90, 0, 90)), "root", BRASS_D, k=0)          # elo 2 (YZ)
+    br.add(torus((0, -0.098, -0.165), 0.12, 0.024, (90, 0, 0)), "root", BRASS, k=0)              # aro grosso
+    br.paint(torus((0, -0.098, -0.165), 0.12, 0.03, (90, 0, 0)).clip(plane((0, 0, -0.2), (0, 0, 1))), hexcol("EBC25E"),
+             soft=0.03)                                                                          # gasto da mão
+    objs = build_parts({"Placa": ([pl], [], None), "Aro": ([br], [], None)})
+    objs.append(empty("grab", (0, -0.098, -0.165)))
+    export("aro_puxar", objs)
+
+
+def _tripod(sh, h, foot_r, col=BRONZE, thick=0.035, seed=0):
+    top = np.array([0.0, 0.0, h])
+    for i in range(3):
+        a = 2 * math.pi * i / 3 + math.pi / 2
+        foot = np.array([math.cos(a) * foot_r, math.sin(a) * foot_r, 0.03])
+        knee = foot * 0.55 + top * 0.45 + np.array([math.cos(a), math.sin(a), 0]) * 0.08
+        sh.add(tube([tuple(foot), tuple(knee), tuple(top - np.array([0, 0, 0.06]))], [thick * 1.15, thick, thick * 0.8],
+                    k=0.02), "root", col, k=0.02)
+        sh.add(round_cone(tuple(foot), tuple(foot + np.array([math.cos(a) * 0.05, math.sin(a) * 0.05, -0.02])),
+                          thick * 1.5, thick * 1.1), "root", BRASS_D, k=0.01)
+    sh.add(cylinder(tuple(top), 0.09, 0.05, rounding=0.02), "root", BRASS, k=0.03)
+    sh.add(torus(tuple(top - np.array([0, 0, 0.05])), 0.11, 0.018), "root", BRASS_D, k=0.01)
+    sh.add(cone(tuple(top + np.array([0, 0, 0.08])), 0.05, 0.012, 0.04, rounding=0.008), "root", BRASS, k=0.01)
+    ring_z = h * 0.38
+    sh.add(torus((0, 0, ring_z), foot_r * 0.62 * (1 - ring_z / h) + 0.04, 0.016), "root", BRASS_D, k=0.01)
+
+
+def sino_cristal():
+    """Sino de Cristal (1,6 m): prisma lilás facetado (material de cristal de Kesrin)
+    pendurado no ápice de um tripé de bronze. Origem no chão. Peça "Cristal"."""
+    br = Shape("Tripe", "bronze", voxel=0.008, tris=1800, color_soft=0.01)
+    _tripod(br, 1.62, 0.6)
+    br.add(cylinder((0, 0, 1.49), 0.016, 0.07), "root", BRASS_D, k=0.01)                        # haste
+    br.add(cone((0, 0, 1.395), 0.11, 0.05, 0.035, rounding=0.008), "root", BRASS, k=0.01)       # garra do cristal
+    br.paint(torus((0, 0, 1.57), 0.091, 0.012), GLYPH, soft=0.01)
+    bm = bmesh.new()
+    crystal_prism(bm, (0, 0, 1.13), (0, 0, 1), 0.27, 0.15, sides=6, tip=0.25, twist=0.26)
+    crystal_prism(bm, (0, 0, 1.13), (0, 0, -1), 0.66, 0.15, sides=6, tip=0.5, twist=0.26)
+    crystal_prism(bm, (0.05, 0.04, 1.0), (0.4, 0.2, -1), 0.32, 0.06, sides=5, tip=0.5, twist=0.4)
+    crystal_prism(bm, (-0.05, 0.02, 1.08), (-0.45, -0.15, -1), 0.26, 0.05, sides=5, tip=0.5, twist=0.1)
+    gem = bm_object("Cristal", bm, "crystal", (1, 1, 1), flat=True,
+                    gradient=lambda t: (0.2 + 0.8 * t, 0.45 + 0.55 * (1 - t), 0.0, 0.0))
+    objs = build_parts({"Tripe": ([br], [], None)}) + [gem]
+    export("sino_cristal", objs)
+
+
+def cristal_eco():
+    """Cristal-Eco (sino maior e mais escuro): prisma largo de lilás profundo num tripé
+    mais robusto, com veios ciano (peça "Veios", glow) que racham quando ressoa."""
+    br = Shape("Tripe", "bronze", voxel=0.01, tris=2000, color_soft=0.012)
+    _tripod(br, 1.95, 0.78, col=BRASS_D, thick=0.048)
+    br.add(cylinder((0, 0, 1.8), 0.02, 0.08), "root", BRASS_D, k=0.01)
+    br.add(cone((0, 0, 1.69), 0.17, 0.07, 0.045, rounding=0.01), "root", BRASS_D, k=0.01)
+    bm = bmesh.new()
+    L_dn, L_up, r = 0.95, 0.3, 0.24
+    zc = 1.36
+    crystal_prism(bm, (0, 0, zc), (0, 0, 1), L_up, r, sides=6, tip=0.3, twist=0.0)
+    crystal_prism(bm, (0, 0, zc), (0, 0, -1), L_dn, r, sides=6, tip=0.45, twist=0.0)
+    crystal_prism(bm, (0.08, 0.05, 1.2), (0.45, 0.25, -1), 0.42, 0.08, sides=5, tip=0.5, twist=0.4)
+    crystal_prism(bm, (-0.08, -0.02, 1.28), (-0.5, -0.1, -1), 0.36, 0.07, sides=5, tip=0.5, twist=0.1)
+    crystal_prism(bm, (0.0, -0.09, 1.1), (0.05, -0.5, -1), 0.3, 0.06, sides=5, tip=0.5, twist=0.7)
+    gem = bm_object("Cristal", bm, "crystal", (1, 1, 1), flat=True,
+                    gradient=lambda t: (0.02 + 0.33 * t, 0.85, 0.0, 0.0))
+    # veios: zigue-zagues sobre as faces do prisma (um pouco para fora da face)
+    gl = Shape("Veios", "glow", voxel=0.004, tris=1400)
+    body = L_dn * (1 - 0.45)
+    rng = np.random.default_rng(11)
+    for f in range(6):
+        a = 2 * math.pi * (f + 0.5) / 6
+        nx, ny = math.cos(a), math.sin(a)
+        tx, ty = -ny, nx
+        dist = r * math.cos(math.pi / 6) * 0.985 + 0.004
+        pts = []
+        steps = 6
+        for s in range(steps + 1):
+            z = zc + L_up * 0.5 - (L_up * 0.5 + body * 0.95) * s / steps
+            w = rng.uniform(-0.6, 0.6) * r * 0.45
+            rr = dist * (0.92 + 0.08 * (1 - abs(z - zc) / 0.6)) if z < zc else dist
+            pts.append((nx * rr + tx * w, ny * rr + ty * w, z))
+        gl.add(tube(pts, [0.006] + [0.0085] * (steps - 1) + [0.004], k=0.004), "root", CYAN, k=0.004)
+    objs = build_parts({"Tripe": ([br], [], None), "Veios": ([gl], [], None)}) + [gem]
+    export("cristal_eco", objs)
+
+
+def cabeco(name="cabeco", H=3.0):
+    """Cabeço do Cabo de Vidro: coluna de bronze canelada sobre base de arenito, com aro
+    de latão no topo (plano XZ: o cabo passa por ele ao longo de Y). "cable" = centro do
+    aro, a H m do chão (2,2 / 3,0 m)."""
+    st = Shape("Base", "stone", voxel=0.012, tris=700, color_soft=0.02)
+    st.add(box((0, 0, 0.12), (0.34, 0.34, 0.12), rounding=0.03).displace(0.008, 4.0, 2, 2), "root", STONE_D, k=0)
+    st.add(cone((0, 0, 0.3), 0.3, 0.2, 0.08, rounding=0.02), "root", STONE, k=0.02)
+    sand_drift(st, (0.08, 0.05, -0.05), (0.55, 0.5, 0.12))
+    br = Shape("Coluna", "bronze", voxel=0.01, tris=1800, color_soft=0.012)
+    col = cylinder((0, 0, (H - 0.1) * 0.5 + 0.2), 0.11, (H - 0.1) * 0.5 - 0.1, rounding=0.02)
+    for i in range(8):
+        a = 2 * math.pi * i / 8
+        col = col.cut(cylinder((math.cos(a) * 0.118, math.sin(a) * 0.118, H * 0.5), 0.022, H * 0.4), 0.008)
+    br.add(col, "root", BRONZE, k=0)
+    br.add(cylinder((0, 0, 0.42), 0.15, 0.05, rounding=0.015), "root", BRASS_D, k=0.01)
+    for z in (H * 0.45, H - 0.34):
+        br.add(torus((0, 0, z), 0.12, 0.018), "root", BRASS_D, k=0.008)
+    br.add(cone((0, 0, H - 0.2), 0.12, 0.07, 0.06, rounding=0.015), "root", BRASS_D, k=0.01)
+    br.add(torus((0, 0, H), 0.17, 0.034, (90, 0, 0)), "root", BRASS, k=0.02)                      # aro do cabo
+    br.add(sphere((0, 0, H + 0.2), 0.04), "root", BRASS, k=0.02)
+    br.paint(box((0, -0.12, H * 0.62), (0.03, 0.03, 0.18)), GLYPH, soft=0.02)
+    objs = build_parts({"Base": ([st], [], None), "Coluna": ([br], [], None)})
+    objs.append(empty("cable", (0, 0, H)))
+    export(name, objs)
+
+
+def braseiro():
+    """Braseiro (Olho de Brasa): tigela rasa de bronze com uma gema-tigela de vidro âmbar
+    (peça "Gema", glow; o jogo a acende de 0 a 2,0). Serve no chão e no fundo do olho
+    da cabeça do colosso. Origem no fundo da tigela; Ø 0,9 m."""
+    br = Shape("Tigela", "bronze", voxel=0.006, tris=1300, color_soft=0.01)
+    bowl = ellipsoid((0, 0, 0.3), (0.45, 0.45, 0.28)).shell(0.03).clip(plane((0, 0, 0.3), (0, 0, 1)))
+    br.add(bowl, "root", BRASS_D, k=0)
+    br.add(torus((0, 0, 0.3), 0.45, 0.03), "root", BRASS, k=0.01)
+    br.add(cone((0, 0, 0.04), 0.2, 0.14, 0.04, rounding=0.01), "root", BRASS_D, k=0.03)
+    for i in range(6):
+        a = 2 * math.pi * i / 6
+        br.add(sphere((math.cos(a) * 0.45, math.sin(a) * 0.45, 0.31), 0.04), "root", BRASS, k=0.01)
+    br.paint(torus((0, 0, 0.17), 0.39, 0.012), GLYPH, soft=0.012)
+    bm = bmesh.new()
+    crystal_prism(bm, (0, 0, 0.08), (0, 0, 1), 0.3, 0.32, sides=8, tip=0.55, twist=0.2)
+    gem = bm_object("Gema", bm, "glow", (AMBER[0], AMBER[1], AMBER[2], 0.0), flat=True,
+                    gradient=lambda t: tuple(AMBER[k] * (1 - t) + AMBER_HOT[k] * t for k in range(3)) + (0.0,))
+    objs = build_parts({"Tigela": ([br], [], None)}) + [gem]
+    objs.append(empty("flame", (0, 0, 0.35)))
+    export("braseiro", objs)
+
+
 PROPS = {
     "agulha": agulha, "portao_vael": portao_vael, "cabeca_colosso": cabeca_colosso, "mao_colosso": mao_colosso,
     "cristal": cristal, "cristal_b": cristal_b, "geodo": geodo, "colunata": colunata, "arco": arco, "pilar": pilar,
     "rocha": lambda: rocha("rocha", 1, (2.2, 1.7, 1.5)), "rocha_b": lambda: rocha("rocha_b", 4, (1.6, 2.4, 2.4)),
     "totem": totem, "plate": lambda: plate(False), "plate_heavy": lambda: plate(True), "gate": gate,
     "urna": urna, "tambor": tambor, "portal": fenda, "relic": pedra_hora,
+    "item_arpeu": item_arpeu, "item_bastao": item_bastao, "item_lanterna": item_lanterna, "item_concha": item_concha,
+    "relicario": relicario, "argola": argola, "aro_puxar": aro_puxar, "sino_cristal": sino_cristal,
+    "cristal_eco": cristal_eco, "cabeco": cabeco, "cabeco_baixo": lambda: cabeco("cabeco_baixo", 2.2),
+    "braseiro": braseiro,
 }
 
 
 def main() -> None:
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     only = argv[argv.index("--only") + 1].split(",") if "--only" in argv else list(PROPS)
+    global OUT, LIFT
+    if "--out" in argv:
+        OUT = Path(argv[argv.index("--out") + 1])
+    LIFT = "--lift" in argv
     for name in only:
         reset_scene()
         log("prop", name)

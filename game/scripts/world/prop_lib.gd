@@ -2,7 +2,7 @@ class_name PropLib
 extends RefCounted
 ## Instancia os props (GLB do Blender) trocando os materiais pelos shaders do
 ## jogo conforme o nome do material (stone, wood, bronze, glow, crystal, seam,
-## cloth, jelly) e cria colisões simples quando pedido.
+## cloth, nacre, jelly) e cria colisões simples quando pedido.
 
 const NOISE := preload("res://addons/vibe_vfx/textures/cloud_noise.png")
 const PROP_SHADER := preload("res://game/shaders/prop.gdshader")
@@ -44,6 +44,14 @@ static func shared_material(kind: String) -> ShaderMaterial:
 			m.set_shader_parameter("noise_tex", NOISE)
 			m.set_shader_parameter("sand_amount", 0.0)
 			m.set_shader_parameter("rim_strength", 0.9)
+		"nacre":
+			# nácar da Concha dos Ventos: sem areia, brilho perolado (borda rosada + reflexo)
+			m.shader = PROP_SHADER
+			m.set_shader_parameter("noise_tex", NOISE)
+			m.set_shader_parameter("sand_amount", 0.0)
+			m.set_shader_parameter("metallic_look", 0.55)
+			m.set_shader_parameter("rim_color", Color(1.0, 0.86, 0.9))
+			m.set_shader_parameter("rim_strength", 1.2)
 		"glow":
 			m.shader = GLOW
 		"jelly":

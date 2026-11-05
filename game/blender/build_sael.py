@@ -575,7 +575,7 @@ def build_head(q: float):
     head.paint(ellipsoid(nose_p + V3(0, -0.008, 0.002), (0.011, 0.008, 0.009)), BLUSH, soft=0.010)
 
     # ---- face lines: upper lid line (with a small outer flick) + open smile (flush plates)
-    face = XShape("SaelFace", "skin", voxel=0.0015 * q, tris=340, color_soft=0.002, weight_sigma=0.02,
+    face = XShape("SaelFace", "skin", voxel=0.0012 * q, tris=560, color_soft=0.002, weight_sigma=0.02,
                   ao_strength=0.0)
     for sx in (1.0, -1.0):
         c, R = eye_basis(sx)
@@ -590,10 +590,10 @@ def build_head(q: float):
     def mouth_region(P):
         u = (P[:, 0] - 0.0010) / mw
         line = mz + 0.0050 * u * u + 0.0016 * u + 0.0030 * np.maximum(u - 0.60, 0.0) ** 2 * 6.0
-        th = 0.0022 * (1.0 - 0.45 * np.clip(np.abs(u), 0.0, 1.0) ** 2)
+        th = 0.0030 * (1.0 - 0.40 * np.clip(np.abs(u), 0.0, 1.0) ** 2)
         return np.maximum(np.maximum(np.abs(P[:, 2] - line) - th, (np.abs(u) - 1.0) * mw), P[:, 1] + 0.08)
     mouth = Prim(mouth_region, (-0.04, -0.25, 0.68), (0.04, -0.08, 0.74))
-    face.add(plate(base, mouth, lift=0.0010, sink=0.0030, k=0.0008), "head", MOUTH, k=0.0)
+    face.add(plate(base, mouth, lift=0.0013, sink=0.0030, k=0.0008), "head", MOUTH, k=0.0)
     face.detail(everywhere(), 0.5)
 
     # ---- brows: thick, the inner end a little lower (determined, friendly)
@@ -1777,9 +1777,11 @@ def c_idle(t, ph):
     look = spline(t, [(0, 0), (0.45, 0), (0.80, 26), (1.30, 24), (1.62, -20), (2.15, -18), (2.55, 0), (3.0, 0)], True)
     nod = spline(t, [(0, 0), (0.80, -6), (1.30, -4), (1.62, 3), (2.15, 2), (2.55, 0), (3.0, 0)], True)
     tilt = spline(t, [(0, 0), (0.45, 0), (0.80, 6), (1.30, 8), (1.62, -4), (2.15, -6), (2.55, 0), (3.0, 0)], True)
-    shift = spline(t, [(0, 0), (0.8, 0.006), (1.6, -0.005), (2.4, 0.0), (3.0, 0)], True)
-    body(P, pitch=1.5 + 0.5 * br, roll=-shift * 120, off=(shift, 0.0, -0.010 + 0.003 * br))
-    spine(P, sp=(0.6 * br, 0, look * 0.10), ch=(0.8 * br, -tilt * 0.15, look * 0.15),
+    # fix pass: weight shift with contrapposto (hips over the weight foot, shoulders tilt the other way)
+    shift = spline(t, [(0, 0.016), (0.7, 0.018), (1.25, -0.002), (1.65, -0.016), (2.45, -0.015), (2.9, 0.012),
+                       (3.0, 0.016)], True)
+    body(P, pitch=1.5 + 0.5 * br, roll=-shift * 150, off=(shift, 0.0, -0.010 + 0.003 * br - 0.08 * abs(shift)))
+    spine(P, sp=(0.6 * br, shift * 140, look * 0.10), ch=(0.8 * br, -tilt * 0.15 + shift * 120, look * 0.15),
           nk=(0, tilt * 0.3, look * 0.25), hd=(nod - 1.0 * br, tilt * 0.7, look * 0.5))
     stand_feet(P)
     # Saeli's fan flick -> the same little arm lift, the mittens open and close
@@ -1957,7 +1959,7 @@ def c_double_jump(t, ph):
     # open (2 frames) -> arms beat down -> forward tuck flip -> open into fall
     flip = 360.0 * smooth((t - 0.15) / 0.24) if t > 0.15 else 0.0
     T = [0.0, 0.067, 0.15, 0.22, 0.32, 0.42]
-    tuck = spline(t, list(zip(T, [0.0, 0.0, 0.25, 1.0, 1.0, 0.2])))
+    tuck = spline(t, list(zip(T, [0.0, 0.0, 0.25, 0.72, 0.72, 0.2])))      # fix pass: open tuck (a body, not a ball)
     body(P, pitch=flip + spline(t, list(zip(T, [0, -8, 4, 10, 6, 0]))), pivot=(0, -0.01, 0.47),
          off=(0, 0, spline(t, list(zip(T, [0.0, 0.01, 0.03, 0.06, 0.05, 0.02])))))
     sq = spline(t, list(zip(T, [1.0, 1.04, 1.06, 0.96, 0.97, 1.0])))
@@ -1967,8 +1969,8 @@ def c_double_jump(t, ph):
         foot(P, s, (0.02 * tuck + 0.006, lerp(0.01, -0.13, tuck), lerp(0.03, 0.20, tuck)),
              pitch=lerp(26, 40, tuck), yaw=6, rel=True)
     sw = spline(t, list(zip(T, [-40, -60, -10, -55, -55, -24])))
-    out = spline(t, list(zip(T, [70, 118, 30, 18, 20, 66])))
-    fl = spline(t, list(zip(T, [30, 14, 18, 86, 86, 32])))
+    out = spline(t, list(zip(T, [70, 118, 30, 34, 36, 66])))
+    fl = spline(t, list(zip(T, [30, 14, 18, 64, 64, 32])))
     for s in "LR":
         arm(P, s, swing=sw, out=out, twist=-8, flex=fl, hand=(8, 0, -8))
         curl(P, s, spline(t, list(zip(T, [10, 0, 20, 70, 70, 14]))))
@@ -1983,17 +1985,20 @@ def c_double_jump(t, ph):
 
 
 def c_glide(t, ph):
+    """Planando (fix pass): corpo deitado ~40° para a frente, braços varridos para trás e para baixo
+    (palmas para baixo), pernas estendidas e juntas atrás: da câmera de perseguição a silhueta é uma
+    cunha, não uma cruz. O cachecol (tecido no jogo) é a vela."""
     P = Pose(K)
     bank = 6.0 * wv(ph)
-    body(P, pitch=26 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.03))
-    spine(P, sp=(2, -bank * 0.2, 0), ch=(-4, -bank * 0.3, 0), nk=(-6, 0, 0), hd=(-18, -bank * 0.4, bank * 0.3))
+    body(P, pitch=41 + 1.5 * wv(ph, 0.25), roll=bank, yaw=-2.0 * wv(ph, 0.1), pivot=(0, 0, 0.45), off=(0, 0, 0.03))
+    spine(P, sp=(-2, -bank * 0.2, 0), ch=(-6, -bank * 0.3, 0), nk=(-12, 0, 0), hd=(-22, -bank * 0.4, bank * 0.3))
     for s in "LR":
         sx = sxs(s)
-        dihedral = 6.0 + bank * sx * 0.6
-        arm(P, s, swing=-8 + 1.5 * wv(ph, 0.3), out=49 + dihedral, twist=0, flex=6, hand=(0, 0, -4))
-        curl(P, s, 6)
+        dihedral = bank * sx * 0.5
+        arm(P, s, swing=38 + 2.0 * wv(ph, 0.3), out=26 + dihedral, twist=14, flex=8, hand=(-10, 0, -4))
+        curl(P, s, 8)
     for s, o_ in (("L", 0.0), ("R", 0.5)):
-        foot(P, s, (0.006, 0.15, 0.11 + 0.008 * wv(ph, o_)), pitch=58, yaw=4, rel=True)
+        foot(P, s, (-0.010, 0.040, 0.016 + 0.006 * wv(ph, o_)), pitch=46, yaw=0, rel=True)
     tuft(P, lift=-18 + 2 * wv(ph * 2), flare=-4, tip=-8 + 3 * wv(ph * 3, 0.25))
     # the scarf is the sail: both tails spread wide behind like a kite, trembling in the wind
     # (Saeli's 6 Hz rib flutter -> the tips)
@@ -2012,10 +2017,14 @@ def c_spin(t, ph):
     tk = spline(t, list(zip(T, [0.0, 0.2, 1.0, 1.0, 0.3, 0.0])))
     for s in "LR":
         foot(P, s, (0.004 + 0.006 * tk, 0.01 * tk, 0.05 * tk), pitch=20 * tk, yaw=6, rel=True)
-    out = spline(t, list(zip(T, [2, 22, 50, 52, 24, 2])))
+    # fix pass: arms TUCKED across the chest through the fast part of the turn (0.3-0.6 of the clip),
+    # flung out only on the release, then back to rest
+    T2 = [0.0, 0.033, 0.09, 0.25, 0.30, 0.35, 0.40]
+    out = spline(t, list(zip(T2, [2, 14, 4, 4, 64, 40, 2])))
     for s in "LR":
-        arm(P, s, swing=-8, out=out, twist=-10, flex=spline(t, list(zip(T, [22, 18, 6, 6, 16, 22]))), hand=(4, 0, -6))
-        curl(P, s, spline(t, list(zip(T, [24, 20, 8, 8, 18, 24]))))
+        arm(P, s, swing=spline(t, list(zip(T2, [-8, -22, -40, -40, -14, -10, -8]))), out=out, twist=-10,
+            flex=spline(t, list(zip(T2, [22, 50, 112, 112, 10, 16, 22]))), hand=(4, 0, -6))
+        curl(P, s, spline(t, list(zip(T2, [24, 40, 85, 85, 4, 12, 24]))))
     tuft(P, lift=spline(t, list(zip(T, [0, 4, 12, 12, 6, 0]))), flare=spline(t, list(zip(T, [2, 8, 22, 22, 10, 2]))))
     # centrifugal: the tails fly out flat and trail the turn (to his right: he spins to his left)
     fly = spline(t, list(zip(T, [0.0, 0.1, 1.0, 1.0, 0.45, 0.0])))
@@ -2035,8 +2044,8 @@ def c_surf(t, ph):
     P = Pose(K)
     carve = wv(ph)                                     # one toe/heel carve per loop
     bob = 0.007 * wv(ph * 2, 0.15)
-    body(P, pitch=14 + 2 * wv(ph * 2, 0.3), roll=-3.0 * carve, yaw=SURF_YAW, pivot=(0, 0.0, 0.30),
-         off=(0.020 + 0.006 * carve, 0.0, -0.028 + bob))
+    body(P, pitch=18 + 2 * wv(ph * 2, 0.3), roll=-3.0 * carve, yaw=SURF_YAW, pivot=(0, 0.0, 0.30),
+         off=(0.024 + 0.006 * carve, 0.0, -0.052 + bob))          # fix pass: hips dropped, knees bent ~40°
     spine(P, sp=(3, 1.0 * carve, 9), ch=(4, 2.0 * carve, 14), nk=(-4, 0, 18), hd=(-6, 3.0 * carve, 22))
     # the board under the feet (deck up, nose forward, carving roll)
     bc = Vector((0.0, 0.0, BOARD_HALF_T + 0.002))
@@ -2049,8 +2058,9 @@ def c_surf(t, ph):
         foot_world(P, s, ank, yaw=fy, pitch=-2.9 * carve,              # the feet follow the board's edge
                    pole=Vector((-1.0, 0.25 if s == "L" else -0.25, 0.05)))
     # arms out for balance: front (left) arm toward the nose, back (right) arm low toward the tail
-    arm(P, "L", swing=-34 + 3 * wv(ph, 0.2), out=46 + 4 * carve, twist=-4, flex=26, hand=(4, 0, -8))
-    arm(P, "R", swing=18 + 3 * wv(ph, 0.6), out=36 - 4 * carve, twist=-8, flex=30, hand=(4, 0, -8))
+    # fix pass (no more shared T pose): leading arm forward-LOW over the nose, trailing arm RAISED back
+    arm(P, "L", swing=-46 + 3 * wv(ph, 0.2), out=24 + 4 * carve, twist=-4, flex=14, hand=(4, 0, -8))
+    arm(P, "R", swing=34 + 3 * wv(ph, 0.6), out=82 - 4 * carve, twist=-12, flex=34, hand=(4, 0, -8))
     for s in "LR":
         curl(P, s, 16)
     tuft(P, lift=-12 + 3 * wv(ph * 2), flare=4, tip=-6 + 3 * wv(ph * 3, 0.2))
@@ -2168,17 +2178,21 @@ def c_attack_1(t, ph):
     até a esquerda (smear) e volta à guarda."""
     P = Pose(K)
     T = [0.0, 0.067, 0.11, 0.15, 0.22, 0.30, 0.38]
-    tw = spline(t, list(zip(T, [0, -26, -8, 16, 30, 14, 0])))              # + = torso to his left
-    lunge = spline(t, list(zip(T, [0.0, -0.012, 0.012, 0.030, 0.034, 0.016, 0.0])))
-    body(P, pitch=spline(t, list(zip(T, [3, 0, 5, 9, 10, 6, 3]))), yaw=tw * 0.35, pivot=(0, 0.01, 0.30),
-         off=(0, -lunge, -0.014 - 0.5 * lunge))
+    # fix pass: hips and shoulders counter-rotate ~40° through the swing, a step into the strike and a
+    # wide flat arc (staff tip ~0.5 m to his left at contact) that reads from the chase camera
+    tw = spline(t, list(zip(T, [0, -40, -14, 26, 44, 20, 0])))              # + = torso to his left
+    lunge = spline(t, list(zip(T, [0.0, -0.012, 0.016, 0.040, 0.046, 0.022, 0.0])))
+    body(P, pitch=spline(t, list(zip(T, [3, 0, 6, 11, 12, 7, 3]))), yaw=tw * 0.40, pivot=(0, 0.01, 0.30),
+         off=(0, -lunge, -0.014 - 0.6 * lunge))
     spine(P, sp=(0, 0, tw * 0.25), ch=(spline(t, list(zip(T, [2, -2, 4, 6, 6, 4, 2]))), 0, tw * 0.40),
-          nk=(0, 0, -tw * 0.35), hd=(-2, 0, -tw * 0.40))
-    stance(P)
-    gp = vspline(t, list(zip(T, [(-0.13, -0.15, 0.38), (-0.17, 0.03, 0.51), (-0.15, -0.15, 0.45), (-0.03, -0.25, 0.41),
-                                 (0.09, -0.17, 0.39), (-0.05, -0.20, 0.38), (-0.13, -0.15, 0.38)])))
-    sy = spline(t, list(zip(T, [14, -150, -72, 24, 112, 62, 14])))
-    se = spline(t, list(zip(T, [40, 26, 8, 0, -4, 18, 40])))
+          nk=(0, 0, -tw * 0.40), hd=(-2, 0, -tw * 0.45))
+    step = spline(t, list(zip(T, [0.0, 0.0, 0.030, 0.062, 0.066, 0.040, 0.0])))
+    foot(P, "L", (0.024, -0.038 - step, 0.022 * clamp01(math.sin(math.pi * clamp01((t - 0.06) / 0.10)))), yaw=10 + 10 * step / 0.066)
+    foot(P, "R", (0.024, 0.034, 0.0), yaw=-2 - 8 * step / 0.066, pitch=14 * step / 0.066, pivot="ball")
+    gp = vspline(t, list(zip(T, [(-0.13, -0.15, 0.38), (-0.18, 0.04, 0.52), (-0.16, -0.16, 0.45), (-0.02, -0.26, 0.42),
+                                 (0.11, -0.16, 0.40), (-0.05, -0.20, 0.38), (-0.13, -0.15, 0.38)])))
+    sy = spline(t, list(zip(T, [14, -150, -84, 58, 120, 62, 14])))
+    se = spline(t, list(zip(T, [40, 26, 6, -4, -6, 18, 40])))
     pole = vspline(t, list(zip(T, [(-1, 0.4, -0.6), (-1, 0.6, 0.2), (-1, 0.1, -0.4), (-0.6, -0.4, -0.8),
                                    (0.2, -0.6, -0.8), (-0.8, 0.0, -0.7), (-1, 0.4, -0.6)])))
     hold(P, "R", gp, pole, dvec(sy, se))
@@ -2198,17 +2212,21 @@ def c_attack_2(t, ph):
     """Bastão, golpe 2 (0,38 s): revés da esquerda para a direita (o braço cruza o peito na antecipação)."""
     P = Pose(K)
     T = [0.0, 0.067, 0.11, 0.15, 0.22, 0.30, 0.38]
-    tw = spline(t, list(zip(T, [0, 28, 12, -14, -32, -14, 0])))
-    lunge = spline(t, list(zip(T, [0.0, -0.010, 0.012, 0.030, 0.034, 0.016, 0.0])))
-    body(P, pitch=spline(t, list(zip(T, [3, 1, 5, 9, 10, 6, 3]))), yaw=tw * 0.35, pivot=(0, 0.01, 0.30),
-         off=(0, -lunge, -0.014 - 0.5 * lunge))
+    tw = spline(t, list(zip(T, [0, 40, 16, -26, -44, -18, 0])))
+    lunge = spline(t, list(zip(T, [0.0, -0.010, 0.016, 0.040, 0.046, 0.022, 0.0])))
+    body(P, pitch=spline(t, list(zip(T, [3, 1, 6, 11, 12, 7, 3]))), yaw=tw * 0.40, pivot=(0, 0.01, 0.30),
+         off=(0, -lunge, -0.014 - 0.6 * lunge))
     spine(P, sp=(0, 0, tw * 0.25), ch=(spline(t, list(zip(T, [2, 0, 4, 6, 6, 4, 2]))), 0, tw * 0.40),
-          nk=(0, 0, -tw * 0.35), hd=(-2, 0, -tw * 0.40))
-    stance(P, yl=12, yr=-6)
-    gp = vspline(t, list(zip(T, [(-0.13, -0.15, 0.38), (0.05, -0.08, 0.48), (0.02, -0.21, 0.45), (-0.10, -0.25, 0.41),
-                                 (-0.20, -0.13, 0.39), (-0.17, -0.17, 0.38), (-0.13, -0.15, 0.38)])))
-    sy = spline(t, list(zip(T, [14, 142, 70, -26, -114, -48, 14])))
-    se = spline(t, list(zip(T, [40, 22, 6, 0, -4, 18, 40])))
+          nk=(0, 0, -tw * 0.40), hd=(-2, 0, -tw * 0.45))
+    # step with the right foot into the backhand (to his right-forward)
+    step = spline(t, list(zip(T, [0.0, 0.0, 0.030, 0.060, 0.064, 0.036, 0.0])))
+    foot(P, "L", (0.024, -0.038, 0.0), yaw=12, pitch=10 * step / 0.064, pivot="ball")
+    foot(P, "R", (0.024 + 0.4 * step, 0.034 - 1.3 * step, 0.022 * clamp01(math.sin(math.pi * clamp01((t - 0.06) / 0.10)))),
+         yaw=-6 - 14 * step / 0.064)
+    gp = vspline(t, list(zip(T, [(-0.13, -0.15, 0.38), (0.06, -0.08, 0.48), (0.02, -0.22, 0.45), (-0.11, -0.25, 0.42),
+                                 (-0.21, -0.12, 0.40), (-0.17, -0.17, 0.38), (-0.13, -0.15, 0.38)])))
+    sy = spline(t, list(zip(T, [14, 142, 76, -58, -122, -48, 14])))
+    se = spline(t, list(zip(T, [40, 22, 4, -4, -6, 18, 40])))
     pole = vspline(t, list(zip(T, [(-1, 0.4, -0.6), (-0.4, -1.0, 0.4), (-0.6, -1.0, 0.0), (-1.0, -0.3, -0.4),
                                    (-1.0, 0.4, -0.5), (-1.0, 0.3, -0.6), (-1, 0.4, -0.6)])))
     hold(P, "R", gp, pole, dvec(sy, se))
@@ -2293,8 +2311,8 @@ def c_grapple_throw(t, ph):
     return done(P)
 
 
-SWING_R = (-0.028, -0.150, 0.655)     # pega na corda (mãos na frente do queixo: com os braços curtos
-SWING_L = (0.026, -0.150, 0.592)      # do chibi, acima da cabeça não alcança); a mão direita em cima
+SWING_R = (-0.016, -0.118, 0.736)     # fix pass: pega na corda na altura da testa/olhos, à frente do rosto
+SWING_L = (0.020, -0.122, 0.676)      # (os braços curtos não passam por cima da cabeça grande); direita em cima
 
 
 def c_swing(t, ph):
@@ -2304,9 +2322,9 @@ def c_swing(t, ph):
     P = Pose(K)
     s1 = wv(ph)                         # + = legs forward
     s2 = wv(ph, 0.12)
-    piv = (0.0, -0.15, 0.62)
-    body(P, pitch=-6 - 7 * s2, roll=1.5 * wv(ph, 0.3), pivot=piv, off=(0, 0, 0.0))
-    spine(P, sp=(-2 - 3 * s1, 0, 0), ch=(-2, 0, 0), nk=(-8, 0, 0), hd=(-16 + 2 * s2, 0, 0))
+    piv = (0.0, -0.12, 0.71)
+    body(P, pitch=-4 - 9 * s2, roll=1.5 * wv(ph, 0.3), pivot=piv, off=(0, 0, 0.0))
+    spine(P, sp=(-2 - 3 * s1, 0, 0), ch=(-4, 0, 0), nk=(-12, 0, 0), hd=(-26 + 2 * s2, 0, 0))
     for s, gp, pole in (("R", SWING_R, (-1.0, 0.2, -0.5)), ("L", SWING_L, (1.0, 0.2, -0.5))):
         hold(P, s, gp, pole, (0.0, 0.0, 1.0), grip=105.0)
     # legs together, knees a little bent, swinging from the hips
@@ -2358,8 +2376,10 @@ def c_lantern_hold(t, ph):
     P = Pose(K)
     sw = wv(ph)
     sw2 = wv(ph * 2, 0.2)
-    gp = (0.112 + 0.006 * sw, -0.200 + 0.004 * sw2, 0.486 + 0.008 * sw2)
-    hold(P, "L", gp, (1.0, 0.2, -0.9), dvec(-6 + 4 * sw, 80 + 3 * sw2), grip=100.0)
+    # fix pass: held up and OUT to his left (~0.25 m from the body axis) at shoulder height, so the lantern
+    # and its light read from the chase camera
+    gp = (0.262 + 0.008 * sw, -0.090 + 0.006 * sw2, 0.580 + 0.010 * sw2)
+    hold(P, "L", gp, (0.6, 0.6, -1.0), dvec(20 + 4 * sw, 78 + 3 * sw2), grip=100.0)
     out = P.export()
     return {b: v for b, v in out.items() if b in LANTERN_BONES}
 
@@ -2369,7 +2389,7 @@ def c_horn_blow(t, ph):
     (cabeça para cima); volta."""
     P = Pose(K)
     T = [0.0, 0.10, 0.18, 0.26, 0.50, 0.60, 0.70]
-    pit = spline(t, list(zip(T, [2, 4, -2, -8, -10, -4, 2])))
+    pit = spline(t, list(zip(T, [2, 4, -4, -14, -17, -6, 2])))
     body(P, pitch=pit, pivot=(0, 0.01, 0.30), off=(0, spline(t, list(zip(T, [0, 0, 0.006, 0.014, 0.016, 0.008, 0]))),
                                                   -0.010))
     spine(P, sp=(spline(t, list(zip(T, [0, 0, -3, -6, -7, -3, 0]))), 0, 0),
@@ -2384,7 +2404,7 @@ def c_horn_blow(t, ph):
     rest_gp = Vector((-0.13, -0.10, 0.36))
     gp = rest_gp.lerp(at_mouth, to)
     d = dvec(-10, 20).lerp(dh, to)
-    hold(P, "R", gp, (-1.0, 0.1, -0.5), d, grip=100.0)
+    hold(P, "R", gp, Vector((-1.0, 0.1, -0.5)).lerp(Vector((-1.0, 0.15, 0.55)), to), d, grip=100.0)   # elbow up/out
     arm(P, "L", swing=-4, out=spline(t, list(zip(T, [2, 6, 12, 16, 16, 8, 2]))), twist=-6,
         flex=spline(t, list(zip(T, [22, 26, 34, 40, 40, 30, 22]))), hand=(6, 0, -6))
     curl(P, "L", spline(t, list(zip(T, [24, 30, 70, 80, 80, 40, 24]))))

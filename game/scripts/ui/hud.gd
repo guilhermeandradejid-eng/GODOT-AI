@@ -2,6 +2,8 @@ class_name GameHUD
 extends CanvasLayer
 ## HUD minimalista (estilo Sky): contador de centelhas, 3 Pedras das Horas, losangos de vida
 ## de cada herói, avisos que aparecem e somem, controles de toque e pausa.
+## Itens (itens.md 3.4): retículo no alvo do arpéu, faixa de item novo, ícones das
+## ferramentas ao lado das Pedras das Horas; avisos de trava chegam pelo Game.toast.
 
 signal resume_requested
 signal restart_requested
@@ -20,6 +22,16 @@ var _pause: Control
 var _quality_btn: Button
 var _root: Control
 var _t := 0.0
+var _items_box: HBoxContainer
+var _item_icons := {}             ## id -> _ItemIcon
+var _reticle: _Reticle
+var _banner: PanelContainer
+var _banner_icon: _ItemIcon
+var _banner_title: Label
+var _banner_lines: Label
+var _banner_t := 0.0
+var _banner_queue: Array[String] = []
+const BANNER_TIME := 4.0
 
 
 func _ready() -> void:
@@ -54,6 +66,20 @@ func _ready() -> void:
 		s.custom_minimum_size = Vector2(40, 52)
 		seeds.add_child(s)
 		_seed_slots.append(s)
+	# ferramentas obtidas, logo à direita das Pedras das Horas
+	_items_box = HBoxContainer.new()
+	_items_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_items_box.position = Vector2(92, 31)
+	_items_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_items_box.add_theme_constant_override("separation", 6)
+	_root.add_child(_items_box)
+	for id in Game.ITEM_IDS:
+		var ic := _ItemIcon.new()
+		ic.item = id
+		ic.custom_minimum_size = Vector2(34, 34)
+		ic.visible = Game.has_item(id)
+		_items_box.add_child(ic)
+		_item_icons[id] = ic
 	# vida (pontos do emblema) por herói
 	var hp := VBoxContainer.new()
 	hp.position = Vector2(34, 84)
@@ -83,6 +109,12 @@ func _ready() -> void:
 	_toast.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_toast.modulate.a = 0.0
 	_root.add_child(_toast)
+	_build_banner()
+	# retículo do arpéu (atrás dos controles de toque)
+	_reticle = _Reticle.new()
+	_reticle.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_reticle)
 	# touch
 	touch = TouchControls.new()
 	touch.visible = Game.touch_enabled
@@ -92,6 +124,7 @@ func _ready() -> void:
 	Game.motes_changed.connect(_on_motes)
 	Game.relic_collected.connect(_on_seed)
 	Game.toast.connect(show_toast)
+	Game.item_collected.connect(_on_item)
 
 
 func bind(p: HeroParty) -> void:
@@ -139,8 +172,196 @@ func _process(delta: float) -> void:
 			touch.special_hint = hint
 			touch.queue_redraw()
 		touch.show_swap = Game.mode == Game.Mode.SOLO
+	_update_tools(delta)
+	_update_banner(delta)
 	for s in _seed_slots:
 		s.queue_redraw()
+
+
+# ------------------------------------------------------------------ itens
+## Item novo: ícone ao lado das Pedras, faixa de 4 s e os dois heróis comemoram.
+func _on_item(id: String) -> void:
+	var ic: _ItemIcon = _item_icons.get(id)
+	if ic != null:
+		ic.visible = true
+		ic.pop = 1.0
+	_banner_queue.append(id)
+	Sfx.play("item_get" if Sfx.has("item_get") else "relic")
+	if party == null:
+		return
+	for h in [party.agile, party.strong]:
+		if h == null or not is_instance_valid(h) or h.visual == null or h.is_remote:
+			continue
+		if h.state == Hero.S.GROUND and h.visual.has_state("celebrate"):
+			h.visual.restart_state("celebrate")
+
+
+func _build_banner() -> void:
+	_banner = PanelContainer.new()
+	_banner.add_theme_stylebox_override("panel", UITheme.box(Color(1.0, 0.96, 0.9, 0.9), 26, Color(0.83, 0.64, 0.25, 0.95), 3))
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.custom_minimum_size = Vector2(560, 0)
+	_banner.position = Vector2(-280, 160)
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.modulate.a = 0.0
+	_banner.visible = false
+	_root.add_child(_banner)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.add_child(row)
+	_banner_icon = _ItemIcon.new()
+	_banner_icon.custom_minimum_size = Vector2(72, 72)
+	_banner_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_banner_icon)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	_banner_title = UITheme.label("", 30, UITheme.INK, 700)
+	col.add_child(_banner_title)
+	_banner_lines = UITheme.label("", 21, UITheme.INK.lightened(0.15), 500)
+	_banner_lines.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(_banner_lines)
+
+
+func _update_banner(delta: float) -> void:
+	delta = minf(delta, 0.1)        # um engasgo de carregamento não engole a faixa
+	if _banner_t <= 0.0 and not _banner_queue.is_empty():
+		var id: String = _banner_queue.pop_front()
+		var info: Dictionary = Game.ITEM_INFO.get(id, {})
+		_banner_icon.item = id
+		_banner_icon.queue_redraw()
+		_banner_title.text = "Você encontrou: " + Game.item_name(id)
+		_banner_lines.text = "\n".join(PackedStringArray(info.get("lines", [])))
+		_banner_t = BANNER_TIME
+		_banner.visible = true
+		_banner.pivot_offset = _banner.size * 0.5
+	if _banner_t <= 0.0:
+		_banner.visible = false
+		return
+	_banner_t -= delta
+	var age := BANNER_TIME - _banner_t
+	# entra com escala elástica, sai com fade
+	_banner.modulate.a = clampf(minf(age * 5.0, _banner_t / 0.4), 0.0, 1.0)
+	var k := clampf(age / 0.35, 0.0, 1.0)
+	_banner.scale = Vector2.ONE * lerpf(0.85, 1.0, k) * (1.0 + 0.06 * sin(k * PI))
+
+
+## Herói ágil controlado neste aparelho (ou o Sael da IA no solo, para o Pedido).
+func _local_agile() -> Hero:
+	if party == null or party.agile == null or not is_instance_valid(party.agile):
+		return null
+	if party.agile.is_remote:
+		return null
+	return party.agile
+
+
+## Botões de item visíveis? No co-op, quem joga de Hulvar não os vê; no solo
+## jogando de Hulvar eles continuam (mandam o Sael da IA agir, itens.md 7.2).
+func _items_for_me() -> bool:
+	if party == null:
+		return true
+	if Game.mode == Game.Mode.SOLO:
+		return true
+	return party.active != null and party.active.hero_id == "agile"
+
+
+func _update_tools(_delta: float) -> void:
+	var sael := _local_agile()
+	var tools: Object = sael.get("tools") if sael != null else null
+	var tgt := _tool_target(sael, tools)
+	var mine := _items_for_me()
+	# retículo: só para quem joga com o Sael (no solo de Hulvar, mostra a mira do Pedido)
+	if mine and not tgt.is_empty():
+		_reticle.set_target(tgt["pos"], float(tgt["dist"]), float(tgt["range"]), _perfect_window(sael, tools))
+	else:
+		_reticle.clear_target()
+	if touch == null or not touch.visible:
+		return
+	var su := mine and (Game.has_item("arpeu") or Game.has_item("concha"))
+	var sl := mine and Game.has_item("lanterna")
+	var icon := "hook" if not tgt.is_empty() else ("shell" if Game.has_item("concha") else "empty")
+	var lit := Game.lantern_lit()
+	if tools != null and tools.get("lamp_on") is bool:
+		lit = tools.get("lamp_on")
+	var hint := false
+	if tools != null and tools.get("puzzle_hint") is bool:
+		hint = tools.get("puzzle_hint")
+	elif not tgt.is_empty():
+		hint = float(tgt.get("dist", INF)) <= 10.0 and not (str(tgt.get("kind", "")) in ["hulvar", "strong", "hero", "enemy", "silente"])
+	if su != touch.show_use or sl != touch.show_lamp or icon != touch.use_icon or lit != touch.lamp_on or hint != touch.use_hint:
+		touch.show_use = su
+		touch.show_lamp = sl
+		touch.use_icon = icon
+		touch.lamp_on = lit
+		touch.use_hint = su and hint
+		touch.queue_redraw()
+
+
+## Lê o alvo travado do HeroTools sem depender da forma exata: aceita um método
+## `reticle_target()` / `get_target()`, ou a propriedade `target` como Dictionary
+## (`pos`/`point`/`position`/`node`, `kind`, `range`) ou Node3D.
+## Devolve {} sem alvo, ou {pos, dist, range, kind, perfect}.
+func _tool_target(sael: Hero, tools: Object) -> Dictionary:
+	if sael == null or tools == null:
+		return {}
+	var t: Variant = null
+	for m in ["reticle_target", "get_target"]:
+		if tools.has_method(m):
+			t = tools.call(m)
+			break
+	if t == null:
+		for prop in ["target", "locked", "_target"]:
+			var v: Variant = tools.get(prop)
+			if v != null:
+				t = v
+				break
+	var out := {}
+	var node: Variant = null
+	if t is Dictionary:
+		var d: Dictionary = t
+		if d.is_empty():
+			return {}
+		for k in ["pos", "point", "position", "at"]:
+			if d.get(k) is Vector3:
+				out["pos"] = d[k]
+				break
+		node = d.get("node", d.get("target"))
+		out["kind"] = str(d.get("kind", d.get("type", d.get("class", ""))))
+		var rg: Variant = d.get("range", d.get("reach"))
+		if rg != null:
+			out["range"] = float(rg)
+	elif t is Node3D:
+		node = t
+	elif t is Vector3:
+		out["pos"] = t
+	if not out.has("pos") and node is Node3D and is_instance_valid(node):
+		out["pos"] = (node as Node3D).global_position
+	if not out.has("pos"):
+		return {}
+	var p: Vector3 = out["pos"]
+	if not p.is_finite():
+		return {}
+	if node is Hero and str(out.get("kind", "")) == "":
+		out["kind"] = "hulvar"
+	out["dist"] = sael.global_position.distance_to(p)
+	if not out.has("range"):
+		out["range"] = 14.0
+	return out
+
+
+## Janela de soltura perfeita do balanço (θ 35°–55°): o retículo pisca dourado.
+func _perfect_window(sael: Hero, tools: Object) -> bool:
+	for o in [tools, sael]:
+		if o == null:
+			continue
+		if o.has_method("in_perfect_window"):
+			return bool(o.call("in_perfect_window"))
+		var v: Variant = o.get("perfect_window")
+		if v is bool:
+			return v
+	return false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -285,3 +506,116 @@ class _Petals extends Control:
 			draw_colored_polygon(d, Color("8ffff2") if on else Color(1, 1, 1, 0.22))
 			if on:
 				draw_circle(c, 2.5, Color(1, 1, 1, 0.95))
+
+
+
+## Ícone de ferramenta (ao lado das Pedras e na faixa): arpéu, bastão, lanterna ou concha.
+class _ItemIcon extends Control:
+	var item := "arpeu"
+	var pop := 0.0
+	func _process(d: float) -> void:
+		if pop > 0.0:
+			pop = maxf(0.0, pop - d * 1.5)
+			queue_redraw()
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := minf(size.x, size.y) * 0.5
+		var brass := Color(0.83, 0.64, 0.25)
+		var col: Color = Game.ITEM_INFO.get(item, {}).get("color", brass)
+		var k := 1.0 + 0.35 * pop
+		draw_circle(c, r * 0.95 * k, Color(col.r, col.g, col.b, 0.22 + 0.4 * pop))
+		draw_arc(c, r * 0.95 * k, 0, TAU, 32, Color(1, 1, 1, 0.8), 2.0, true)
+		var w := maxf(1.5, r * 0.11)
+		r *= 0.62
+		match item:
+			"arpeu":
+				draw_line(c + Vector2(0, -r), c + Vector2(0, r * 0.5), brass, w, true)
+				draw_arc(c + Vector2(-r * 0.42, r * 0.42), r * 0.42, 0.0, PI * 0.75, 10, brass, w, true)
+				draw_arc(c + Vector2(r * 0.42, r * 0.42), r * 0.42, PI * 0.25, PI, 10, brass, w, true)
+				draw_arc(c + Vector2(0, -r * 0.75), r * 0.3, 0, TAU, 12, Color(0.55, 0.27, 0.2), w * 0.8, true)
+			"bastao":
+				var a := c + Vector2(-r, r)
+				var b := c + Vector2(r, -r)
+				draw_line(a, b, Color(0.93, 0.86, 0.70), w * 1.6, true)
+				draw_line(b.lerp(a, 0.12), b, brass, w * 1.8, true)
+				for f in [0.68, 0.76, 0.84]:
+					var q := b.lerp(a, f)
+					draw_circle(q, w * 0.9, Color(0.55, 0.4, 0.25))
+			"lanterna":
+				draw_circle(c + Vector2(0, r * 0.1), r * 0.8, Color(1.0, 0.86, 0.55, 0.35))
+				draw_rect(Rect2(c + Vector2(-r * 0.45, -r * 0.5), Vector2(r * 0.9, r * 1.15)), Color(1.0, 0.71, 0.35))
+				draw_circle(c + Vector2(0, r * 0.12), r * 0.2, Color(1, 0.97, 0.85))
+				draw_rect(Rect2(c + Vector2(-r * 0.6, -r * 0.62), Vector2(r * 1.2, r * 0.16)), brass)
+				draw_rect(Rect2(c + Vector2(-r * 0.6, r * 0.62), Vector2(r * 1.2, r * 0.16)), brass)
+				draw_arc(c + Vector2(0, -r * 0.62), r * 0.38, PI, TAU, 12, brass, w * 0.8, true)
+			"concha":
+				var pts := PackedVector2Array()
+				for i in 36:
+					var t := float(i) / 35.0
+					var an := t * TAU * 2.6
+					pts.append(c + Vector2(cos(an), sin(an)) * r * (0.12 + 0.88 * t))
+				draw_circle(c, r * 0.95, Color(0.98, 0.8, 0.82))
+				draw_polyline(pts, Color(0.62, 0.36, 0.42), w, true)
+				draw_circle(c + Vector2(r * 0.95, 0), r * 0.22, brass)
+			_:
+				draw_circle(c, r * 0.5, col)
+
+
+## Retículo do arpéu: losango de latão de 24 px projetado no alvo travado, com um
+## arco fino de alcance (cheio = perto; vazio = no limite). Pisca dourado na
+## janela de soltura perfeita.
+class _Reticle extends Control:
+	var _has := false
+	var _world := Vector3.ZERO
+	var _screen := Vector2.ZERO
+	var _shown := 0.0
+	var _dist := 0.0
+	var _range := 14.0
+	var perfect := false
+	var _t := 0.0
+	func set_target(p: Vector3, dist: float, rng: float, is_perfect: bool) -> void:
+		if not _has or p.distance_to(_world) > 3.0:
+			_shown = 0.0        # alvo novo: entra com um pequeno "zoom"
+		_has = true
+		_world = p
+		_dist = dist
+		_range = maxf(rng, 0.1)
+		perfect = is_perfect
+	func clear_target() -> void:
+		_has = false
+		perfect = false
+	func _process(d: float) -> void:
+		_t += d
+		var cam := get_viewport().get_camera_3d()
+		var on := _has and cam != null and not cam.is_position_behind(_world)
+		if on:
+			var sp := cam.unproject_position(_world)
+			_screen = sp if _shown <= 0.0 or _screen.distance_to(sp) > 160.0 else _screen.lerp(sp, 1.0 - exp(-30.0 * d))
+			_shown = minf(1.0, _shown + d * 7.0)
+		else:
+			_shown = maxf(0.0, _shown - d * 8.0)
+		if _shown > 0.0 or on:
+			queue_redraw()
+	func _draw() -> void:
+		if _shown <= 0.0:
+			return
+		var s := clampf(get_viewport_rect().size.y / 720.0, 0.75, 1.6)
+		var a := _shown
+		var col := Color(0.83, 0.64, 0.25)
+		if perfect:
+			var f := 0.5 + 0.5 * sin(_t * 30.0)
+			col = Color(1.0, 0.84, 0.3).lerp(Color(1, 1, 0.85), f)
+		var hr := 12.0 * s * (1.6 - 0.6 * a) * (1.15 if perfect else 1.0)   # 24 px de altura
+		var c := _screen
+		var d := PackedVector2Array([c + Vector2(0, -hr), c + Vector2(hr * 0.8, 0), c + Vector2(0, hr), c + Vector2(-hr * 0.8, 0)])
+		draw_colored_polygon(d, Color(col.r, col.g, col.b, 0.35 * a))
+		d.append(d[0])
+		draw_polyline(d, Color(0.2, 0.12, 0.08, 0.5 * a), 4.5 * s, true)
+		draw_polyline(d, Color(col.r, col.g, col.b, a), 2.5 * s, true)
+		draw_circle(c, 2.5 * s, Color(1, 1, 1, 0.95 * a))
+		# arco de alcance
+		var rr := hr + 9.0 * s
+		var frac := clampf(1.0 - _dist / _range, 0.0, 1.0)
+		draw_arc(c, rr, 0, TAU, 40, Color(1, 1, 1, 0.18 * a), 1.5 * s, true)
+		if frac > 0.01:
+			draw_arc(c, rr, -PI * 0.5, -PI * 0.5 + TAU * frac, 40, Color(col.r, col.g, col.b, 0.9 * a), 2.0 * s, true)
