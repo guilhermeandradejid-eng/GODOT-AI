@@ -952,6 +952,8 @@ func mount_on(strong: Hero) -> void:
 
 
 func dismount(push := Vector3.ZERO) -> void:
+	if not hook.is_empty():
+		_hook_cleanup()
 	if mount != null:
 		mount.rider = null
 		mount.visual.set_glyph(false)
@@ -1028,6 +1030,11 @@ func _st_ride(delta: float) -> void:
 	if intent.take("action"):
 		_spin()
 		visual.set_state("ride")
+	# no cesto: Reboque, Lançar a Luz e puxar seguem sem sair do RIDE
+	if not hook.is_empty():
+		_hook_tick(delta)
+	elif _use():
+		return
 
 
 # ------------------------------------------------------------------- launch / grind
@@ -1038,6 +1045,7 @@ func launch(v: Vector3, lock := 0.35) -> void:
 	velocity = v
 	set_state(S.LAUNCH)
 	state_t = -lock
+	_launch_t = 0.0
 	air_jumps = 1
 	air_spin = true
 	visual.restart_state("launch" if visual.has_state("launch") else ("double_jump" if hero_id == "agile" else "jump"))
@@ -1046,7 +1054,15 @@ func launch(v: Vector3, lock := 0.35) -> void:
 
 
 func _st_launch(delta: float) -> void:
+	_launch_t += delta
 	velocity.y -= cfg["gravity"] * delta
+	# Canhão do Ninho → argola: depois de 0,25 s o USAR pode prender
+	if tools != null:
+		if _launch_t >= 0.25:
+			if _use() and state != S.LAUNCH:
+				return
+		else:
+			intent.take("use")
 	_fall_speed = velocity.y
 	move_and_slide()
 	if state_t > 0.0 and velocity.y < 0.0:
@@ -1095,7 +1111,7 @@ func _st_grind(delta: float) -> void:
 
 # ------------------------------------------------------------------- water
 func _check_water() -> void:
-	if state in [S.RIDE, S.GRIND, S.CUTSCENE, S.LAUNCH]:
+	if state in [S.RIDE, S.GRIND, S.CUTSCENE, S.LAUNCH, S.HOOK, S.SWING, S.ZIPLINE]:
 		return
 	var space := get_world_3d().direct_space_state
 	_water_q.position = global_position + Vector3.UP * 0.35
@@ -1203,6 +1219,8 @@ func _st_cutscene(delta: float) -> void:
 
 func add_updraft(strength: float) -> void:
 	updraft = maxf(updraft, strength)
+	if tools != null:
+		tools.recharge_lufada()
 
 
 func is_heavy() -> bool:

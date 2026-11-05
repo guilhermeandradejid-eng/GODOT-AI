@@ -84,15 +84,15 @@ HAIR_HI = hexcol("7A4E32")     # reflexo
 HAIR_DK = hexcol("35211A")     # raiz / nuca
 BROW = hexcol("3A2416")
 LASH = hexcol("2A1810")        # linha da pálpebra superior
-MOUTH = hexcol("5E2220")
+MOUTH = hexcol("4A1A18")
 JACKET = hexcol("7A4A2A")
 JACKET_DK = hexcol("4E2E1A")
 STRAP = hexcol("3A2418")
 SHEARLING = hexcol("F2E3C6")
 SHEAR_SH = hexcol("DCC8A4")    # lã na sombra (miolo dos tufos)
 SHIRT = hexcol("EFE0C0")
-TROUSERS = hexcol("2B3A87")
-TROUSERS_DK = hexcol("223070")
+TROUSERS = hexcol("34466E")    # fix pass: warmer slate (separates from Hulvar's body blue)
+TROUSERS_DK = hexcol("283757")
 BOOT = hexcol("3A2418")
 BOOT_CUFF = hexcol("4E2E1A")
 SOLE = hexcol("C8935A")
@@ -103,6 +103,10 @@ BRASS_D = hexcol("9A6A22")
 WOOD = hexcol("E6C38F")
 WOOD_DK = hexcol("C99A5E")
 INDIGO = hexcol("2B3A87")
+DECK = hexcol("26305F")         # fix pass: dark outward deck (the cream deck matched the sand)
+GOGGLE_LENS = hexcol("E89A2E")  # âmbar
+GOGGLE_STRAP = hexcol("3A2418")
+NOSE_HI = hexcol("F2BE96")
 
 BIG = 1.0e3
 
@@ -156,7 +160,7 @@ def h2w(p) -> np.ndarray:
 HEAD_C = V3(0, -0.012, 0.822)          # crânio
 HEAD_R = V3(0.158, 0.150, 0.152)
 JAW_C = V3(0, -0.040, 0.742)
-JAW_R = V3(0.126, 0.110, 0.084)
+JAW_R = V3(0.112, 0.106, 0.086)         # fix pass: jaw ~11% narrower
 EYE_C_L = V3(0.054, -0.133, 0.784)     # feedback 2: smaller eyes (x0.65), a bit lower, ~1 eye-width apart
 EYE_R = 0.030
 EYE_SQ = (0.88, 1.16, 0.80)
@@ -548,11 +552,13 @@ def hp(u, v, w, r=1.0) -> np.ndarray:
 
 def build_head(q: float):
     head = XShape("SaelHead", "skin", voxel=0.0030 * q, tris=1420, color_soft=0.003, weight_sigma=0.02,
-                  ao_strength=0.40)
+                  ao_strength=0.14)          # fix pass: face AO clamped (no forehead stripes / smudges)
     head.add(ellipsoid(HEAD_C, HEAD_R), "head", SKIN, k=0.0)
     head.add(ellipsoid(JAW_C, JAW_R), "head", SKIN, k=0.05)
-    head.add_mirrored(ellipsoid((0.084, -0.088, 0.738), (0.066, 0.058, 0.054)), "head", SKIN, k=0.045)   # cheeks
-    head.add(ellipsoid((0.0, -0.104, 0.690), (0.046, 0.036, 0.032)), "head", SKIN, k=0.035)              # chin
+    head.add_mirrored(ellipsoid((0.075, -0.090, 0.742), (0.058, 0.056, 0.052)), "head", SKIN, k=0.045)   # cheeks
+    head.add(ellipsoid((0.0, -0.110, 0.684), (0.034, 0.032, 0.030)), "head", SKIN, k=0.032)              # chin point
+    head.add_mirrored(ellipsoid((0.062, -0.118, 0.752), (0.026, 0.016, 0.014), (0, 0, -18)), "head", SKIN,
+                      k=0.020)                                                                            # cheekbones
     for sx in (1.0, -1.0):          # lower lids: the cheeks push up under the eyes
         c, R = eye_basis(sx)
         lid_c = c + R @ V3(0.0013 * sx, -0.036, 0.004)
@@ -573,6 +579,7 @@ def build_head(q: float):
     for sx in (1.0, -1.0):
         head.paint(ellipsoid(mx((0.094, -0.116, 0.734), sx), (0.032, 0.030, 0.021)), BLUSH, soft=0.016)
     head.paint(ellipsoid(nose_p + V3(0, -0.008, 0.002), (0.011, 0.008, 0.009)), BLUSH, soft=0.010)
+    head.paint(ellipsoid(nose_p + V3(0, -0.012, 0.016), (0.006, 0.006, 0.014)), NOSE_HI, soft=0.006)   # bridge light
 
     # ---- face lines: upper lid line (with a small outer flick) + open smile (flush plates)
     face = XShape("SaelFace", "skin", voxel=0.0012 * q, tris=560, color_soft=0.002, weight_sigma=0.02,
@@ -593,14 +600,18 @@ def build_head(q: float):
         th = 0.0030 * (1.0 - 0.40 * np.clip(np.abs(u), 0.0, 1.0) ** 2)
         return np.maximum(np.maximum(np.abs(P[:, 2] - line) - th, (np.abs(u) - 1.0) * mw), P[:, 1] + 0.08)
     mouth = Prim(mouth_region, (-0.04, -0.25, 0.68), (0.04, -0.08, 0.74))
-    face.add(plate(base, mouth, lift=0.0013, sink=0.0030, k=0.0008), "head", MOUTH, k=0.0)
+    # fix pass: a continuous darker smirk line (~2.5 cm), his left corner up
+    del mouth
+    mpts = surface_line(base, [(-0.0125, 0.7045), (-0.004, 0.7025), (0.005, 0.7030), (0.0120, 0.7065), (0.0155, 0.7105)],
+                        lift=0.0004)
+    face.add(stroke(mpts, [0.0019, 0.0024, 0.0024, 0.0021, 0.0015], 0.0015), "head", MOUTH, k=0.0)
     face.detail(everywhere(), 0.5)
 
     # ---- brows: thick, the inner end a little lower (determined, friendly)
     brows = XShape("SaelBrows", "hair", voxel=0.0016 * q, tris=200, color_soft=0.002, weight_sigma=0.02,
                    ao_strength=0.0)
     for sx in (1.0, -1.0):
-        pts = surface_line(base, [(0.022 * sx, 0.832), (0.052 * sx, 0.846), (0.083 * sx, 0.843)], lift=0.0010)
+        pts = surface_line(base, [(0.022 * sx, 0.839), (0.050 * sx, 0.8475), (0.083 * sx, 0.8435)], lift=0.0010)
         brows.add(stroke(pts, [0.0060, 0.0066, 0.0040], 0.003), "head", BROW, k=0.0)
 
     face.cull_by = [head]
@@ -673,9 +684,6 @@ HAIR_LOCKS = [
      [0.040, 0.036, 0.024, 0.004]),
     ([(-0.06, -0.68, 0.74, 1.12), (-0.12, -0.90, 0.56, 1.18), (-0.22, -0.92, 0.42, 1.13)], [0.032, 0.024, 0.004]),
     ([(0.46, -0.64, 0.66, 1.11), (0.54, -0.78, 0.52, 1.15), (0.64, -0.70, 0.40, 1.11)], [0.028, 0.020, 0.004]),
-    # cowlick on top (curls back)
-    ([(0.06, -0.34, 0.95, 1.18), (0.10, -0.26, 1.00, 1.34), (0.18, -0.06, 1.00, 1.46), (0.26, 0.16, 0.96, 1.44)],
-     [0.018, 0.014, 0.009, 0.004]),
 ]
 TUFT_PATH = [(0.00, 0.50, 0.86, 1.12), (0.02, 0.84, 0.70, 1.34), (0.04, 0.98, 0.66, 1.70)]
 TUFT_SIDE = [(0.34, 0.98, 0.56, 1.58), (-0.30, 0.98, 0.50, 1.56)]
@@ -687,10 +695,10 @@ def tuft_points():
 
 def build_hair(q: float, head_base):
     hair = XShape("SaelHair", "hair", voxel=0.0030 * q, tris=1450, color_soft=0.004, weight_sigma=0.02,
-                  ao_strength=0.45)
+                  ao_strength=0.18)
     hair.add(ellipsoid(HEAD_C, HEAD_R + 0.013), "head", HAIR, k=0.0)
     hair.add(ellipsoid(HEAD_C + V3(0, 0.016, 0.040), (0.148, 0.152, 0.136)), "head", HAIR, k=0.03)
-    hair.clip(hairline_prim(), k=0.010)
+    hair.clip(hairline_prim(), k=0.018)
     for path, radii in HAIR_LOCKS:
         hair.add(lock(path, radii, flat=0.46), "head", HAIR, k=0.007)
     # soft light on the top-front, darker roots at the nape
@@ -700,7 +708,7 @@ def build_hair(q: float, head_base):
     hair.cull_margin = 0.002
 
     tuft = XShape("SaelTuft", "hair", voxel=0.0026 * q, tris=260, color_soft=0.004, weight_sigma=0.03,
-                  ao_strength=0.25)
+                  ao_strength=0.12)
     tp = tuft_points()
     nb = tuple(nrm(tp[1] - HEAD_C))
     tuft.add(blade([tp[0], tp[1], tp[2]], [0.040, 0.030, 0.004], flat=0.46, normal=nb), "hair_B_2", HAIR, k=0.0)
