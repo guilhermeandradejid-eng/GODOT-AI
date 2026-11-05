@@ -585,12 +585,12 @@ def build_head(q: float):
         ring = ring.union(round_cone(flick_a, flick_b, 0.0032, 0.0015), 0.002)
         ring = tight(ring, c - 0.06, c + 0.06)
         face.add(plate(base, ring, lift=0.0020, sink=0.0034, k=0.0012), "head", LASH, k=0.0)
-    mz, mw = 0.703, 0.0260
+    mz, mw = 0.703, 0.0290
 
     def mouth_region(P):
         u = (P[:, 0] - 0.0010) / mw
-        line = mz + 0.0095 * u * u + 0.0024 * u + 0.0020 * np.maximum(u - 0.55, 0.0) ** 2 * 4.0
-        th = 0.0026 * (1.0 - 0.40 * np.clip(np.abs(u), 0.0, 1.0) ** 2)
+        line = mz + 0.0050 * u * u + 0.0016 * u + 0.0030 * np.maximum(u - 0.60, 0.0) ** 2 * 6.0
+        th = 0.0022 * (1.0 - 0.45 * np.clip(np.abs(u), 0.0, 1.0) ** 2)
         return np.maximum(np.maximum(np.abs(P[:, 2] - line) - th, (np.abs(u) - 1.0) * mw), P[:, 1] + 0.08)
     mouth = Prim(mouth_region, (-0.04, -0.25, 0.68), (0.04, -0.08, 0.74))
     face.add(plate(base, mouth, lift=0.0010, sink=0.0030, k=0.0008), "head", MOUTH, k=0.0)
