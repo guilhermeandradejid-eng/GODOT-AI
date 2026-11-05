@@ -74,3 +74,11 @@ SOFTWARE.
 ## CC0 1.0 Universal (ambientCG e texturas procedurais)
 
 Dedicado ao domínio público — <https://creativecommons.org/publicdomain/zero/1.0/>.
+
+## Texturas de detalhe dos heróis (`game/assets/textures/materials/`)
+
+- **leather, knit, canvas, planks** — escaneadas do [ambientCG](https://ambientcg.com) (Leather030, Fabric018,
+  Fabric036, Planks022), licença **CC0 1.0 Universal**, obtidas pelo espelho
+  [PatrickJnr/cc0-texture-pack](https://github.com/PatrickJnr/cc0-texture-pack) (README: "contains assets from
+  ambientCG.com, licensed under CC0 1.0 Universal"). Convertidas para detalhe em tons de cinza, 512 px, sem emendas.
+- **denim, wool, rubber, brass** — texturas procedurais próprias deste projeto (CC0).

@@ -47,6 +47,15 @@ const DEFS := {
 		"spring_off": {"anchor": ["brace", "slam", "surf", "celebrate"], "nest": ["brace", "slam"]},
 		## esmalte de porcelana: brilho especular e contraluz mais fortes
 		"materials": {"*": {"shadow_tint": Color(0.78, 0.71, 0.82)}, "stone": {"sheen": 0.35, "rim_strength": 1.1}},
+		## texturas de detalhe CC0 (triplanar na pose de repouso): tábuas pintadas de casco e latão martelado
+		"details": {
+			"stone": {"albedo": "res://game/assets/textures/materials/planks_albedo.png",
+				"normal": "res://game/assets/textures/materials/planks_normal.png",
+				"scale": 1.5, "mean": 0.58, "albedo_mix": 0.5, "normal_strength": 0.55},
+			"metal": {"albedo": "res://game/assets/textures/materials/brass_albedo.png",
+				"normal": "res://game/assets/textures/materials/brass_normal.png",
+				"scale": 6.0, "mean": 0.58, "albedo_mix": 0.4, "normal_strength": 0.5},
+		},
 		"aliases": {"swim": "fall", "flop": "slam", "sit": "idle", "spin": "ram"},
 		"walk_stride": 0.62, "run_stride": 2.9, "max_cps": 2.6,
 		## galope: punho D, punho E, pé D, pé E

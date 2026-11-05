@@ -64,9 +64,11 @@ void fragment() {
 		vec3 w = pow(abs(rn), vec3(detail_sharp));
 		w /= max(w.x + w.y + w.z, 1e-4);
 		vec3 p = v_rest_pos * detail_scale;
-		vec2 ux = p.zy;
-		vec2 uy = p.xz;
-		vec2 uz = p.xy;
+		// v da textura cresce para baixo na Godot: inverte para a imagem ficar em pé e o
+		// mapa normal OpenGL (+Y) iluminar o relevo do lado certo
+		vec2 ux = vec2(p.z, -p.y);
+		vec2 uy = vec2(p.x, -p.z);
+		vec2 uz = vec2(p.x, -p.y);
 		vec3 ta = texture(detail_albedo, ux).rgb * w.x + texture(detail_albedo, uy).rgb * w.y
 			+ texture(detail_albedo, uz).rgb * w.z;
 		float lum = dot(ta, vec3(0.299, 0.587, 0.114));

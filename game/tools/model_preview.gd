@@ -102,6 +102,9 @@ static func apply_hero_materials(root: Node, role: String) -> void:
 		var hv := HeroVisual.new()
 		hv.def = HeroDefs.def_of(role)
 		hv.mesh = mi as MeshInstance3D
+		var dets: Dictionary = hv._details()
+		if not dets.is_empty():
+			hv._add_rest_attributes(dets.keys())
 		hv._setup_materials()
 		for m in hv.eye_materials:
 			m.set_shader_parameter("lid", float(hv.def.get("base_lid", 0.06)))
