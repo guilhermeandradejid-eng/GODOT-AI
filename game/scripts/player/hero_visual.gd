@@ -62,8 +62,9 @@ func _ready() -> void:
 	mesh = _find(model, "MeshInstance3D") as MeshInstance3D
 	anim = _find(model, "AnimationPlayer") as AnimationPlayer
 	base_lid = float(def.get("base_lid", 0.06))
-	if def.has("detail"):
-		_add_rest_attributes(def["detail"].get("surfaces", []))
+	var dets := _details()
+	if not dets.is_empty():
+		_add_rest_attributes(dets.keys())
 	_setup_materials()
 	_setup_loops()
 	_setup_tree()
@@ -131,11 +132,41 @@ func _setup_materials() -> void:
 				mat.next_pass = outline
 				body_materials.append(mat)
 			"hair":
+				# brilho anisotrópico em faixa (precisa do UV0.v ao longo das mechas)
 				mat.shader = TOON
-				mat.set_shader_parameter("sheen", 0.5)
+				mat.set_shader_parameter("sheen", 0.12)
+				mat.set_shader_parameter("hair_band", 0.9)
 				mat.set_shader_parameter("rim_strength", 0.85)
 				mat.set_shader_parameter("sss_strength", 0.1)
 				mat.next_pass = outline
+				body_materials.append(mat)
+			"leather":
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 0.35)
+				mat.set_shader_parameter("rim_strength", 0.9)
+				mat.set_shader_parameter("sss_strength", 0.06)
+				mat.next_pass = outline
+				body_materials.append(mat)
+			"wool", "shirt", "denim":
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 0.04)
+				mat.set_shader_parameter("rim_strength", 0.75)
+				mat.set_shader_parameter("sss_strength", 0.2 if base == "wool" else 0.12)
+				mat.next_pass = outline
+				body_materials.append(mat)
+			"sole":
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 0.1)
+				mat.set_shader_parameter("rim_strength", 0.5)
+				mat.set_shader_parameter("sss_strength", 0.0)
+				mat.next_pass = outline
+				body_materials.append(mat)
+			"glass":
+				# lentes dos óculos: âmbar, brilho forte, um pouco de luz própria
+				mat.shader = TOON
+				mat.set_shader_parameter("sheen", 1.2)
+				mat.set_shader_parameter("rim_strength", 1.3)
+				mat.set_shader_parameter("vertex_glow", 0.6)
 				body_materials.append(mat)
 			"scarf":
 				# tecido fino contra o sol: transluz quente nas bordas e contraluz forte
@@ -157,8 +188,8 @@ func _setup_materials() -> void:
 				mat.shader = TOON
 				mat.next_pass = outline
 				body_materials.append(mat)
-		var det: Dictionary = def.get("detail", {})
-		if base in det.get("surfaces", []):
+		var det: Dictionary = _details().get(base, {})
+		if not det.is_empty():
 			mat.set_shader_parameter("use_detail", true)
 			for k in ["albedo", "normal"]:
 				if det.has(k) and ResourceLoader.exists(String(det[k])):
@@ -172,6 +203,16 @@ func _setup_materials() -> void:
 		for k in overrides.get(base, {}):
 			mat.set_shader_parameter(k, overrides[base][k])
 		mesh.set_surface_override_material(i, mat)
+
+
+## Texturas de detalhe por superfície: HeroDefs "details" {superfície: {albedo, normal, scale,
+## albedo_mix, mean, normal_strength}}; aceita também o formato antigo "detail" {surfaces: [...], ...}.
+func _details() -> Dictionary:
+	var out: Dictionary = def.get("details", {}).duplicate()
+	var old: Dictionary = def.get("detail", {})
+	for s in old.get("surfaces", []):
+		out[s] = old
+	return out
 
 
 ## Grava a posição/normal de repouso de cada vértice em CUSTOM0/CUSTOM1 nas superfícies

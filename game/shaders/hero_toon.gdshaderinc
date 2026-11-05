@@ -35,6 +35,14 @@ varying vec3 v_rest_pos;
 varying vec3 v_rest_nrm;
 varying vec3 v_skin_nrm;
 
+// Brilho de cabelo anisotrópico (Kajiya-Kay, dois lóbulos): a direção do fio vem do UV0.v
+// (0 na raiz → 1 na ponta de cada mecha, gravado no Blender) por derivadas de tela.
+uniform float hair_band = 0.0;              // 0 desliga
+uniform vec3 hair_band_color : source_color = vec3(1.0, 0.86, 0.7);
+uniform float hair_shift = 0.12;            // desloca o lóbulo primário em direção à raiz
+uniform float hair_exp = 80.0;
+varying vec3 v_strand;
+
 void vertex() {
 	v_rest_pos = CUSTOM0.xyz;
 	v_rest_nrm = CUSTOM1.xyz;
@@ -79,6 +87,20 @@ void fragment() {
 		vec3 nview = normalize((VIEW_MATRIX * MODEL_MATRIX * vec4(rdn, 0.0)).xyz);
 		NORMAL = normalize(mix(NORMAL, nview, detail_normal_strength));
 	}
+	if (hair_band > 0.0) {
+		// direção em que UV.y cresce (bitangente pelo "cotangent frame" de derivadas de tela)
+		vec3 dp1 = dFdx(VERTEX);
+		vec3 dp2 = dFdy(VERTEX);
+		vec2 duv1 = dFdx(UV);
+		vec2 duv2 = dFdy(UV);
+		vec3 dp2perp = cross(dp2, NORMAL);
+		vec3 dp1perp = cross(NORMAL, dp1);
+		vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+		float bl = length(b);
+		v_strand = bl > 1e-8 ? b / bl : vec3(0.0);
+	} else {
+		v_strand = vec3(0.0);
+	}
 	ALBEDO = base;
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
@@ -104,4 +126,14 @@ void light() {
 	// soft fur sheen
 	vec3 h = normalize(LIGHT + VIEW);
 	SPECULAR_LIGHT += pow(clamp(dot(NORMAL, h), 0.0, 1.0), 12.0) * sheen * LIGHT_COLOR / PI * ATTENUATION;
+	if (hair_band > 0.0 && dot(v_strand, v_strand) > 0.5) {
+		vec3 t1 = normalize(v_strand + NORMAL * hair_shift);
+		vec3 t2 = normalize(v_strand - NORMAL * hair_shift * 1.6);
+		float th1 = dot(t1, h);
+		float th2 = dot(t2, h);
+		float k1 = pow(sqrt(max(0.0, 1.0 - th1 * th1)), hair_exp);
+		float k2 = pow(sqrt(max(0.0, 1.0 - th2 * th2)), hair_exp * 0.35) * 0.35;
+		float lit_side = smoothstep(-0.1, 0.3, ndl) * ATTENUATION;
+		SPECULAR_LIGHT += (hair_band_color * k1 + ALBEDO * k2 * 2.0) * hair_band * lit_side * LIGHT_COLOR / PI;
+	}
 }
