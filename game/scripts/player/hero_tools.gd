@@ -1005,7 +1005,10 @@ func _update_lamp(delta: float) -> void:
 	var flick := 1.0 + 0.06 * sin(_flick_t * TAU * 3.0) * (0.7 + 0.3 * sin(_flick_t * 7.7))
 	light.light_energy = 1.8 * (1.0 + 0.6 * hours / 3.0) * flick
 	light.omni_range = r + 2.0
-	_halo.scale = Vector3.ONE * (0.5 + 0.05 * flick)
+	_halo.scale = Vector3.ONE * (0.95 + 0.05 * flick)
+	# brasas ocasionais saindo da lanterna
+	if Engine.get_physics_frames() % 24 == 0 and Fx.has_method("burst"):
+		Fx.burst("sparkle", light.global_position + Vector3.UP * 0.05, LAMP_COLOR, 0.22)
 	if Game.has_method("set_lantern"):
 		Game.call("set_lantern", light.global_position, r)
 	else:

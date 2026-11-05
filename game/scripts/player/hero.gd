@@ -277,6 +277,8 @@ func set_state(s: int) -> void:
 	var was := state
 	state = s
 	state_t = 0.0
+	if was == S.ZIPLINE:
+		Sfx.loop("cable_hum", false)
 	if was in [S.HOOK, S.SWING, S.ZIPLINE] and not (s in [S.HOOK, S.SWING, S.ZIPLINE]):
 		_hook_cleanup()
 	if s == S.GLIDE:
@@ -1523,7 +1525,7 @@ func start_zipline(rail, offset := 0.0, entry := 0.0) -> void:
 		tools.rope_active = true
 		tools.rope_attached = true
 	play_clip("swing", "fall")
-	Sfx.play_at("cable_hum" if Sfx.has("cable_hum") else "grind_start", global_position)
+	Sfx.play_at("grind_start", global_position)
 	Fx.burst("ring_light", global_position + Vector3.UP * 1.1, Color(0.4, 1.0, 0.9), 0.6)
 
 
@@ -1569,7 +1571,7 @@ func _st_zipline(delta: float) -> void:
 		facing = atan2(tan.x, tan.z)
 	if tools != null:
 		tools.rope_to = cp
-	Sfx.loop("surf", true, global_position, -18.0 + zip_speed * 0.4)
+	Sfx.loop("cable_hum", true, global_position, -18.0 + zip_speed * 0.4)
 	if jump_buffer > 0.0:
 		jump_buffer = 0.0
 		zipline = null
