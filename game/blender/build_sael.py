@@ -241,6 +241,9 @@ def make_rig() -> Rig:
             B(f"upperarm_{s}", t(mx(SHOULDER_L, sx)), t(mx(ELBOW_L, sx)), "chest"),
             B(f"forearm_{s}", t(mx(ELBOW_L, sx)), t(mx(WRIST_L, sx)), f"upperarm_{s}"),
             B(f"hand_{s}", t(mx(WRIST_L, sx)), t(mx(HAND_TIP_L, sx)), f"forearm_{s}"),
+            # mitten fingers (one bone): curls around the item axis in the item clips
+            B(f"fingers_{s}", t(mx(WRIST_L + HAND_DIR * 0.044, sx)), t(mx(WRIST_L + HAND_DIR * 0.086, sx)),
+              f"hand_{s}"),
             B(f"thigh_{s}", t(mx(HIP_L, sx)), t(mx(KNEE_L, sx)), "hips"),
             B(f"shin_{s}", t(mx(KNEE_L, sx)), t(mx(ANKLE_L, sx)), f"thigh_{s}"),
             B(f"foot_{s}", t(mx(ANKLE_L, sx)), t(mx(TOE_L, sx)), f"shin_{s}"),
@@ -837,10 +840,10 @@ def build_body(q: float):
         palm = W + hd * 0.030
         skin.add(ellipsoid(palm, (0.029, 0.023, 0.030), Rh), f"hand_{s_}", SKIN_HAND, k=0.012)
         fing = W + hd * 0.057 + V3(0, -0.004, 0)
-        skin.add(ellipsoid(fing, (0.027, 0.020, 0.024), Rh), f"hand_{s_}", SKIN_HAND, k=0.012)
+        skin.add(ellipsoid(fing, (0.027, 0.020, 0.024), Rh), f"fingers_{s_}", SKIN_HAND, k=0.012)
         for fx in (-0.013, 0.0, 0.013):
             fp = fing + Rh @ V3(fx * sx, 0.0, 0.018)
-            skin.add(sphere(fp, 0.0100), f"hand_{s_}", SKIN_HAND, k=0.006)
+            skin.add(sphere(fp, 0.0100), f"fingers_{s_}", SKIN_HAND, k=0.006)
         th0 = W + hd * 0.020 + V3(-0.006 * sx, -0.022, 0.0)
         th1 = th0 + V3(0.003 * sx, -0.014, -0.020)
         skin.add(round_cone(th0, th1, 0.0110, 0.0094), f"hand_{s_}", SKIN_HAND, k=0.008)
