@@ -11,6 +11,8 @@ const URL = process.env.URL || 'http://localhost:4173/';
   const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FAIL ') + msg); if (!c) process.exitCode = 1; };
   ok(await p.evaluate(() => document.body.classList.contains('touch')), 'detecta toque');
   await p.screenshot({ path: 'shots/touch_menu.png' });
+  // a renderização por software é muito lenta; congela o loop e avança com __step
+  await p.evaluate(() => { __game.freeze = true; });
   await p.tap('#start-btn');
   await p.waitForTimeout(500);
   const r = await p.evaluate(() => {
