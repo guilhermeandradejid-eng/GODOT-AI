@@ -159,3 +159,33 @@ h3 { margin: 6px 0 10px; font-size: 20px; text-transform: uppercase; letter-spac
   #tickets { right: 120px; }
   #clock { width: 110px; } #clock-time { font-size: 28px; }
 }
+
+/* balões de fala */
+.bubble {
+  position: absolute; left: 0; top: 0; max-width: 220px; padding: 6px 12px; font-weight: 600; font-size: 14px; line-height: 1.15; text-align: center;
+  background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); white-space: nowrap;
+  animation: bubbleIn .35s cubic-bezier(.3,1.8,.5,1);
+}
+.bubble::after { content: ''; position: absolute; left: 50%; bottom: -11px; width: 14px; height: 14px; background: inherit; border-right: 3px solid var(--ink); border-bottom: 3px solid var(--ink); transform: translateX(-50%) rotate(45deg); }
+.bubble.angry { background: #ffe1d6; animation: bubbleIn .35s cubic-bezier(.3,1.8,.5,1), jitter .18s .35s infinite; font-size: 15px; }
+.bubble.happy { background: #d6f7e1; }
+.bubble.sad { background: #e3e7f0; color: #4a5370; }
+.bubble.machine { background: #1d2540; color: #7fe3ff; font-family: 'Courier New', monospace; font-weight: 700; border-color: #7fe3ff; box-shadow: 0 4px 0 #0e1326; }
+.bubble.machine::after { border-color: #7fe3ff; }
+.bubble.tech { background: #fff6cc; }
+.bubble.out { animation: bubbleOut .25s forwards; }
+@keyframes bubbleIn { from { scale: 0; } }
+@keyframes bubbleOut { to { scale: 0; opacity: 0; } }
+@keyframes jitter { 25% { rotate: -2deg; } 75% { rotate: 2deg; } }
+
+.coin { position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; z-index: 7; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, #fff6b0, #ffd23f 45%, #e09a00); border: 2.5px solid var(--ink); box-shadow: inset -2px -3px 0 rgba(0,0,0,.15); }
+
+/* últimos 10 segundos */
+body.final #clock { animation: pulse .5s infinite; background: #b0122b; }
+body.final::after { content: ''; position: fixed; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(255, 40, 40, .45); animation: finalPulse 1s infinite; z-index: 3; }
+@keyframes finalPulse { 50% { opacity: .35; } }
+
+/* menu deixa a cidade aparecer atrás */
+#menu { background: linear-gradient(90deg, rgba(20,26,51,.55), rgba(20,26,51,.15)); backdrop-filter: none; }
+#menu .panel { background: rgba(255, 250, 240, .96); }

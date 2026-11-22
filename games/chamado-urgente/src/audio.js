@@ -52,6 +52,9 @@ export const sfx = {
   spray: () => { noise(0.1, 0.06, 2500); },
   countdown: (last) => { tone(last ? 880 : 440, last ? 0.4 : 0.15, 'square', 0.12); },
   whistle: () => { tone(1500, 0.5, 'sine', 0.15, 400); },
+  coin: (i = 0) => { tone(988 + i * 40, 0.06, 'square', 0.05); tone(1319 + i * 40, 0.09, 'square', 0.05, 0, 0.05); },
+  star: (i = 0) => { [659, 784, 988].forEach((f, k) => tone(f * (1 + i * 0.25), 0.18, 'triangle', 0.14, 0, k * 0.05)); noise(0.2, 0.08, 3000); },
+  bonk: () => { tone(220, 0.12, 'square', 0.12, -120); noise(0.1, 0.1, 400); },
 };
 
 // Música de fundo: loop simples de bossa/lo-fi chiptune gerado em tempo real.

@@ -4,6 +4,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { City } from './city.js';
 
 import { buildLevel } from './level.js';
 import { FX } from './fx.js';
@@ -15,25 +18,26 @@ import { devices, pollGamepads, keyPressed, endFrame } from './input.js';
 import { sfx, initAudio, startMusic, toggleMusic } from './audio.js';
 import { ROUND_SECONDS, STARS, TICKETS, PROBLEMS, PLAYER_COLORS, TEAM_SCALE } from './config.js';
 import { iconImg, ICONS } from './icons.js';
+import { LINES, pick } from './lines.js';
 
 const params = new URLSearchParams(location.search);
 
 // ------------------------------------------------------------------ render
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.0;
 document.getElementById('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = makeBackground();
+scene.fog = new THREE.Fog(0xd2ecff, 80, 340);
 
-const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.5, 200);
+const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.5, 1400);
 const camTarget = new THREE.Vector3(0, 0, 0.9);
-const CAM_PITCH = THREE.MathUtils.degToRad(57);
+const CAM_PITCH = THREE.MathUtils.degToRad(55);
 
 const hemi = new THREE.HemisphereLight(0xe4eeff, 0x7a6a58, 1.35);
 scene.add(hemi);
@@ -42,18 +46,35 @@ sun.position.set(-9, 20, 12);
 sun.target.position.set(0, 0, 0);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 13, bottom: -13, near: 1, far: 60 });
+Object.assign(sun.shadow.camera, { left: -19, right: 19, top: 19, bottom: -19, near: 1, far: 80 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.shadow.radius = 3;
 scene.add(sun, sun.target);
-const windowLight = new THREE.DirectionalLight(0xbfe0ff, 0.6);
-windowLight.position.set(2, 6, -14);
-scene.add(windowLight);
+// luzes do teto do escritório (acendem no fim do dia); alcance curto para não iluminar a rua
+const officeLight = new THREE.SpotLight(0xfff0d8, 0, 34, Math.PI / 3.2, 0.6, 0);
+officeLight.position.set(0, 22, 0); officeLight.target.position.set(0, 0, 0);
+scene.add(officeLight, officeLight.target);
+const lights = { sun, hemi, officeLight };
+
+// qualidade: alta = AO + contorno + bloom; baixa = só bloom
+const QUALITY = params.get('q') || localStorage.getItem('cu-quality') || 'high';
 
 const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
 const composer = new EffectComposer(renderer, rt);
 composer.addPass(new RenderPass(scene, camera));
+let gtao = null;
+if (!params.has('noao')) {
+  gtao = new GTAOPass(scene, camera, window.innerWidth, window.innerHeight);
+  gtao.updateGtaoMaterial({ radius: 0.7, distanceExponent: 1.4, thickness: 1.5, scale: 1.2, samples: 12 });
+  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+  gtao.blendIntensity = 0.85;
+  composer.addPass(gtao);
+}
+const outline = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+Object.assign(outline, { edgeStrength: 3, edgeGlow: 0, edgeThickness: 1 });
+outline.visibleEdgeColor.set(0xfff2b0); outline.hiddenEdgeColor.set(0x3a3a50);
+composer.addPass(outline);
 // limpa pixels NaN/Inf (brilhos especulares extremos) antes do bloom, senão viram "manchas" brancas
 composer.addPass(new ShaderPass({
   uniforms: { tDiffuse: { value: null } },
@@ -63,30 +84,47 @@ composer.addPass(new ShaderPass({
       if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0);
       gl_FragColor = vec4(clamp(c.rgb, 0.0, 16.0), c.a); }`,
 }));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.92);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.55, 0.9);
 if (!params.has('nobloom')) composer.addPass(bloom);
+// gradação de cor: saturação, calor do fim de tarde, vinheta e alerta vermelho (fogo)
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, sat: { value: 1.12 }, warm: { value: 0 }, alarm: { value: 0 }, vig: { value: 0.32 } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float sat, warm, alarm, vig; varying vec2 vUv;
+    void main() { vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      c.rgb = mix(vec3(l), c.rgb, sat);
+      c.rgb *= mix(vec3(1.0), vec3(1.08, 0.98, 0.88), warm);
+      vec2 d = vUv - 0.5; float r = dot(d, d);
+      c.rgb *= 1.0 - vig * smoothstep(0.12, 0.55, r);
+      c.rgb = mix(c.rgb, c.rgb * vec3(1.25, 0.75, 0.65) + vec3(0.06, 0.0, 0.0), alarm * smoothstep(0.1, 0.5, r));
+      gl_FragColor = c; }`,
+});
+composer.addPass(grade);
 composer.addPass(new OutputPass());
 
-function makeBackground() {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
-  const g = c.getContext('2d');
-  const grd = g.createRadialGradient(256, 200, 40, 256, 256, 420);
-  grd.addColorStop(0, '#34407a'); grd.addColorStop(1, '#141a33');
-  g.fillStyle = grd; g.fillRect(0, 0, 512, 512);
-  g.fillStyle = 'rgba(255,255,255,0.05)';
-  for (let y = 0; y < 512; y += 24) for (let x = (y / 24) % 2 ? 12 : 0; x < 512; x += 24) { g.beginPath(); g.arc(x, y, 2.2, 0, Math.PI * 2); g.fill(); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+function setQuality(q) {
+  game.quality = q;
+  try { localStorage.setItem('cu-quality', q); } catch {}
+  if (gtao) gtao.enabled = q === 'high';
+  outline.enabled = q !== 'low';
+  renderer.setPixelRatio(q === 'high' ? Math.min(window.devicePixelRatio, 2) : 1);
+  sun.shadow.mapSize.setScalar(q === 'low' ? 1024 : 2048);
+  if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  fitCamera();
+  const b = document.getElementById('quality-btn');
+  if (b) b.textContent = 'Qualidade: ' + { high: 'alta', medium: 'média', low: 'baixa' }[q];
 }
 
 function fitCamera() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h);
   composer.setSize(w, h);
+  gtao?.setSize(w, h);
   camera.aspect = w / h;
   const vfov = THREE.MathUtils.degToRad(camera.fov);
   const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
-  const halfW = 13.2, halfD = 9.2;
+  const halfW = 13.4, halfD = 9.4;
   const dW = halfW / Math.tan(hfov / 2);
   const dD = (halfD * Math.sin(CAM_PITCH) + 1.5) / Math.tan(vfov / 2);
   game.camDist = Math.max(dW, dD) * 1.06;
@@ -96,6 +134,7 @@ function fitCamera() {
 }
 
 // ------------------------------------------------------------------ jogo
+const city = new City(scene);
 const level = buildLevel(scene);
 const fx = new FX(scene);
 const ui = new UI(camera, renderer);
@@ -114,14 +153,16 @@ const game = {
   streak: 0,
   stats: { resolved: 0, failed: 0, byType: {} },
   camDist: 30,
-  shake: 0,
+  shake: 0, hitstop: 0, punch: 0, dayT: 0.8, introK: 1,
   countdown: 0,
   joined: [],
   addProgress, onTicketOpened, onTicketResolved, onTicketFailed,
   spawnItem(kind, pos) { const it = new Item(kind, scene, pos); game.items.push(it); return it; },
 };
 window.__game = game;
-fitCamera();
+game.quality = QUALITY;
+if (params.has('q')) game.autoQDone = true;
+setQuality(QUALITY);
 window.addEventListener('resize', fitCamera);
 
 function resetWorld() {
@@ -130,7 +171,7 @@ function resetWorld() {
   for (const p of game.players) p.root.removeFromParent();
   game.players = [];
   for (const s of game.stations) if (s.problem) s.clearProblem(true);
-  for (const s of game.stations) { s.mood = 'work'; s.moodT = 99; }
+  for (const s of game.stations) { s.mood = 'work'; s.moodT = 99; s.pendingLine = null; }
   for (const sp of level.itemSpawns) game.items.push(new Item(sp.kind, scene, sp.pos.clone()));
   ui.clearAll();
 }
@@ -147,7 +188,9 @@ function startRound() {
   game.score = 0; game.streak = 0;
   game.stats = { resolved: 0, failed: 0, byType: {} };
   ui.setScore(0); ui.setClock(0);
-  game.state = 'countdown'; game.countdown = 3.2;
+  game.state = 'countdown'; game.countdown = 3.4;
+  game.introK = 0; game.introFrom = camera.position.clone(); game.introLook = new THREE.Vector3(0, -6, 0);
+  game.lastSec = 99;
   show('hud'); hide('menu'); hide('results'); hide('pause');
 }
 
@@ -170,6 +213,11 @@ function onTicketOpened(t) {
   else if (t.type === 'router') { sfx.alarm(); ui.showBanner('INTERNET CAIU!', 'danger'); }
   else sfx.ring();
   if (t.vip) ui.showBanner('★ Chamado VIP do diretor!', 'vip');
+  if (t.type === 'router') {
+    const ds = game.desks.filter((d) => !d.problem).sort(() => Math.random() - 0.5).slice(0, 3);
+    ds.forEach((d, i) => setTimeout(() => game.state === 'playing' && ui.say(d.headAnchor, pick(LINES.router), 'angry'), 250 + i * 450));
+  }
+  if (t.type === 'fire') { game.shake = 0.25; game.punch = 1; }
 }
 
 function onTicketResolved(t, player) {
@@ -182,8 +230,11 @@ function onTicketResolved(t, player) {
   game.stats.resolved++;
   game.stats.byType[t.type] = (game.stats.byType[t.type] || 0) + 1;
   ui.removeTicket(t, true);
-  ui.setScore(game.score);
   const mp = t.station.markerPos(new THREE.Vector3());
+  const shown = game.score;
+  ui.coins(mp, Math.min(10, 4 + Math.floor(pts / 40)), (i) => { sfx.coin(i); if (i === 0) ui.setScore(shown); });
+  player?.celebrate(game);
+  game.hitstop = 0.09; game.punch = 0.6;
   ui.floatText(mp, `+${pts}`, '#ffd23f', true);
   if (game.streak >= 3) ui.floatText(mp.clone().add(new THREE.Vector3(0, -0.6, 0)), `Combo x${game.streak}!`, '#7fe3ff');
   fx.confetti(mp.clone().add(new THREE.Vector3(0, -0.6, 0)));
@@ -198,7 +249,7 @@ function onTicketFailed(t) {
   ui.setScore(game.score);
   ui.floatText(t.station.markerPos(new THREE.Vector3()), `SLA estourado! -${TICKETS.failPenalty}`, '#ff5a5a', true);
   sfx.fail();
-  game.shake = 0.35;
+  game.shake = 0.45; game.punch = -0.6;
 }
 
 function endRound() {
@@ -226,6 +277,8 @@ function showResults() {
     <div><b>${sla}%</b><span>dentro do SLA</span></div>`;
   el.querySelector('.res-goals').innerHTML = game.goals.map((s, i) => `<span class="${game.score >= s ? 'ok' : ''}">${'★'.repeat(i + 1)} ${s}</span>`).join('');
   show('results'); hide('hud');
+  for (let i = 0; i < stars; i++) setTimeout(() => { sfx.star(i); game.shake = 0.18; }, 300 + i * 350 + 250);
+  document.body.classList.remove('final');
 }
 
 // ------------------------------------------------------------------ menus
@@ -262,6 +315,7 @@ document.getElementById('start-btn').addEventListener('click', () => { initAudio
 document.getElementById('again-btn').addEventListener('click', () => startRound());
 document.getElementById('menu-btn').addEventListener('click', () => { game.state = 'menu'; resetWorld(); hide('results'); hide('hud'); show('menu'); renderSlots(); });
 document.getElementById('resume-btn').addEventListener('click', () => togglePause());
+document.getElementById('quality-btn').addEventListener('click', () => setQuality({ high: 'medium', medium: 'low', low: 'high' }[game.quality]));
 document.getElementById('music-btn').addEventListener('click', (e) => { e.target.textContent = toggleMusic() ? 'Música: ligada' : 'Música: desligada'; });
 document.addEventListener('pointerdown', () => initAudio(), { once: true });
 
@@ -285,6 +339,7 @@ function readInputs() {
 }
 
 function update(dt) {
+  if (game.hitstop > 0) { game.hitstop -= dt; dt *= 0.1; }
   game.time += dt;
   if (game.state === 'menu') {
     for (const [d, inp] of inputs) {
@@ -310,6 +365,8 @@ function update(dt) {
     game.tickets.update(dt);
     ui.setClock(game.tickets.elapsed);
     ui.setNetDown(game.tickets.routerDown);
+    const left = Math.ceil(ROUND_SECONDS - game.tickets.elapsed);
+    if (left <= 10 && left !== game.lastSec && left > 0) { game.lastSec = left; sfx.countdown(false); }
     if (game.tickets.elapsed >= ROUND_SECONDS) endRound();
   }
   for (const p of game.players) p.update(dt, inputs.get(p.device) || NO_INPUT, game);
@@ -321,14 +378,16 @@ function update(dt) {
       const push = (m - d) / 2, nx = dx / d, nz = dz / d;
       a.pos.x -= nx * push; a.pos.z -= nz * push; b.pos.x += nx * push; b.pos.z += nz * push;
       for (const [x, y, s] of [[a, b, 1], [b, a, -1]]) if (x.dashT > 0 && y.stun <= 0) {
-        y.vel.set(nx * 7 * s, 0, nz * 7 * s); y.stun = 0.35; y.squash = 0.8; sfx.drop();
+        y.vel.set(nx * 7 * s, 0, nz * 7 * s); y.stun = 0.35; y.dizzyT = 1.2; y.squash = 0.8; sfx.bonk(); game.shake = Math.max(game.shake, 0.12);
         fx.puff(y.pos.clone().setY(0.6), 8, 0xffffff);
       }
     }
   }
   for (const it of game.items) it.update(dt, game);
   game.items = game.items.filter((i) => i.alive);
-  for (const s of game.stations) s.update(dt, game.time, fx);
+  for (const s of game.stations) s.update(dt, game.time, fx, game);
+  city.update(dt, game.time);
+  game.bubbleDt = (game.bubbleDt || 0) + dt;
   fx.update(dt);
 
   // relógio de parede
@@ -344,16 +403,51 @@ function update(dt) {
   camTarget.x += (tx - camTarget.x) * Math.min(1, dt * 2);
   camTarget.z += (tz - camTarget.z) * Math.min(1, dt * 2);
   game.shake = Math.max(0, game.shake - dt);
+  game.punch += (0 - game.punch) * Math.min(1, dt * 5);
+  if (game.state !== 'menu') game.introK = Math.min(1, game.introK + dt / 3.0);
+  // ciclo do dia acompanha o relógio do expediente
+  const wantT = game.state === 'menu' ? 0.82 : game.tickets ? Math.min(1, game.tickets.elapsed / ROUND_SECONDS) : 0;
+  game.dayT += (wantT - game.dayT) * Math.min(1, dt * (game.state === 'countdown' ? 3 : 1.5));
+  city.setTime(game.dayT, lights);
+  grade.uniforms.warm.value = city.eve * 0.8;
+  const fire = game.tickets?.open.some((tk) => tk.type === 'fire') && game.state === 'playing';
+  grade.uniforms.alarm.value += ((fire ? 0.35 + Math.sin(game.time * 6) * 0.15 : 0) - grade.uniforms.alarm.value) * Math.min(1, dt * 4);
+  // contorno no que cada técnico pode usar
+  const sel = [];
+  if (game.state === 'playing') for (const p of game.players) {
+    if (p.target && (p.target.problem || p.target.kind === 'dispenser' || p.target.kind === 'coffee')) sel.push(p.target.group);
+    const it = game.items.find((i) => i.highlight > 0.9 && !i.heldBy); if (it) sel.push(it.group);
+  }
+  outline.selectedObjects = sel;
+  outline.edgeStrength = 2.6 + Math.sin(game.time * 8) * 0.9;
 }
 
 function render() {
-  const menuSway = game.state === 'menu' ? Math.sin(game.time * 0.25) * 0.8 : 0;
   const sh = game.shake * 0.6;
-  camera.position.set(camTarget.x + menuSway + (Math.random() - 0.5) * sh, Math.sin(CAM_PITCH) * game.camDist, camTarget.z + Math.cos(CAM_PITCH) * game.camDist + (Math.random() - 0.5) * sh);
-  camera.lookAt(camTarget.x + menuSway * 0.5, 0, camTarget.z);
+  const dist = game.camDist * (1 - 0.035 * game.punch);
+  const playPos = new THREE.Vector3(camTarget.x + (Math.random() - 0.5) * sh, Math.sin(CAM_PITCH) * dist, camTarget.z + Math.cos(CAM_PITCH) * dist + (Math.random() - 0.5) * sh);
+  const playLook = new THREE.Vector3(camTarget.x, 0, camTarget.z);
+  if (game.state === 'menu') {
+    // órbita cinematográfica em volta do prédio
+    const a = game.time * 0.05 + 0.6;
+    camera.position.set(Math.sin(a) * 62, 30 + Math.sin(game.time * 0.2) * 3, Math.cos(a) * 62);
+    camera.lookAt(0, -7, 0);
+  } else if (game.introK < 1) {
+    const k = game.introK, e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    camera.position.lerpVectors(game.introFrom, playPos, e);
+    camera.position.y += Math.sin(k * Math.PI) * 6;
+    const look = new THREE.Vector3().lerpVectors(game.introLook, playLook, e);
+    camera.lookAt(look);
+  } else {
+    camera.position.copy(playPos);
+    camera.lookAt(playLook);
+  }
+  if (game.debugCam) { camera.position.fromArray(game.debugCam.pos); camera.lookAt(...game.debugCam.look); }
+  camera.updateMatrixWorld(); // a UI projeta com a câmera deste quadro
   const active = game.state === 'playing' || game.state === 'countdown' || game.state === 'ending';
   if (game.tickets && active) ui.updateTickets(game.tickets.open);
   ui.updateHints(game.players);
+  ui.updateBubbles(game.bubbleDt || 0); game.bubbleDt = 0;
   composer.render();
 }
 
@@ -365,6 +459,16 @@ function frame(ts) {
   readInputs();
   update(dt);
   render();
+  // qualidade automática: se o FPS ficar baixo durante o jogo, reduz efeitos
+  if (game.state === 'playing' && !game.autoQDone) {
+    game.fpsAcc = (game.fpsAcc || 0) + dt; game.fpsN = (game.fpsN || 0) + 1;
+    if (game.fpsAcc > 4) {
+      const fps = game.fpsN / game.fpsAcc;
+      if (fps < 45 && game.quality !== 'low') setQuality(game.quality === 'high' ? 'medium' : 'low');
+      else game.autoQDone = true;
+      game.fpsAcc = 0; game.fpsN = 0;
+    }
+  }
   endFrame();
 }
 
@@ -376,7 +480,7 @@ if (params.get('auto')) {
   const n = Number(params.get('auto')) || 1;
   game.joined = [devices.kbA, devices.kbB].slice(0, Math.min(2, n));
   startRound();
-  game.countdown = 0.01;
+  game.countdown = 0.01; game.introK = 1;
   if (params.get('demo')) {
     setTimeout(() => {
       const T = game.tickets;

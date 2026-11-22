@@ -9,16 +9,16 @@ import { aabb, DeskStation, PrinterStation, RouterStation, DispenserStation, Cof
 export const BOUNDS = { minX: -12, maxX: 12, minZ: -7.5, maxZ: 7.5 };
 
 const PEOPLE = [
-  { name: 'Mariana', person: { shirt: 0xff7b9c, hair: 0x5a3320, hairStyle: 1, skin: 0xf2c29b } },
-  { name: 'Seu Jorge', person: { shirt: 0xf4efe6, hair: 0x9aa3b5, hairStyle: 3, skin: 0xc68a5e, tie: 0xb0122b } },
-  { name: 'Pri', person: { shirt: 0x7ad1c1, hair: 0x1d1410, hairStyle: 2, skin: 0x8d5a3b } },
-  { name: 'Rafael', person: { shirt: 0xffd23f, hair: 0x3b2a20, hairStyle: 0, skin: 0xf6d2b5 } },
-  { name: 'Dona Cida', person: { shirt: 0xb07cff, hair: 0xe9eef7, hairStyle: 1, skin: 0xe8b48c } },
-  { name: 'Thiago', person: { shirt: 0x5d6b8a, hair: 0x2a1c14, hairStyle: 0, skin: 0xb27650, tie: 0x3d7bff } },
-  { name: 'Bia', person: { shirt: 0xff9b54, hair: 0xb0122b, hairStyle: 2, skin: 0xf2c29b } },
-  { name: 'Carlão', person: { shirt: 0x6fb1c8, hair: 0x1d1410, hairStyle: 3, skin: 0x9a6440 } },
+  { name: 'Mariana', person: { shirt: 0xff7b9c, hair: 0x5a3320, hairStyle: 5, skin: 0xf2c29b, lashes: true, earrings: 0xffd23f } },
+  { name: 'Seu Jorge', person: { shirt: 0xf4efe6, hair: 0x9aa3b5, hairStyle: 3, skin: 0xc68a5e, tie: 0xb0122b, mustache: true, glasses: true } },
+  { name: 'Pri', person: { shirt: 0x7ad1c1, hair: 0x1d1410, hairStyle: 2, skin: 0x8d5a3b, lashes: true, earrings: 0xff5a8a } },
+  { name: 'Rafael', person: { shirt: 0xffd23f, hair: 0x3b2a20, hairStyle: 6, skin: 0xf6d2b5, hoodie: true } },
+  { name: 'Dona Cida', person: { shirt: 0xf4efe6, cardigan: 0xb07cff, hair: 0xe9eef7, hairStyle: 1, skin: 0xe8b48c, glasses: true, lashes: true } },
+  { name: 'Thiago', person: { shirt: 0x5d6b8a, hair: 0x2a1c14, hairStyle: 0, skin: 0xb27650, tie: 0x3d7bff, beard: true } },
+  { name: 'Bia', person: { shirt: 0xff9b54, hair: 0xb0122b, hairStyle: 4, skin: 0xf2c29b, lashes: true, glasses: true } },
+  { name: 'Carlão', person: { shirt: 0x6fb1c8, hair: 0x1d1410, hairStyle: 3, skin: 0x9a6440, beard: true, bowtie: 0xffd23f } },
 ];
-const BOSS = { name: 'Diretor Ramos', person: { shirt: 0x2a2f3d, hair: 0x6a6466, hairStyle: 3, skin: 0xf2c29b, tie: 0xffd23f } };
+const BOSS = { name: 'Diretor Ramos', person: { shirt: 0x2a2f3d, hair: 0x6a6466, hairStyle: 0, skin: 0xf2c29b, tie: 0xffd23f, mustache: true, glasses: true } };
 
 function place(obj, x, y, z) { obj.position.set(x, y, z); return obj; }
 
@@ -32,9 +32,9 @@ export function buildLevel(scene) {
   const solid = (obj, box) => { root.add(obj); if (box) colliders.push(box); return obj; };
 
   // ---------------- piso / laje ----------------
-  const slab = M.box(25.2, 1.2, 16.4, 0x3b4566, 0, -0.6, 0, 0.15);
+  const slab = M.box(25.8, 1.2, 17.0, 0xe9e4da, 0, -0.6, 0, 0.1);
   slab.receiveShadow = true; root.add(slab);
-  const slabTrim = M.box(25.4, 0.12, 16.6, 0xffd23f, 0, -0.06, 0, 0.04);
+  const slabTrim = M.box(26.0, 0.16, 17.2, 0x3b4566, 0, -0.08, 0, 0.04);
   root.add(slabTrim);
 
   const carpet = TX.carpetTexture(PALETTE.carpet, PALETTE.carpet2);
@@ -73,10 +73,6 @@ export function buildLevel(scene) {
   const glass = new THREE.Mesh(new THREE.PlaneGeometry(24.4, 1.45), new THREE.MeshStandardMaterial({ color: 0xaee3ff, transparent: true, opacity: 0.18, roughness: 0.3, metalness: 0.0 }));
   glass.position.set(0, 1.67, BZ); root.add(glass);
   for (let x = -10.5; x <= 10.5; x += 3) root.add(M.box(2.5, 0.06, 0.4, 0xf4efe6, x, 0.97, BZ + 0.08, 0.02));
-  // skyline
-  const sky = new THREE.Mesh(new THREE.PlaneGeometry(60, 15), new THREE.MeshBasicMaterial({ map: TX.skylineTexture(), toneMapped: false }));
-  sky.material.color.setScalar(0.95);
-  sky.position.set(0, 2.5, -14); root.add(sky);
   // laterais
   wall(BOUNDS.minX - T / 2, 0, T, 15.6);
   wall(BOUNDS.maxX + T / 2, 0, T, 15.6);

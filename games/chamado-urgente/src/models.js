@@ -51,88 +51,10 @@ export function sphere(r, color, x = 0, y = 0, z = 0, opts) {
   return m;
 }
 
-function capsule(r, len, color) {
+export function capsule(r, len, color) {
   const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 12), color instanceof THREE.Material ? color : mat(color));
   m.castShadow = true;
   return m;
-}
-
-// ---------------------------------------------------------------------------
-// Pessoas (técnicos e funcionários) — corpo "chunky" estilo party game.
-export function makePerson({ shirt = 0x3d7bff, pants = 0x2a2f3d, skin = 0xf2c29b, hair = 0x3b2a20, hairStyle = 0, headset = false, tie = null } = {}) {
-  const root = new THREE.Group();
-  const rig = new THREE.Group(); // recebe squash/stretch e balanço
-  root.add(rig);
-
-  const legL = new THREE.Group(); legL.position.set(-0.13, 0.32, 0);
-  const legR = new THREE.Group(); legR.position.set(0.13, 0.32, 0);
-  for (const leg of [legL, legR]) {
-    const l = capsule(0.09, 0.16, pants); l.position.y = -0.14; leg.add(l);
-    const shoe = box(0.17, 0.1, 0.24, 0x1d2540, 0, -0.28, 0.03, 0.04); leg.add(shoe);
-    rig.add(leg);
-  }
-
-  const body = new THREE.Group(); body.position.y = 0.62; rig.add(body);
-  const torso = box(0.56, 0.56, 0.42, shirt, 0, 0, 0, 0.16); body.add(torso);
-  const belt = box(0.57, 0.08, 0.43, pants, 0, -0.24, 0, 0.04); body.add(belt);
-  // crachá
-  const lanyard = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.012, 6, 16, Math.PI), mat(0xff5a5a));
-  lanyard.rotation.z = Math.PI; lanyard.position.set(0, 0.24, 0.2); lanyard.rotation.x = -0.25; body.add(lanyard);
-  body.add(box(0.12, 0.15, 0.02, 0xffffff, 0.0, 0.03, 0.225, 0.02));
-  if (tie) body.add(box(0.07, 0.3, 0.02, tie, 0, 0.08, 0.215, 0.02));
-
-  const head = new THREE.Group(); head.position.y = 0.55; body.add(head);
-  const skull = sphere(0.27, skin, 0, 0, 0); head.add(skull);
-  // cabelo
-  const hairMat = mat(hair);
-  if (hairStyle === 0) {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.285, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.52), hairMat);
-    cap.rotation.x = -0.35; cap.position.set(0, 0.03, -0.02); cap.castShadow = true; head.add(cap);
-  } else if (hairStyle === 1) {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.29, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), hairMat);
-    cap.rotation.x = -0.6; cap.position.set(0, 0.02, -0.03); cap.castShadow = true; head.add(cap);
-    const bun = sphere(0.12, hairMat, 0, 0.18, -0.24); head.add(bun);
-  } else if (hairStyle === 2) {
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2;
-      head.add(sphere(0.11, hairMat, Math.cos(a) * 0.16, 0.2, Math.sin(a) * 0.16 - 0.04));
-    }
-    head.add(sphere(0.14, hairMat, 0, 0.25, -0.05));
-  } else {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.28, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.3), hairMat);
-    cap.rotation.x = -0.5; cap.position.set(0, 0.04, -0.03); head.add(cap);
-  }
-  const eyeMat = mat(0x1d2540, { roughness: 0.3 });
-  const eyeL = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.05, 4, 8), eyeMat); eyeL.position.set(-0.09, 0.02, 0.245);
-  const eyeR = eyeL.clone(); eyeR.position.x = 0.09;
-  head.add(eyeL, eyeR);
-  const cheekMat = mat(0xff9b8a, { transparent: true, opacity: 0.55 });
-  const chL = sphere(0.045, cheekMat, -0.16, -0.06, 0.205); chL.scale.z = 0.3; chL.castShadow = false;
-  const chR = chL.clone(); chR.position.x = 0.16; head.add(chL, chR);
-  const mouth = box(0.08, 0.02, 0.02, 0x1d2540, 0, -0.09, 0.255, 0.01); head.add(mouth);
-
-  if (headset) {
-    const band = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.025, 8, 24, Math.PI), mat(0x2a2f3d));
-    band.position.y = 0.02; head.add(band);
-    const earL = cyl(0.08, 0.08, 0.06, 0x2a2f3d, -0.29, 0.0, 0); earL.rotation.z = Math.PI / 2;
-    const earR = earL.clone(); earR.position.x = 0.29; head.add(earL, earR);
-    const mic = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 16, Math.PI * 0.45), mat(0x2a2f3d));
-    mic.position.set(-0.27, -0.01, 0.0); mic.rotation.set(0, -Math.PI / 2, -0.1); mic.rotation.order = 'YXZ';
-    mic.rotation.set(0, Math.PI / 2 + 0.2, Math.PI * 1.25);
-    head.add(mic);
-    head.add(sphere(0.035, 0xff5a5a, -0.2, -0.14, 0.18));
-  }
-
-  const mkArm = (side) => {
-    const arm = new THREE.Group(); arm.position.set(0.33 * side, 0.18, 0);
-    const a = capsule(0.075, 0.2, shirt); a.position.y = -0.14; arm.add(a);
-    const hand = sphere(0.09, skin, 0, -0.32, 0); arm.add(hand);
-    body.add(arm);
-    return arm;
-  };
-  const armL = mkArm(-1), armR = mkArm(1);
-
-  return { root, rig, body, head, legL, legR, armL, armR, mouth, eyes: [eyeL, eyeR] };
 }
 
 // ---------------------------------------------------------------------------

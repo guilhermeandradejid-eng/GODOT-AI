@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { makePerson } from './models.js';
+import { makePerson, setFace, animateFace } from './characters.js';
+import { LINES, pick } from './lines.js';
 import { pushOutCircle } from './physics.js';
 import { PLAYER, PLAYER_COLORS, ITEMS } from './config.js';
 import { Item } from './items.js';
@@ -7,8 +8,13 @@ import { Item } from './items.js';
 const VERB = {
   cable: 'Trocar cabo', virus: 'Rodar antivírus', paper: 'Repor papel', jam: 'Desemperrar', fire: 'Apagar fogo', router: 'Reiniciar roteador',
 };
-const HAIR = [0x3b2a20, 0x1d1410, 0xb0122b, 0xffd23f];
-const SKIN = [0xf2c29b, 0x9a6440, 0xf6d2b5, 0xc68a5e];
+// Os técnicos: cada um com visual e personalidade
+export const TECHS = [
+  { name: 'Léo', look: { hair: 0x3b2a20, hairStyle: 0, skin: 0xf2c29b, glasses: true, headset: true } },
+  { name: 'Duda', look: { hair: 0x1d1410, hairStyle: 5, skin: 0x9a6440, hat: 'beanie', hatColor: 0x2fc4b0, lashes: true, earrings: 0xffd23f, hoodie: true } },
+  { name: 'Kenji', look: { hair: 0x1d1410, hairStyle: 6, skin: 0xf6d2b5, hat: 'cap', hatColor: 0xffd23f, headset: true } },
+  { name: 'Bruna', look: { hair: 0xb0122b, hairStyle: 4, skin: 0xc68a5e, lashes: true, glasses: true, headset: true } },
+];
 
 const _v = new THREE.Vector3();
 
@@ -17,7 +23,9 @@ export class Player {
     this.index = index;
     this.device = device;
     this.color = PLAYER_COLORS[index];
-    this.p = makePerson({ shirt: this.color.shirt, pants: 0x2a2f3d, hair: HAIR[index], skin: SKIN[index], hairStyle: [0, 2, 1, 3][index], headset: true });
+    this.tech = TECHS[index];
+    this.p = makePerson({ shirt: this.color.shirt, pants: 0x2a2f3d, shoes: 0xffffff, ...this.tech.look });
+    this.celebrateT = 0; this.stepT = 0; this.quipT = 0; this.idleLook = 0;
     this.root = this.p.root;
     this.root.scale.setScalar(1.18);
     scene.add(this.root);
@@ -110,6 +118,8 @@ export class Player {
     this.coffeeT = Math.max(0, this.coffeeT - dt);
     this.denyT = Math.max(0, this.denyT - dt);
     this.stun = Math.max(0, this.stun - dt);
+    this.quipT = Math.max(0, this.quipT - dt);
+    this.celebrateT = Math.max(0, this.celebrateT - dt);
 
     // --- movimento
     let speed = PLAYER.speed * (this.held ? PLAYER.carrySlow : 1) * (this.coffeeT > 0 ? PLAYER.coffeeBoost : 1);
@@ -174,11 +184,12 @@ export class Player {
       const nozzle = this.pos.clone().add(new THREE.Vector3(f.x * 0.65, 0.85, f.z * 0.65));
       game.fx.foam(nozzle, f);
       if (Math.random() < dt * 12) game.sfx.spray();
-      if (pr?.type === 'fire') { game.addProgress(station, this, dt); this.fixing = station; }
+      if (pr?.type === 'fire') { game.addProgress(station, this, dt); this.fixing = station; this.quip(game, LINES.techFire); }
     } else if (inp.use && pr && this.dashT <= 0) {
       const need = pr.def.item;
       if (!need || this.held?.kind === need) {
         this.fixing = station;
+        this.quip(game, LINES.tech);
         game.addProgress(station, this, dt);
       } else if (inp.usePressed) {
         this.denyT = 1.2; game.sfx.deny();
@@ -214,6 +225,16 @@ export class Player {
     this.animate(dt, game);
   }
 
+  quip(game, list) {
+    if (this.quipT > 0 || Math.random() > 0.35) { this.quipT = Math.max(this.quipT, 2); return; }
+    this.quipT = 9 + Math.random() * 6;
+    game.ui.say((o) => o.copy(this.pos).setY(2.6), pick(list), 'tech');
+  }
+  celebrate(game) {
+    this.celebrateT = 0.9; this.squash = 0.7;
+    if (Math.random() < 0.4) game.ui.say((o) => o.copy(this.pos).setY(2.6), pick(LINES.techDone), 'tech');
+  }
+
   drinkCoffee(game) {
     if (this.coffeeT > PLAYER.coffeeTime - 1) return;
     this.coffeeT = PLAYER.coffeeTime;
@@ -228,36 +249,57 @@ export class Player {
     this.walkPhase += dt * (4 + sp * 2.6);
     const w = Math.min(1, sp / 3);
     const t = game.time;
-    P.legL.rotation.x = Math.sin(this.walkPhase) * 0.8 * w;
-    P.legR.rotation.x = -Math.sin(this.walkPhase) * 0.8 * w;
-    P.rig.position.y = Math.abs(Math.sin(this.walkPhase)) * 0.09 * w;
-    P.rig.rotation.z = Math.sin(this.walkPhase) * 0.06 * w;
-    P.body.rotation.x = 0.12 * w + (this.dashT > 0 ? 0.35 : 0);
+    P.legL.rotation.x = Math.sin(this.walkPhase) * 0.9 * w;
+    P.legR.rotation.x = -Math.sin(this.walkPhase) * 0.9 * w;
+    P.rig.position.y = Math.abs(Math.sin(this.walkPhase)) * 0.11 * w;
+    P.rig.rotation.set(0, 0, Math.sin(this.walkPhase) * 0.07 * w);
+    P.body.rotation.set(0.14 * w + (this.dashT > 0 ? 0.45 : 0), 0, 0);
+    P.head.rotation.set(0, 0, 0);
+    // passos levantam poeirinha
+    if (w > 0.5) { this.stepT -= dt * (4 + sp * 2.6); if (this.stepT <= 0) { this.stepT = Math.PI; game.fx.puff(this.pos.clone().setY(0.05), 2, 0xe9e4da); } }
 
+    const urgent = game.tickets?.open.some((tk) => tk.remaining / tk.sla < 0.25);
+    let face = urgent ? 'panic' : 'neutral';
     if (this.fixing || this.spraying) {
-      const fast = this.spraying ? 0 : Math.sin(t * 22);
-      P.armL.rotation.x = -1.5 + fast * 0.45;
-      P.armR.rotation.x = -1.5 - fast * 0.45;
-      P.armL.rotation.z = P.armR.rotation.z = 0;
-      P.body.rotation.x = 0.2;
+      const fast = this.spraying ? Math.sin(t * 40) * 0.05 : Math.sin(t * 22);
+      P.armL.rotation.set(-1.5 + fast * 0.45, 0, 0);
+      P.armR.rotation.set(-1.5 - fast * 0.45, 0, 0);
+      P.body.rotation.x = this.spraying ? -0.12 : 0.22;
       P.rig.position.y = Math.abs(Math.sin(t * 22)) * 0.04;
+      face = 'focused';
     } else if (this.held) {
-      P.armL.rotation.x = P.armR.rotation.x = -1.35;
-      P.armL.rotation.z = 0.25; P.armR.rotation.z = -0.25;
+      P.armL.rotation.set(-1.4, 0, 0.25); P.armR.rotation.set(-1.4, 0, -0.25);
     } else {
-      P.armL.rotation.x = -Math.sin(this.walkPhase) * 0.9 * w;
-      P.armR.rotation.x = Math.sin(this.walkPhase) * 0.9 * w;
-      P.armL.rotation.z = -0.08 - Math.sin(t * 2) * 0.02; P.armR.rotation.z = 0.08 + Math.sin(t * 2) * 0.02;
+      P.armL.rotation.set(-Math.sin(this.walkPhase) * 1.0 * w, 0, -0.1 - Math.sin(t * 2) * 0.03);
+      P.armR.rotation.set(Math.sin(this.walkPhase) * 1.0 * w, 0, 0.1 + Math.sin(t * 2) * 0.03);
+      // parado: olha em volta
+      if (w < 0.1) { this.idleLook += dt; P.head.rotation.y = Math.sin(this.idleLook * 0.9) * 0.35 * Math.min(1, this.idleLook); }
+      else this.idleLook = 0;
     }
-    P.head.rotation.y = 0;
+    if (this.celebrateT > 0) {
+      const k = 1 - this.celebrateT / 0.9;
+      P.rig.position.y = Math.sin(k * Math.PI) * 0.6;
+      P.rig.rotation.y = k * Math.PI * 2;
+      P.armR.rotation.set(-3.0, 0, 0.3);
+      if (!this.held) P.armL.rotation.set(-3.0, 0, -0.3);
+      face = 'happy';
+    }
+    if (this.stun > 0) { face = 'dizzy'; P.rig.rotation.z = Math.sin(t * 20) * 0.2; }
+    if (this.denyT > 0.8) face = 'sad';
+    if (this.coffeeT > 0 && face === 'neutral') face = 'proud';
+    setFace(P, face);
+    animateFace(P, dt, t, { dizzy: this.stun > 0 || this.dizzyT > 0, sweat: urgent && !this.celebrateT, lookX: this.vel.x * 0.004, lookY: -this.vel.z * 0.003 });
+    this.dizzyT = Math.max(0, (this.dizzyT || 0) - dt);
+
     // squash & stretch
     this.squash += (0 - this.squash) * Math.min(1, dt * 10);
     const breath = 1 + Math.sin(t * 3 + this.index) * 0.015;
     const s = 1 + this.squash * 0.25;
-    P.rig.scale.set(1 / Math.sqrt(Math.abs(s)) , s * breath, 1 / Math.sqrt(Math.abs(s)));
+    P.rig.scale.set(1 / Math.sqrt(Math.abs(s)), s * breath, 1 / Math.sqrt(Math.abs(s)));
     if (this.held) this.held.group.position.y = Math.abs(Math.sin(this.walkPhase)) * 0.05 * w;
     this.ring.material.opacity = 0.6 + Math.sin(t * 4) * 0.2;
-    // fumacinha de café
-    if (this.coffeeT > 0 && Math.random() < dt * 8) game.fx.emit({ pos: this.pos.clone().setY(0.2), vel: [0, 0.4, 0], spread: 0.3, life: 0.5, size: 0.05, color: 0xffb02b, glow: true, intensity: 1.5 });
+    if (this.coffeeT > 0 && Math.random() < dt * 8) game.fx.emit({ pos: this.pos.clone().setY(0.2), vel: [0, 0.4, 0], spread: 0.3, life: 0.5, size: 0.05, color: 0xffb02b, glow: true, intensity: 1.2 });
+    // rastro do dash
+    if (this.dashT > 0) game.fx.emit({ pos: this.pos.clone().setY(0.7), vel: [0, 0.2, 0], spread: 0.2, life: 0.3, size: 0.18, size1: 0, color: this.color.shirt, glow: true, intensity: 0.9 });
   }
 }

@@ -5,6 +5,10 @@ você e seus colegas são o time de TI do escritório e precisam atender os cham
 
 ![gameplay](docs/gameplay.jpg)
 
+| Personagens | A cidade em volta (menu) |
+|---|---|
+| ![personagens](docs/personagens.jpg) | ![cidade](docs/cidade.jpg) |
+
 ## Rodar
 
 ```bash
@@ -42,6 +46,24 @@ Extras: **chamados VIP** do diretor (SLA menor, vale 1,5x), **combo** por chamad
 **café** dá velocidade por 10 s, itens podem ser **arremessados** e o colega pega no ar.
 Expediente de 3 min (09:00 → 18:00), metas de 1 a 3 estrelas ajustadas ao tamanho da equipe.
 
+### Ambientação e "juice"
+
+- **Cidade 3D** em volta do prédio (o escritório é o 7º andar): ruas com carros e pedestres, parques,
+  telhados com caixas d'água e antenas, nuvens e pássaros. O menu é uma órbita em volta do prédio e a
+  partida começa com a câmera descendo até o andar.
+- **Ciclo do dia** ligado ao relógio do expediente: o sol cruza o céu, as sombras giram e, no fim da
+  tarde, a luz fica dourada, as janelas da cidade, os postes e os faróis acendem e as luzes do escritório ligam.
+- **Personagens** chibi com olhos que piscam, sobrancelhas e bocas por expressão (bravo, pânico, feliz,
+  triste, concentrado, tonto). Funcionários levantam e gesticulam quando há problema, suam quando o SLA
+  aperta, tomam café, se espreguiçam e conversam com o vizinho. Cada um tem visual próprio.
+- **Balões de fala** ("Só cliquei no link do prêmio...", "Já reiniciei 3 vezes!"); a impressora fala em
+  modo máquina ("NHAC NHAC NHAC") e os técnicos soltam bordões ("Desliga e liga de novo...").
+- **Feedback de jogo**: hitstop e zoom ao fechar chamado, moedas voando até o placar, técnico comemora,
+  tontura com estrelinhas ao levar trombada, rastro no dash, poeira dos passos, contorno no que dá para usar,
+  vinheta vermelha com fogo, tensão nos últimos 10 s e estrelas "batendo" no relatório.
+- **Pós-processamento**: oclusão de ambiente (GTAO), bloom, contorno, gradação de cor. Qualidade
+  alta/média/baixa na pausa; se o FPS cair abaixo de ~45 o jogo reduz sozinho (`?q=low` força).
+
 ## Código
 
 | Arquivo | Conteúdo |
@@ -51,6 +73,8 @@ Expediente de 3 min (09:00 → 18:00), metas de 1 a 3 estrelas ajustadas ao tama
 | `src/stations.js` | mesas, impressoras, rack, prateleiras, café e os visuais de cada problema |
 | `src/tickets.js` | geração de chamados, SLA, vírus espalhando, internet fora |
 | `src/player.js` · `src/items.js` | técnicos (movimento, dash, interação) e itens (física, arremesso) |
+| `src/characters.js` · `src/lines.js` | personagens (rosto, expressões, piscar, acessórios) e falas |
+| `src/city.js` | cidade externa, trânsito, nuvens/pássaros e o ciclo do dia (luz, céu, janelas) |
 | `src/models.js` · `src/textures.js` · `src/fx.js` | modelos procedurais, texturas em canvas, partículas |
 | `src/ui.js` · `src/icons.js` · `src/audio.js` | HUD/marcadores, ícones SVG, sons e música sintetizados |
 

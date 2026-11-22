@@ -14,6 +14,7 @@ export class UI {
     this.cards = new Map();
     this.markers = new Map();
     this.hints = [];
+    this.bubbles = [];
     this.scoreEl = $('#score-value');
     this.clockEl = $('#clock-time');
     this.starsFill = $('#stars-fill');
@@ -108,13 +109,55 @@ export class UI {
   updateHints(players) {
     players.forEach((p, i) => {
       const el = this.hints[i]; if (!el) return;
-      const sp = this.project(_v.copy(p.pos).setY(1.95));
+      const sp = this.project(_v.copy(p.pos).setY(2.35));
       el.style.transform = `translate(${sp.x}px, ${sp.y}px) translate(-50%, -100%)`;
       const txt = el.querySelector('.txt');
       if (txt.textContent !== p.hint) txt.textContent = p.hint;
       el.classList.toggle('empty', !p.hint);
       el.classList.toggle('deny', p.hint.startsWith('Precisa'));
     });
+  }
+
+  // ------------------------------------------------------------ balões de fala
+  say(anchor, text, cls = '', dur = 2.6) {
+    // no máximo um balão por âncora
+    for (const b of this.bubbles) if (b.anchor === anchor) { b.t = b.dur; }
+    const el = document.createElement('div');
+    el.className = 'bubble ' + cls;
+    el.textContent = text;
+    this.markersEl.appendChild(el);
+    this.bubbles.push({ el, anchor, t: 0, dur });
+  }
+  updateBubbles(dt) {
+    const v = new THREE.Vector3();
+    this.bubbles = this.bubbles.filter((b) => {
+      b.t += dt;
+      if (b.t >= b.dur) { b.el.classList.add('out'); setTimeout(() => b.el.remove(), 250); return false; }
+      const sp = this.project(b.anchor(v));
+      b.el.style.transform = `translate(${sp.x}px, ${sp.y}px) translate(-50%, -100%)`;
+      return true;
+    });
+  }
+  clearBubbles() { this.bubbles.forEach((b) => b.el.remove()); this.bubbles = []; }
+
+  // moedinhas voando do chamado até o placar
+  coins(worldPos, n, onArrive) {
+    const sp = this.project(worldPos);
+    const target = document.getElementById('score-value').getBoundingClientRect();
+    const tx = target.left + target.width / 2, ty = target.top + target.height / 2;
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'coin';
+      document.body.appendChild(el);
+      const ox = (Math.random() - 0.5) * 120, oy = -40 - Math.random() * 80;
+      const delay = i * 55;
+      const dur = 650 + Math.random() * 200;
+      el.animate([
+        { transform: `translate(${sp.x}px, ${sp.y}px) scale(0.3)` },
+        { transform: `translate(${sp.x + ox}px, ${sp.y + oy}px) scale(1.15)`, offset: 0.3 },
+        { transform: `translate(${tx}px, ${ty}px) scale(0.6)` },
+      ], { duration: dur, delay, easing: 'cubic-bezier(.5,0,.6,1)', fill: 'forwards' }).onfinish = () => { el.remove(); onArrive?.(i); };
+    }
   }
 
   // ------------------------------------------------------------ textos flutuantes
@@ -143,6 +186,7 @@ export class UI {
     const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10;
     this.clockEl.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     $('#clock').classList.toggle('late', ROUND_SECONDS - elapsed < 30);
+    document.body.classList.toggle('final', ROUND_SECONDS - elapsed < 10 && elapsed < ROUND_SECONDS);
     $('#clock-fill').style.width = `${Math.min(1, elapsed / ROUND_SECONDS) * 100}%`;
   }
   setNetDown(v) { this.netAlert.classList.toggle('show', v); }
@@ -157,6 +201,7 @@ export class UI {
   clearAll() {
     this.cards.forEach((c) => c.el.remove()); this.cards.clear();
     this.markers.forEach((m) => m.el.remove()); this.markers.clear();
+    this.clearBubbles();
   }
 }
 
