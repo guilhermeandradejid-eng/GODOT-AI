@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { makeItemMesh } from './models.js';
 import { pushOutCircle, groundAt } from './physics.js';
 import { ITEMS } from './config.js';
+import { addOutline } from './toon.js';
 
 let nextId = 1;
 export class Item {
@@ -11,6 +12,7 @@ export class Item {
     this.def = ITEMS[kind];
     this.group = new THREE.Group();
     this.mesh = makeItemMesh(kind);
+    addOutline(this.mesh, 0.018);
     this.group.add(this.mesh);
     this.group.position.copy(pos);
     scene.add(this.group);

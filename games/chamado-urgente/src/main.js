@@ -14,7 +14,7 @@ import { Player } from './player.js';
 import { Item } from './items.js';
 import { TicketManager } from './tickets.js';
 import { UI } from './ui.js';
-import { devices, pollGamepads, keyPressed, endFrame } from './input.js';
+import { devices, pollGamepads, keyPressed, endFrame, setupTouch, touchState } from './input.js';
 import { sfx, initAudio, startMusic, toggleMusic } from './audio.js';
 import { ROUND_SECONDS, STARS, TICKETS, PROBLEMS, PLAYER_COLORS, TEAM_SCALE } from './config.js';
 import { iconImg, ICONS } from './icons.js';
@@ -33,7 +33,7 @@ renderer.toneMappingExposure = 1.0;
 document.getElementById('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xd2ecff, 80, 340);
+scene.fog = new THREE.Fog(0xd2ecff, 55, 420);
 
 const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.5, 1400);
 const camTarget = new THREE.Vector3(0, 0, 0.9);
@@ -71,6 +71,34 @@ if (!params.has('noao')) {
   gtao.blendIntensity = 0.85;
   composer.addPass(gtao);
 }
+// desfoque de profundidade (tilt-shift): o escritório fica nítido, a cidade lá embaixo vira maquete
+const dof = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null }, tDepth: { value: null }, cameraNear: { value: 0.5 }, cameraFar: { value: 1400 },
+    focus: { value: 32 }, blurStart: { value: 8 }, blurEnd: { value: 40 }, maxBlur: { value: 6 }, texel: { value: new THREE.Vector2(1 / 1024, 1 / 1024) },
+  },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `#include <packing>
+    uniform sampler2D tDiffuse, tDepth; uniform float cameraNear, cameraFar, focus, blurStart, blurEnd, maxBlur; uniform vec2 texel; varying vec2 vUv;
+    float dist(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, cameraNear, cameraFar); }
+    float coc(float z) { return smoothstep(blurStart, blurEnd, z - focus); }
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      float k = coc(dist(vUv));
+      if (k < 0.02) { gl_FragColor = c; return; }
+      vec4 acc = c; float wsum = 1.0;
+      for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float r = sqrt((fi + 0.5) / 20.0);
+        float a = fi * 2.39996;
+        vec2 uv = vUv + vec2(cos(a), sin(a)) * r * k * maxBlur * texel;
+        float w = coc(dist(uv)); // amostras nítidas (escritório) não vazam no fundo
+        acc += texture2D(tDiffuse, uv) * w; wsum += w;
+      }
+      gl_FragColor = acc / wsum;
+    }`,
+});
+if (gtao) { dof.uniforms.tDepth.value = gtao.depthTexture; composer.addPass(dof); }
 const outline = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
 Object.assign(outline, { edgeStrength: 3, edgeGlow: 0, edgeThickness: 1 });
 outline.visibleEdgeColor.set(0xfff2b0); outline.hiddenEdgeColor.set(0x3a3a50);
@@ -84,7 +112,7 @@ composer.addPass(new ShaderPass({
       if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0);
       gl_FragColor = vec4(clamp(c.rgb, 0.0, 16.0), c.a); }`,
 }));
-const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.55, 0.9);
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.5, 1.05);
 if (!params.has('nobloom')) composer.addPass(bloom);
 // gradação de cor: saturação, calor do fim de tarde, vinheta e alerta vermelho (fogo)
 const grade = new ShaderPass({
@@ -106,7 +134,7 @@ composer.addPass(new OutputPass());
 function setQuality(q) {
   game.quality = q;
   try { localStorage.setItem('cu-quality', q); } catch {}
-  if (gtao) gtao.enabled = q === 'high';
+  if (gtao) { gtao.enabled = q === 'high'; dof.enabled = q === 'high'; }
   outline.enabled = q !== 'low';
   renderer.setPixelRatio(q === 'high' ? Math.min(window.devicePixelRatio, 2) : 1);
   sun.shadow.mapSize.setScalar(q === 'low' ? 1024 : 2048);
@@ -121,6 +149,8 @@ function fitCamera() {
   renderer.setSize(w, h);
   composer.setSize(w, h);
   gtao?.setSize(w, h);
+  dof.uniforms.texel.value.set(1 / w, 1 / h);
+  dof.uniforms.maxBlur.value = 4.5 * Math.min(window.devicePixelRatio, 2) * (h / 900);
   camera.aspect = w / h;
   const vfov = THREE.MathUtils.degToRad(camera.fov);
   const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
@@ -179,7 +209,7 @@ function resetWorld() {
 function startRound() {
   initAudio(); startMusic();
   resetWorld();
-  if (!game.joined.length) game.joined.push(devices.kbA);
+  if (!game.joined.length) game.joined.push(touchState.active ? devices.touch : devices.kbA);
   game.players = game.joined.map((d, i) => new Player(i, d, scene, level.spawn[i]));
   ui.setPlayers(game.players);
   game.goals = STARS.map((s) => Math.round(s * TEAM_SCALE.stars[game.players.length - 1] / 50) * 50);
@@ -306,7 +336,7 @@ function renderSlots() {
     const c = '#' + PLAYER_COLORS[i].shirt.toString(16).padStart(6, '0');
     return d
       ? `<div class="slot on" style="--pc:${c}"><div class="slot-face">${iconImg('hand', 40)}</div><b>Técnico ${i + 1}</b><span>${d.label}</span><small>${d.hint}</small></div>`
-      : `<div class="slot" style="--pc:${c}"><div class="slot-face">?</div><b>Vaga ${i + 1}</b><span>Pressione <kbd>E</kbd>, <kbd>Enter</kbd> ou <kbd>A</kbd> no controle</span></div>`;
+      : `<div class="slot" style="--pc:${c}"><div class="slot-face">?</div><b>Vaga ${i + 1}</b><span>${touchState.active && i === 0 ? 'Toque em <b>Começar</b>' : 'Pressione <kbd>E</kbd>, <kbd>Enter</kbd> ou <kbd>A</kbd> no controle'}</span></div>`;
   }).join('');
   document.getElementById('start-btn').textContent = game.joined.length ? `Começar expediente (${game.joined.length} técnico${game.joined.length > 1 ? 's' : ''})` : 'Começar sozinho';
 }
@@ -315,6 +345,8 @@ document.getElementById('start-btn').addEventListener('click', () => { initAudio
 document.getElementById('again-btn').addEventListener('click', () => startRound());
 document.getElementById('menu-btn').addEventListener('click', () => { game.state = 'menu'; resetWorld(); hide('results'); hide('hud'); show('menu'); renderSlots(); });
 document.getElementById('resume-btn').addEventListener('click', () => togglePause());
+document.getElementById('tpause').addEventListener('click', () => togglePause());
+setupTouch(() => renderSlots());
 document.getElementById('quality-btn').addEventListener('click', () => setQuality({ high: 'medium', medium: 'low', low: 'high' }[game.quality]));
 document.getElementById('music-btn').addEventListener('click', (e) => { e.target.textContent = toggleMusic() ? 'Música: ligada' : 'Música: desligada'; });
 document.addEventListener('pointerdown', () => initAudio(), { once: true });
@@ -338,7 +370,10 @@ function readInputs() {
   for (const d of Object.values(devices)) inputs.set(d, game.inputOverride[d.id] ? { ...NO_INPUT, ...game.inputOverride[d.id] } : d.read());
 }
 
+let lastPlayingClass = null;
 function update(dt) {
+  const playingNow = ['playing', 'countdown', 'ending'].includes(game.state);
+  if (playingNow !== lastPlayingClass) { document.body.classList.toggle('playing', playingNow); lastPlayingClass = playingNow; }
   if (game.hitstop > 0) { game.hitstop -= dt; dt *= 0.1; }
   game.time += dt;
   if (game.state === 'menu') {
@@ -444,6 +479,7 @@ function render() {
   }
   if (game.debugCam) { camera.position.fromArray(game.debugCam.pos); camera.lookAt(...game.debugCam.look); }
   camera.updateMatrixWorld(); // a UI projeta com a câmera deste quadro
+  dof.uniforms.focus.value = game.state === 'menu' ? camera.position.distanceTo(new THREE.Vector3(0, -6, 0)) - 6 : camera.position.distanceTo(new THREE.Vector3(camTarget.x, 0, camTarget.z));
   const active = game.state === 'playing' || game.state === 'countdown' || game.state === 'ending';
   if (game.tickets && active) ui.updateTickets(game.tickets.open);
   ui.updateHints(game.players);

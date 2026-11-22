@@ -208,8 +208,8 @@ export class Player {
 
     // dica contextual
     const d = this.device;
-    const kGrab = d.kind === 'gamepad' ? 'A' : d.id === 'kbA' ? 'E' : 'Enter';
-    const kUse = d.kind === 'gamepad' ? 'X' : d.id === 'kbA' ? 'F' : 'Shift';
+    const kGrab = d.kind === 'gamepad' || d.kind === 'touch' ? 'A' : d.id === 'kbA' ? 'E' : 'Enter';
+    const kUse = d.kind === 'gamepad' ? 'X' : d.kind === 'touch' ? 'B' : d.id === 'kbA' ? 'F' : 'Shift';
     if (this.denyT > 0 && pr?.def.item) this.hint = `Precisa: ${ITEMS[pr.def.item].label}`;
     else if (pr) {
       const need = pr.def.item;

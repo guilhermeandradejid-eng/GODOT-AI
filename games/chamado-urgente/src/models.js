@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from './config.js';
 import * as TX from './textures.js';
+import { toonMat } from './toon.js';
 
 // ---------------------------------------------------------------------------
 // Fábrica de materiais/geometrias com cache
@@ -9,7 +10,7 @@ const matCache = new Map();
 export function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!matCache.has(key)) {
-    matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.0, ...opts }));
+    matCache.set(key, toonMat({ color, ...opts }));
   }
   return matCache.get(key);
 }

@@ -54,7 +54,57 @@ class GamepadDevice {
   }
 }
 
+// ------------------------------------------------------------------ touch
+// joystick virtual (metade esquerda, nasce onde o dedo toca) + botões A (pegar), B (usar), Correr
+export const touchState = { active: false, x: 0, z: 0, grab: false, use: false, dash: false, prev: {} };
+export const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+class TouchDevice {
+  constructor() { this.id = 'touch'; this.kind = 'touch'; this.label = 'Toque'; this.hint = 'Joystick + botões A / B'; }
+  read() {
+    const t = touchState, p = t.prev;
+    const out = { x: t.x, z: t.z, grab: t.grab && !p.grab, use: t.use, usePressed: t.use && !p.use, dash: t.dash && !p.dash, join: t.grab && !p.grab, start: false };
+    t.prev = { grab: t.grab, use: t.use, dash: t.dash };
+    return out;
+  }
+}
+
+export function setupTouch(onFirstTouch) {
+  const root = document.getElementById('touch');
+  const zone = root.querySelector('.stick-zone');
+  const base = root.querySelector('.stick-base');
+  const knob = root.querySelector('.stick-knob');
+  const R = 56;
+  let stickId = null, ox = 0, oy = 0;
+  const setStick = (dx, dy) => {
+    const l = Math.hypot(dx, dy), k = l > R ? R / l : 1;
+    dx *= k; dy *= k;
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    const m = Math.hypot(dx, dy) / R;
+    touchState.x = m > 0.18 ? dx / R : 0; touchState.z = m > 0.18 ? dy / R : 0;
+  };
+  zone.addEventListener('pointerdown', (e) => {
+    if (stickId !== null) return;
+    stickId = e.pointerId; try { zone.setPointerCapture(e.pointerId); } catch {}
+    ox = e.clientX; oy = e.clientY;
+    base.style.left = ox + 'px'; base.style.top = oy + 'px';
+    base.classList.add('on'); setStick(0, 0);
+  });
+  zone.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) setStick(e.clientX - ox, e.clientY - oy); });
+  const end = (e) => { if (e.pointerId !== stickId) return; stickId = null; base.classList.remove('on'); setStick(0, 0); };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+  for (const b of root.querySelectorAll('[data-btn]')) {
+    const k = b.dataset.btn;
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch {} touchState[k] = true; b.classList.add('down'); navigator.vibrate?.(8); });
+    const up = () => { touchState[k] = false; b.classList.remove('down'); };
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  }
+  window.addEventListener('touchstart', () => { if (!touchState.active) { touchState.active = true; document.body.classList.add('touch'); onFirstTouch?.(); } }, { passive: true });
+  if (isTouchDevice()) { touchState.active = true; document.body.classList.add('touch'); }
+}
+
 export const devices = {
+  touch: new TouchDevice(),
   kbA: new KeyboardDevice('kbA'),
   kbB: new KeyboardDevice('kbB'),
 };

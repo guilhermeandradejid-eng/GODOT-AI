@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as M from './models.js';
 import * as TX from './textures.js';
 import { PALETTE } from './config.js';
+import { addOutline } from './toon.js';
 import { aabb, DeskStation, PrinterStation, RouterStation, DispenserStation, CoffeeStation } from './stations.js';
 
 // Cenário 1: "Andar 7 — Escritório da Contabilidade".
@@ -265,6 +266,10 @@ export function buildLevel(scene) {
     s.position.set(x, 1.45, BZ + 0.18);
     root.add(s);
   }
+
+  // contorno nos móveis com que se interage (lê melhor e combina com os personagens)
+  for (const st of stations) addOutline(st.group, 0.02);
+  for (const o of [sofa, table, meet]) addOutline(o, 0.02);
 
   return {
     root, colliders, stations, desks,

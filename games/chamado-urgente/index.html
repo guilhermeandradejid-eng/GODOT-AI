@@ -2,7 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Chamado Urgente!</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -26,6 +28,17 @@
     <div id="net-alert">INTERNET FORA — todos os SLAs correm mais rápido!</div>
   </div>
   <div id="markers"></div>
+
+  <div id="touch">
+    <div class="stick-zone"><div class="stick-base"><div class="stick-knob"></div></div><div class="stick-hint">arraste para andar</div></div>
+    <div class="tbtns">
+      <button class="tbtn dash" data-btn="dash"><b>»</b><span>Correr</span></button>
+      <button class="tbtn use" data-btn="use"><b>B</b><span>Usar</span></button>
+      <button class="tbtn grab" data-btn="grab"><b>A</b><span>Pegar</span></button>
+    </div>
+    <button class="tpause" id="tpause">II</button>
+  </div>
+  <div id="rotate">Gire o aparelho para jogar na horizontal ↻</div>
   <div id="banner"></div>
 
   <div id="menu" class="overlay">
