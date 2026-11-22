@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chamado Urgente!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud" class="hidden">
+    <div id="tickets"></div>
+    <div id="clock">
+      <div class="clock-label">Expediente</div>
+      <div id="clock-time">09:00</div>
+      <div class="clock-bar"><div id="clock-fill"></div></div>
+    </div>
+    <div id="scorebox">
+      <div class="score-label">Pontos</div>
+      <div id="score-value">0</div>
+      <div id="stars-bar"><div id="stars-fill"></div><span class="star"></span><span class="star"></span><span class="star"></span></div>
+    </div>
+    <div id="net-alert">INTERNET FORA — todos os SLAs correm mais rápido!</div>
+  </div>
+  <div id="markers"></div>
+  <div id="banner"></div>
+
+  <div id="menu" class="overlay">
+    <div class="panel menu-panel">
+      <div class="logo">
+        <div class="logo-top">CHAMADO</div>
+        <div class="logo-bottom">URGENTE!</div>
+        <div class="logo-sub">Suporte técnico cooperativo · 1 a 4 técnicos</div>
+      </div>
+      <div class="menu-grid">
+        <div>
+          <h3>Equipe de TI</h3>
+          <div id="slots"></div>
+          <button id="start-btn" class="btn big">Começar sozinho</button>
+          <div class="small">ou pressione <kbd>Espaço</kbd> / <kbd>Start</kbd></div>
+        </div>
+        <div>
+          <h3>Chamados do dia</h3>
+          <div id="how"></div>
+          <div class="controls">
+            <div><b>WASD</b> mover · <b>E</b> pegar/soltar · <b>F</b> consertar/arremessar · <b>Shift</b> correr</div>
+            <div><b>Setas</b> mover · <b>Enter</b> pegar · <b>Shift dir.</b> usar · <b>Ctrl dir.</b> correr</div>
+            <div><b>Café</b> deixa o técnico mais rápido · <b>Esc</b> pausa · <b>M</b> música</div>
+          </div>
+        </div>
+      </div>
+      <div class="level-chip">Cenário 1 · <b>7º andar — Contabilidade</b></div>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="panel small-panel">
+      <h2>Pausa para o cafezinho</h2>
+      <button id="resume-btn" class="btn big">Voltar ao trabalho</button>
+      <button id="music-btn" class="btn">Música: ligada</button>
+    </div>
+  </div>
+
+  <div id="results" class="overlay hidden">
+    <div class="panel small-panel">
+      <h2>Relatório do expediente</h2>
+      <div class="res-stars"></div>
+      <div class="res-score">0</div>
+      <div class="res-msg"></div>
+      <div class="res-stats"></div>
+      <div class="res-goals"></div>
+      <div class="row">
+        <button id="again-btn" class="btn big">Jogar de novo</button>
+        <button id="menu-btn" class="btn">Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -18,6 +18,7 @@ Tudo que dá para fazer no editor também dá para fazer por comandos.
 | `recipes/` | receitas JSON dos mundos de demonstração (bons exemplos para copiar) |
 | `demos/` | cenas de demonstração geradas + hub (`demo_hub.tscn` é a cena principal) |
 | `tests/` | `run_tests.py` (testes headless), `render_gallery.py` (galeria de estilos) |
+| `games/chamado-urgente/` | jogo web à parte (Three.js + Vite, coop de suporte técnico) — não é Godot; `.gdignore` em `games/` |
 
 ## Como executar comandos
 
