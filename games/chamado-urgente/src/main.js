@@ -58,7 +58,8 @@ scene.add(officeLight, officeLight.target);
 const lights = { sun, hemi, officeLight };
 
 // qualidade: alta = AO + contorno + bloom; baixa = só bloom
-const QUALITY = params.get('q') || localStorage.getItem('cu-quality') || 'high';
+let savedQ = null; try { savedQ = localStorage.getItem('cu-quality'); } catch {}
+const QUALITY = params.get('q') || savedQ || 'high';
 
 const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
 const composer = new EffectComposer(renderer, rt);
