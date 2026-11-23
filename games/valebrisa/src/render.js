@@ -102,8 +102,20 @@ void main() {
     col *= 1.0 - occ * uAO;
   }
 
+  // ---- traço externo de anime: pixel de fundo encostado num personagem vira tinta
+  bool inked = false;
+  if (uOutlines > 0.5) {
+    vec2 o4[4];
+    o4[0] = vec2(0.0, texel.y); o4[1] = vec2(0.0, -texel.y); o4[2] = vec2(texel.x, 0.0); o4[3] = vec2(-texel.x, 0.0);
+    for (int i = 0; i < 4; i++) {
+      vec4 nn4 = texture2D(tNormal, uv + o4[i]);
+      if (nn4.a > 0.97 && (!geo || nc.a < 0.97) && (geo ? d - lin(uv + o4[i]) > 0.3 : true)) inked = true;
+    }
+    if (inked) col = vec3(0.1, 0.08, 0.15) + col * 0.15;
+  }
+
   // ---- contornos e brilho de aresta
-  if (geo && uOutlines > 0.5) {
+  if (geo && uOutlines > 0.5 && !inked) {
     vec3 n = normalize(nc.rgb * 2.0 - 1.0);
     vec2 offs[4];
     offs[0] = vec2(0.0, texel.y); offs[1] = vec2(0.0, -texel.y); offs[2] = vec2(texel.x, 0.0); offs[3] = vec2(-texel.x, 0.0);
@@ -119,7 +131,10 @@ void main() {
     dEdge = dEdge > 0.0 ? 1.0 : 0.0;
     nEdge = smoothstep(0.18, 0.5, nEdge);
     float strength = nc.a;
-    if (dEdge > 0.0) col = mix(col, col * vec3(0.32, 0.3, 0.42), strength);
+    if (strength > 0.97) {
+      // personagem anime: por dentro só um vinco leve entre partes sobrepostas
+      if (dEdge > 0.0) col = mix(col, col * vec3(0.55, 0.5, 0.65), 0.6);
+    } else if (dEdge > 0.0) col = mix(col, col * vec3(0.32, 0.3, 0.42), strength);
     else col = mix(col, col * vec3(1.18, 1.15, 1.05) + vec3(0.05, 0.05, 0.03), nEdge * strength * 0.85);
   }
 

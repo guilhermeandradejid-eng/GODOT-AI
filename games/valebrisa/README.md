@@ -14,7 +14,10 @@ com cenário em "diorama" e linguagem visual de JRPG 16-bit. Versão de teste jo
 |---|---|---|
 | ![noite](docs/noite.jpg) | ![amanhecer](docs/amanhecer.jpg) | ![celular](docs/celular.jpg) |
 
-Quadros da animação (caminhada, combo com antecipação e follow-through, rolamento):
+Personagens (Vó Amora, Tião, Pipa, Seu Bento e Nico) e quadros da animação (caminhada, combo com antecipação e
+follow-through, rolamento):
+
+![personagens](docs/personagens.jpg)
 
 ![animação](docs/animacao.jpg)
 
@@ -122,9 +125,11 @@ em [`docs/referencias.md`](docs/referencias.md).
 - Água transparente por profundidade, reflexo de céu e nuvens, correnteza, **cáusticas no leito**,
   **brilhos de sol** (bloom) e **espuma que vai e volta** na margem.
 
-**Personagens e animação fluida (12 princípios da Disney, `anim.js`)**
-- Rig articulado (quadril, coluna, peito, cabeça, braço/antebraço/mão, coxa/canela/pé) com formas arredondadas,
-  olhos grandes com brilho, sobrancelhas e boca expressivas; inclinação "de sprite" para a câmera, para o rosto
+**Personagens em anime cel-shaded e animação fluida (12 princípios da Disney, `anim.js`)**
+- Proporção ~1:4,5 (cabeça menor, pernas e braços longos e articulados), casaco aberto com gola alta e abas,
+  cabelo em mechas pontudas, olhos anime (branco, íris colorida, pupila e brilho), cílios e sobrancelhas.
+- **Cel-shading de 2 tons** com corte seco (sem dither) e **traço de tinta por fora da silhueta**, como contorno
+  de sprite, mais vincos leves entre partes sobrepostas; inclinação "de sprite" para a câmera para o rosto
   ler bem de cima.
 - **Tweens com easing por segmento** (slow in/slow out) e **antecipação → golpe → follow-through → recuperação**
   em todos os ataques, giro, rolamento, magia, dano, morte, aceno e comemoração.

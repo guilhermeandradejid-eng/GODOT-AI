@@ -175,6 +175,8 @@ export class HumanoidAnimator {
     this.bodyY = new Spring(22, 0.6);
     this.eyes = new Spring(40, 0.9, 1); this.brow = new Spring(20, 0.8); this.mouth = new Spring(25, 0.7);
     this.hipBase = p.hips.position.y;
+    this.waist = rig.waist ?? 0.4;
+    this.k = this.waist / 0.4; // poses foram afinadas para cintura 0.4 — escala os deslocamentos
     this.phase = 0;
     this.t = 0;
     this.action = null; this.actT = 0;
@@ -218,7 +220,7 @@ export class HumanoidAnimator {
     // ---- camada de locomoção (contínua)
     const sp = this.speed;
     const walkW = clamp(sp / 2.2, 0, 1), runW = clamp((sp - 3.2) / 2.0, 0, 1);
-    const stride = lerp(0.9, 1.25, runW);
+    const stride = lerp(0.9, 1.25, runW) * Math.sqrt(this.k);
     this.phase += (sp / stride) * Math.PI * dt;
     const ph = this.phase;
     const L = {};
@@ -304,12 +306,12 @@ export class HumanoidAnimator {
       const tg = pose[k] || [0, 0, 0], s = this.springs[k], j = p[k];
       j.rotation.set(s[0].step(tg[0], dt), s[1].step(tg[1], dt), s[2].step(tg[2], dt));
     }
-    p.hips.position.y = this.hipBase + this.hipY.step(pose._hipY || 0, dt);
-    p.hips.position.z = this.hipZ.step(pose._hipZ || 0, dt);
+    p.hips.position.y = this.hipBase + this.hipY.step((pose._hipY || 0) * this.k, dt);
+    p.hips.position.z = this.hipZ.step((pose._hipZ || 0) * this.k, dt);
     const bx = this.bx.step(pose._bx || 0, dt), by = this.by.step(pose._by || 0, dt), bz = this.bz.step(pose._bz || 0, dt);
     p.body.rotation.set(bx, by, bz);
     // rolamento: o corpo encolhe e sobe um pouco no meio do giro (arco)
-    p.body.position.y = 0.4 + Math.sin(Math.min(Math.abs(bx), Math.PI)) * 0.05 + this.bodyY.step(pose._bodyY || 0, dt);
+    p.body.position.y = this.waist + Math.sin(Math.min(Math.abs(bx), Math.PI)) * 0.05 * this.k + this.bodyY.step((pose._bodyY || 0) * this.k, dt);
     // squash & stretch com volume preservado (mola gelatinosa)
     const s = clamp(this.sq.step(pose._sq || 0, dt), -0.35, 0.4);
     const sy = 1 + s, sxz = 1 / Math.sqrt(sy);

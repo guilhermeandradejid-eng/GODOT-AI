@@ -88,7 +88,7 @@ vec3 vb_points(vec3 albedo, vec3 wp, vec3 wn) {
 }
 
 /** sombreamento principal: sun = N·L×sombra (0..1) */
-vec3 vb_toon(vec3 albedo, float sun, vec3 wn, vec3 nView, float rim) {
+vec3 vb_toon(vec3 albedo, float sun, vec3 wn, vec3 nView, float rim, float cel) {
   float cloud = vb_cloud(vWPos.xz) * uCloud;
   sun *= 1.0 - cloud * 0.55;
   float d = (vb_bayer(gl_FragCoord.xy) - 0.5) * 0.1;
@@ -98,6 +98,8 @@ vec3 vb_toon(vec3 albedo, float sun, vec3 wn, vec3 nView, float rim) {
   vec3 hi = albedo * (uSunColor * uHiColor + amb * 0.22);
   float b = sun + d;
   vec3 c = b < 0.16 ? shade : (b < 0.66 ? lit : hi);
+  // cel anime: 2 tons com corte seco (sem dither) e sombra um pouco mais saturada
+  if (cel > 0.5) c = sun < 0.3 ? albedo * mix(amb, amb * vec3(0.92, 0.86, 1.08), 0.6) : albedo * (uSunColor + amb * 0.22);
   // contorno de luz (rim) em degrau
   float fr = 1.0 - clamp(nView.z, 0.0, 1.0);
   c += albedo * uRimColor * step(0.62, fr + d) * rim * 0.45;
@@ -208,10 +210,11 @@ export function toonMat(opts = {}) {
   const uEmis = { value: opts.emissive ?? 0 };
   const uPattern = { value: opts.pattern ?? 0 };
   const uRim = { value: opts.rim ?? 0 };
+  const uCel = { value: opts.cel ? 1 : 0 };
   m.userData.uOutline = uOutline;
   m.userData.uFlash = uFlash;
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, shared, opts.uniforms || {}, { uOutline, uFlash, uFlashColor, uEmis, uPattern, uRim, uWind: opts.windU || { value: opts.wind || 0 } });
+    Object.assign(sh.uniforms, shared, opts.uniforms || {}, { uOutline, uFlash, uFlashColor, uEmis, uPattern, uRim, uCel, uWind: opts.windU || { value: opts.wind || 0 } });
     let vs = sh.vertexShader;
     vs = vs.replace('#include <common>', '#include <common>\n' + VERT_HEAD + (opts.vertHead || ''));
     vs = vs.replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -245,7 +248,7 @@ export function toonMat(opts = {}) {
 
     let fs = sh.fragmentShader;
     fs = fs.replace('#include <common>', '#include <common>\n' + GLSL_COMMON + `
-      uniform float uOutline; uniform float uFlash; uniform vec3 uFlashColor; uniform float uEmis; uniform float uPattern; uniform float uRim;
+      uniform float uOutline; uniform float uFlash; uniform vec3 uFlashColor; uniform float uEmis; uniform float uPattern; uniform float uRim; uniform float uCel;
       ` + (opts.fragHead || ''));
     let albedo = '';
     if (opts.albedoGLSL) albedo += opts.albedoGLSL + '\n';
@@ -269,7 +272,7 @@ export function toonMat(opts = {}) {
     fs = fs.replace('#include <lights_fragment_end>', '');
     fs = fs.replace('#include <aomap_fragment>', '');
     fs = fs.replace('#include <opaque_fragment>', `
-      vec3 vbCol = vb_toon(diffuseColor.rgb, vbSun, normalize(vWNormal), normal, uRim);
+      vec3 vbCol = vb_toon(diffuseColor.rgb, vbSun, normalize(vWNormal), normal, uRim, uCel);
       vbCol = mix(vbCol, diffuseColor.rgb * uEmisBoost, uEmis);
       vbCol = mix(vbCol, uFlashColor, uFlash);
       gl_FragColor = vec4(vbCol, diffuseColor.a);`);
