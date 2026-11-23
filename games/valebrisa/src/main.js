@@ -4,9 +4,10 @@ import { PixelRenderer } from './render.js';
 import { shared, toonMat, unlitMat } from './materials.js';
 import { World, toWorld, toUV, PLACES } from './world.js';
 import { buildScenery, mergeStatic, campfire, torch } from './props.js';
-import { buildGrass } from './grass.js';
+import { buildGrass, buildAnimeGrass } from './grass.js';
+import { TOON, setStyle } from './style.js';
 import { Lighting, TIME_PRESETS } from './lighting.js';
-import { FX } from './fx.js';
+import { FX, SwordTrail } from './fx.js';
 import { UI } from './ui.js';
 import { Input } from './input.js';
 import { initAudio, sfx, playMusic, toggleMusic, isMusicOn } from './audio.js';
@@ -40,6 +41,7 @@ class Game {
     this.shakeT = 0; this.shakeAmp = 0;
     this.state = 'title';
     this.musicOn = true;
+    this.styleName = TOON ? 'desenho animado' : 'pixel art';
     this.enemies = [];
     this.projectiles = [];
     this.pickups = [];
@@ -53,6 +55,11 @@ class Game {
     this.fx = new FX(this.scene, this.pr, document.getElementById('ui'));
     this.ui = new UI(document.getElementById('ui'), this);
     this.fx.ui = this.ui.dmgLayer;
+    this.fx.initJuice(this.pr.camera);
+    this.swordTrail = new SwordTrail(this.fx);
+    this.fx.trails.push(this.swordTrail);
+    this.timeScale = 1; this.slowT = 0;
+    this.camKick = new THREE.Vector3(); this.camKickV = new THREE.Vector3();
     this.player = new Player(this);
     const sp = W(...PLACES.spawn);
     this.player.place(sp.x, sp.z);
@@ -89,7 +96,7 @@ class Game {
     this.torches = [[-3.1, -15.0], [3.1, -15.0], [-2.6, -22.4], [2.6, -22.4]].map((at) => {
       const w = W(...at), t = torch(); t.position.set(w.x, world.heightAt(w.x, w.z), w.z); sc.add(t); world.addCircle(w.x, w.z, 0.15); return t;
     });
-    this.grassCount = buildGrass(world, sc, (x, z) => this.scenery.blocked(x, z, -0.45) || Math.hypot(x - fireAt.x, z - fireAt.z) < 1, this.pr, [
+    this.grassCount = (TOON ? (w, sc2, ex, pr, zs) => buildAnimeGrass(w, sc2, ex, zs) : buildGrass)(world, sc, (x, z) => (TOON ? this.scenery.blockedSolid(x, z, -0.45) : this.scenery.blocked(x, z, -0.45)) || Math.hypot(x - fireAt.x, z - fireAt.z) < 1, this.pr, [
       { c: [-6, -3], r: 5, colors: [0, 1] }, { c: [8, 4], r: 4, colors: [2, 0] }, { c: [-14, 7], r: 4, colors: [3, 0, 6] },
       { c: [4, -9], r: 4, colors: [1, 4] }, { c: [-6, 22], r: 3, colors: [2, 5] }, { c: [7, 33], r: 3, colors: [1, 3] },
       { c: [16, -6], r: 6, colors: [3, 2, 6] }, { c: [-16, -5], r: 5, colors: [1, 0] }, { c: [0, -29], r: 7, colors: [0, 3, 6] },
@@ -468,12 +475,25 @@ class Game {
     }
     const hp = { x: e.pos.x, y: e.pos.y + (e.kind === 'boss' ? 1.4 : 0.5), z: e.pos.z };
     this.lighting.flash(new THREE.Vector3(hp.x, hp.y, hp.z), crit ? 0xffd27a : 0xfff0d0, crit ? 3.4 : 2.6, crit ? 1.6 : 1.0, 0.14);
+    // ---- juice: peso do golpe proporcional ao dano
+    const heavy = kb >= 6 || crit;
+    const willDie = e.hp <= 0;
+    const dir = new THREE.Vector3(e.pos.x - from.x, 0, e.pos.z - from.z).normalize();
     this.fx.hitSpark(hp, crit ? 0xfff2a8 : 0xffffff);
+    this.fx.impact(new THREE.Vector3(hp.x, hp.y, hp.z), { size: heavy ? 1.4 : 0.95, life: heavy ? 0.2 : 0.15 });
+    this.fx.stars3(new THREE.Vector3(hp.x, hp.y, hp.z), heavy ? 5 : 3, { color: crit ? 0xffe066 : 0xffffff, speed: heavy ? 4 : 3, size: heavy ? 0.22 : 0.16 });
+    for (let k = 0; k < (heavy ? 4 : 2); k++) this.fx.puff({ x: hp.x - dir.x * 0.2, y: hp.y, z: hp.z - dir.z * 0.2 }, { vx: dir.x * 2 + (Math.random() - 0.5), vz: dir.z * 2 + (Math.random() - 0.5), vy: 1, size: 0.14, life: 0.35 });
     this.fx.text(new THREE.Vector3(e.pos.x, e.pos.y + (e.kind === 'boss' ? 1.6 : 0), e.pos.z), String(dmg), crit ? 'crit' : '');
-    this.hitstop = Math.max(this.hitstop, crit ? 0.085 : 0.05);
-    this.shake(crit ? 2 : 1);
-    crit ? sfx.crit() : sfx.hit();
-    if (e.hp <= 0) this.killEnemy(e);
+    this.hitstop = Math.max(this.hitstop, (heavy ? 0.1 : 0.065) + (willDie ? 0.05 : 0));
+    this.shake(heavy ? 3 : 1.5, heavy ? 0.22 : 0.14);
+    this.kickCam(dir, heavy ? 0.22 : 0.12);
+    this.pr.zoomKick(heavy ? 1.6 : 0.8);
+    if (e.jelly) e.jelly.kick(heavy ? -5 : -3.5);
+    if (e.kind !== 'boss' && !e.big) e.hopV = heavy ? 5.5 : 3.5;
+    if (e.kind === 'boss') e.rig.animator?.squash?.(-2);
+    heavy ? sfx.heavy() : sfx.hit();
+    if (crit) sfx.crit();
+    if (willDie) this.killEnemy(e);
   }
 
   killEnemy(e) {
@@ -483,8 +503,15 @@ class Game {
     const c = { coin: 0, n: 0 };
     void c;
     const col = e.kind === 'slime' ? [new THREE.Color(e.color).getHex(), 0xffffff, 0xd8f5e8] : e.kind === 'mushroom' ? [0xd4553f, 0xf6f1e0, 0xb98ad6] : e.kind === 'beetle' ? [0x6a4fa0, 0x3a2f4f, 0xffcf4a] : [0x7b5a48, 0x6e9d4c, 0xffb347];
-    this.fx.burst({ x: e.pos.x, y: e.pos.y + 0.4, z: e.pos.z }, e.kind === 'boss' ? 60 : 16, { speed: e.kind === 'boss' ? 6 : 3.5, up: 4, g: -14, color: col, life: 0.8, size: 0.12, floor: e.pos.y + 0.05 });
-    this.fx.ring(e.pos, { r0: 0.2, r1: 1.4, color: 0xffffff, life: 0.25, y: 0.3 });
+    this.fx.burst({ x: e.pos.x, y: e.pos.y + 0.4, z: e.pos.z }, e.kind === 'boss' ? 40 : 10, { speed: e.kind === 'boss' ? 6 : 3.5, up: 4, g: -14, color: col, life: 0.8, size: 0.1, floor: e.pos.y + 0.05 });
+    // "poof" de desenho animado + espiral + estrelinhas + câmera lenta
+    const big = e.kind === 'boss';
+    this.fx.poof(e.pos, { n: big ? 18 : 10, speed: big ? 6 : 3.4, size: big ? 0.6 : 0.3, color: [0xffffff, 0xffffff, col[0]], y: big ? 1 : 0.35, life: big ? 1 : 0.6 });
+    this.fx.swirl(e.pos, { size: big ? 4 : 1.8, y: big ? 1.2 : 0.5, life: 0.6 });
+    this.fx.stars3(new THREE.Vector3(e.pos.x, e.pos.y + 0.6, e.pos.z), big ? 10 : 5, { speed: 4, up: 3 });
+    this.fx.ring(e.pos, { r0: 0.2, r1: big ? 5 : 1.6, color: 0xffffff, life: 0.3, y: 0.12, width: 0.12 });
+    sfx.poof();
+    this.slowMo(big ? 0.15 : 0.4, big ? 1.2 : 0.22);
     const [g0, g1] = e.gold;
     const gold = Math.round(g0 + Math.random() * (g1 - g0));
     const n = Math.min(10, Math.ceil(gold / 2));
@@ -641,7 +668,7 @@ class Game {
       this.scene.add(g);
       this.spikes.push({ obj: g, t: 0 });
       sfx.root();
-      this.fx.dust(pos, 5, 0x8a6a50);
+      this.fx.poof(pos, { n: 6, speed: 2.5, size: 0.24, color: [0xc9a37a, 0x9a7a5a], y: 0.1, life: 0.5 });
       if (Math.hypot(this.player.pos.x - at.x, this.player.pos.z - at.z) < 1.1) this.damagePlayer(dmg, pos);
     });
   }
@@ -650,7 +677,9 @@ class Game {
     this.lighting.flash(b.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffc070, 6, 1.4, 0.35);
     this.fx.ring(b.pos, { r0: 1, r1: 4.6, color: 0xfff2a8, life: 0.4, y: 0.15, width: 0.15 });
     this.fx.ring(b.pos, { r0: 0.5, r1: 3.6, color: 0xffffff, life: 0.3, y: 0.2, width: 0.25 });
-    for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; this.fx.dust({ x: b.pos.x + Math.cos(a) * 2.5, y: b.pos.y, z: b.pos.z + Math.sin(a) * 2.5 }, 1, 0x8a6a50); }
+    for (let i = 0; i < 20; i++) { const a = (i / 20) * Math.PI * 2; this.fx.puff({ x: b.pos.x + Math.cos(a) * 1.6, y: b.pos.y + 0.2, z: b.pos.z + Math.sin(a) * 1.6 }, { vx: Math.cos(a) * 7, vz: Math.sin(a) * 7, vy: 1.2, drag: 3, size: 0.4, life: 0.7, color: 0xe8d8c0 }); }
+    this.fx.stars3(new THREE.Vector3(b.pos.x, b.pos.y + 0.5, b.pos.z), 8, { speed: 6, up: 4, size: 0.25 });
+    this.pr.zoomKick(-2.2);
     if (this.player.distTo(b.pos) < 4.4) this.damagePlayer(22, b.pos);
   }
   bossEmerge(b) {
@@ -662,17 +691,43 @@ class Game {
 
   // ------------------------------------------------------------ projéteis
   spawnWindBlade(p) {
-    const geo = new THREE.RingGeometry(0.45, 0.75, 10, 1, -1.1, 2.2); geo.rotateX(-Math.PI / 2);
+    // "Lâmina de Vento": crescente de ar + dois redemoinhos girando + rastro de fumacinhas
     const g = new THREE.Group();
-    const m = new THREE.Mesh(geo, unlitMat(0x7fe0c8, { side: THREE.DoubleSide }));
-    const geo2 = new THREE.RingGeometry(0.6, 0.78, 10, 1, -0.9, 1.8); geo2.rotateX(-Math.PI / 2);
-    const m2 = new THREE.Mesh(geo2, unlitMat(0xffffff, { side: THREE.DoubleSide })); m2.position.y = 0.01;
-    g.add(m, m2); g.rotation.y = p.facing - Math.PI / 2;
-    g.traverse((o) => o.layers.set(1));
+    const geo = new THREE.RingGeometry(0.5, 0.95, 18, 1, -1.2, 2.4); geo.rotateX(-Math.PI / 2);
+    const geo2 = new THREE.RingGeometry(0.72, 1.0, 18, 1, -1.0, 2.0); geo2.rotateX(-Math.PI / 2);
+    const m = new THREE.Mesh(geo, unlitMat(new THREE.Color(0.55, 1.6, 1.4), { side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false }));
+    const m2 = new THREE.Mesh(geo2, unlitMat(new THREE.Color(1.8, 1.9, 1.9), { side: THREE.DoubleSide, depthWrite: false }));
+    m2.position.y = 0.02;
+    g.add(m, m2);
+    const swirls = [];
+    for (const sd of [-1, 1]) {
+      const sw = new THREE.Mesh(this.fx.swirlGeos[1], unlitMat(0xffffff, { side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false }));
+      sw.position.set(sd * 0.55, 0.05, 0.25); sw.scale.setScalar(0.9);
+      g.add(sw); swirls.push([sw, sd]);
+    }
+    g.rotation.y = p.facing - Math.PI / 2;
+    g.traverse((o) => { o.layers.set(1); o.renderOrder = 3; });
     const dir = new THREE.Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
-    const blade = new Projectile(this, { owner: 'player', mesh: g, pos: p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)).addScaledVector(dir, 0.5), vel: dir.multiplyScalar(12), life: 0.75, radius: 0.6, pierce: true, dmg: Math.round(p.stats.atk * 1.4), trail: 0xbff5e8 });
+    const blade = new Projectile(this, {
+      owner: 'player', mesh: g, pos: p.pos.clone().add(new THREE.Vector3(0, 0.55, 0)).addScaledVector(dir, 0.7), vel: dir.clone().multiplyScalar(13), life: 0.8, radius: 0.8, pierce: true, dmg: Math.round(p.stats.atk * 1.5),
+      onUpdate: (b, dt) => {
+        const k = Math.min(1, b.t / 0.25);
+        g.scale.setScalar(0.5 + k * 0.7 + Math.sin(b.t * 30) * 0.03);
+        for (const [sw, sd] of swirls) sw.rotation.y += sd * dt * 14;
+        if (Math.random() < 0.7) this.fx.puff({ x: b.pos.x + (Math.random() - 0.5) * 0.8, y: b.pos.y - 0.2, z: b.pos.z + (Math.random() - 0.5) * 0.8 }, { vx: -dir.x * 2, vz: -dir.z * 2, vy: 0.4, size: 0.13, life: 0.35, color: 0xd8fff6 });
+        if (Math.random() < 0.3) this.fx.particle({ x: b.pos.x, y: b.pos.y, z: b.pos.z }, { vx: (Math.random() - 0.5) * 3, vy: 1.5, vz: (Math.random() - 0.5) * 3, g: -3, life: 0.6, size: 0.07, color: [0x8bc45a, 0xe2b448][Math.floor(Math.random() * 2)] });
+      },
+      onHit: (b, e) => {
+        this.fx.poof(e.pos, { n: 7, speed: 3, size: 0.22, color: [0xd8fff6, 0xffffff], life: 0.5 });
+        this.fx.swirl(e.pos, { size: 1.5, color: 0xd8fff6, y: 0.6, life: 0.45 });
+      },
+      onDie: (b) => { this.fx.poof(b.pos.clone().setY(b.pos.y - 0.4), { n: 6, speed: 2, size: 0.18, color: 0xd8fff6, life: 0.4 }); },
+    });
     this.projectiles.push(blade);
-    this.lighting.flash(blade.pos, 0x7fe0c8, 4, 1.6, 0.75, blade.pos);
+    this.lighting.flash(blade.pos, 0x7fe0c8, 4.5, 1.8, 0.8, blade.pos);
+    this.fx.swirl(p.pos, { size: 1.4, y: 0.4, color: 0xd8fff6, life: 0.35 });
+    this.pr.zoomKick(0.6);
+    this.kickCam(dir.clone().negate(), 0.08);
   }
   spawnSpore(e, ang) {
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), toonMat({ color: '#b98ad6', outline: 0.9, emissive: 0.5 }));
@@ -705,6 +760,8 @@ class Game {
   }
 
   later(t, fn) { this.timers.push({ t, fn }); }
+  slowMo(scale, dur) { this.timeScale = Math.min(this.timeScale, scale); this.slowT = Math.max(this.slowT, dur); }
+  kickCam(dir, amt) { this.camKickV.addScaledVector(dir, amt * 14); }
   shake(amp, dur = 0.25) { this.shakeAmp = Math.max(this.shakeAmp, amp); this.shakeT = Math.max(this.shakeT, dur); }
 
   // ------------------------------------------------------------ áreas
@@ -731,6 +788,7 @@ class Game {
       case 'music': this.musicOn = toggleMusic(); this.ui.pauseScreen(); break;
       case 'pixels': { const o = [0, 2, 3, 4]; const pr = this.pr; pr.pixelScaleOverride = o[(o.indexOf(pr.pixelScaleOverride) + 1) % o.length]; pr.resize(); this.ui.applyScale(); this.ui.pauseScreen(); break; }
       case 'outlines': this.pr.outlines = !this.pr.outlines; this.ui.pauseScreen(); break;
+      case 'style': setStyle(TOON ? 'pixel' : 'toon'); location.reload(); break;
       case 'time': {
         const keys = Object.keys(TIME_PRESETS);
         const i = (keys.indexOf(this.timeMode || 'ciclo') + 1) % keys.length;
@@ -779,7 +837,12 @@ class Game {
     if (this.state === 'play') this.playTime += dt;
     // hitstop congela a simulação (não a câmera nem o tempo dos shaders)
     let simDt = dt;
+    if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.timeScale = 1; }
+    simDt *= this.timeScale;
     if (this.hitstop > 0) { this.hitstop -= dt; simDt = 0; }
+    // mola do "empurrão" de câmera
+    this.camKickV.addScaledVector(this.camKick, -160 * dt).multiplyScalar(Math.exp(-14 * dt));
+    this.camKick.addScaledVector(this.camKickV, dt);
 
     if (playing && simDt > 0) {
       // passos de no máximo 50 ms (estável mesmo com quadros lentos)
@@ -806,7 +869,7 @@ class Game {
       const a = Math.round(this.shakeAmp * Math.min(1, this.shakeT * 4));
       this.pr.shake.set(Math.round((Math.random() - 0.5) * 2 * a), Math.round((Math.random() - 0.5) * 2 * a));
     } else { this.pr.shake.set(0, 0); this.shakeAmp = 0; }
-    this.pr.updateCamera(this.camTarget);
+    this.pr.updateCamera(this.camTarget.clone().add(this.camKick), dt);
     // sombra acompanha a câmera presa a texels
     const sc = this.sun.shadow.camera;
     const texel = (sc.right - sc.left) / this.sun.shadow.mapSize.x;
@@ -824,7 +887,7 @@ class Game {
     const fade = this.pr.compMat.uniforms.uFade;
     fade.value = this.state === 'dying' ? Math.min(0.6, fade.value + dt * 0.6) : Math.max(0, fade.value - dt * 2);
 
-    this.fx.update(dt);
+    this.fx.update(dt * (this.hitstop > 0 ? 0.15 : this.timeScale));
     this.ui.update(dt);
     // prompt de interação
     if (this.state === 'play' && p.state === 'free') {

@@ -1,6 +1,6 @@
 # Valebrisa — contos do vale dos ventos
 
-RPG de ação **isométrico em 3D com cara de pixel art**, no espírito de *Secrets of Grindea*
+RPG de ação **isométrico em 3D com visual de desenho animado (toon/cel-shading, inspirado no estilo de Wind Waker)** — com um modo alternativo em pixel art —, no espírito de *Secrets of Grindea*
 (combate rápido com combo, golpe carregado, rolamento, inimigos e chefe com ataques telegrafados),
 com cenário em "diorama" e linguagem visual de JRPG 16-bit. Versão de teste jogável no navegador.
 
@@ -81,10 +81,26 @@ reaparecem depois de um tempo (bom para subir de nível).
 | Besouro-chifre | mira (faixa vermelha no chão) e investe em linha reta | saia da faixa; se ele bater em algo fica tonto (dano x1,5) |
 | Toco Ancião | padrões telegrafados em sequência | leia os avisos, puna depois da pancada |
 
-## Direção de arte — "pixel art 3D"
+## Direção de arte — "desenho animado" (padrão) e "pixel art 3D" (alternativo)
 
-O objetivo é parecer pixel art desenhada à mão, não um 3D genérico com filtro. Pesquisa e referências
-em [`docs/referencias.md`](docs/referencias.md).
+O estilo padrão é **toon de desenho animado**, inspirado na linguagem visual de *The Legend of Zelda: The Wind Waker*
+(sem usar personagens, nomes ou arte de lá): render liso em resolução cheia, cel-shading de 2 tons com borda
+limpa, cores vivas, sem contornos; grama em tufos sólidos, copas redondas, água azul com linhas brancas de
+espuma; personagens cabeçudos com olhos grandes desenhados (pupilas que olham e piscam) e sobrancelhas grossas
+por cima do cabelo; fumacinhas redondas, espirais de vento e estrelinhas. Na pausa, **Estilo** alterna para o
+modo pixel art (ou abra com `?estilo=pixel`).
+
+### Peso e "juice" do combate
+- **Rastro da espada** que segue a lâmina de verdade (ribbon com núcleo branco e borda colorida).
+- **Hitstop proporcional** ao golpe (leve, pesado, crítico, golpe final), **zoom-punch** da câmera, **empurrão
+  direcional** da câmera e tremor; **câmera lenta** no golpe que mata (mais longa no chefe).
+- Inimigos **achatam como gelatina** e **dão um pulinho** ao levar o golpe; anel de impacto, estrelinhas e
+  fumacinha na direção do golpe; números de dano que **estouram** com overshoot.
+- Morte em **"poof"**: anel de fumacinhas, espiral e estrelas; som de batida grave nos golpes pesados.
+- **Lâmina de Vento** refeita: crescente de ar com dois redemoinhos girando, cresce ao sair, deixa rastro de
+  fumacinhas e folhas e explode em vento ao acertar.
+- **Golpe carregado**: faíscas orbitando a lâmina, estouro de luz ao carregar; o giro solta redemoinhos e um anel
+  de fumacinhas. Pancada do chefe e raízes com nuvens de poeira.
 
 **Base do pixel**
 - Resolução interna baixa (~300 px de altura, escala inteira) e câmera ortográfica isométrica **presa ao grid

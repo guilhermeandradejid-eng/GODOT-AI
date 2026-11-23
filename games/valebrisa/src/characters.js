@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { toonMat, unlitMat } from './materials.js';
 import { HumanoidAnimator } from './anim.js';
+import { TOON } from './style.js';
 
 // =============================================================================
 // Personagens "chibi" montados com primitivas (cabeça grande, corpo curto) e animados
@@ -55,6 +56,7 @@ const ELL = (r, sx, sy, sz, ws = 10, hs = 8) => { const g = new THREE.SphereGeom
  *         weapon (sword|staff), beard, dress, glove, scale, iris }
  */
 export function buildHumanoid(look, flash) {
+  if (TOON) return buildToonHumanoid(look, flash);
   const r = new Rig(flash);
   const L = { skin: '#f6d2b4', hair: '#7a3f2c', tunic: '#3f7fae', tunic2: '#2f5f88', shirt: '#efe6d6', pants: '#3e3654', boots: '#5e3f31', belt: '#6b4433', scale: 1, iris: '#3f86c8', ...look };
   L.hairL = L.hairL || shadeHex(L.hair, 1.3);
@@ -234,6 +236,164 @@ export function buildHumanoid(look, flash) {
     r.mesh(new THREE.TorusGeometry(0.06, 0.016, 4, 8), '#7a5642', w, [0, 1.08, 0]);
     r.mesh(new THREE.OctahedronGeometry(0.06, 0), '#7fe0c8', w, [0, 1.08, 0], { unlit: true });
   }
+  r.root.userData.rig = r;
+  r.animator = new HumanoidAnimator(r);
+  return r;
+}
+
+/**
+ * Personagem toon "de desenho animado": cabeça grande e redonda (~1:2,4), olhos enormes
+ * desenhados (branco + pupila preta grande que acompanha o olhar + brilho), sobrancelhas
+ * grossas que flutuam por cima do cabelo, nariz de botão, mãos e botas arredondadas,
+ * mechas de cabelo macias. Mesmo esqueleto do animador (anim.js).
+ */
+export function buildToonHumanoid(look, flash) {
+  const r = new Rig(flash);
+  const L = { skin: '#ffd8b8', hair: '#8a4a2a', tunic: '#3f8fd0', tunic2: '#2e6fb0', shirt: '#f4efe4', pants: '#6a5a8a', boots: '#7a4a30', belt: '#6b4433', scale: 1, ...look };
+  L.hairL = L.hairL || shadeHex(L.hair, 1.3);
+  r.eyes = []; r.brows = []; r.chains = []; r.pupils = [];
+  const chain = (obj, o) => { r.chains.push({ obj, base: [obj.rotation.x, 0, obj.rotation.z], kv: 0.1, ka: 0.012, max: 1.1, flutter: 8, amp: 0.08, ph: Math.random() * 6, w: 10, z: 0.32, ...o }); return obj; };
+  r.root.scale.setScalar(L.scale * 0.95);
+  const WAIST = 0.42;
+  r.waist = WAIST;
+  const M = (geo, color, parent, pos, o = {}) => r.mesh(geo, color, parent, pos, { ...o, mat: { cel: true, outline: 0.6, rim: 0.4, ...(o.mat || {}) } });
+
+  const body = r.pivot(r.root, [0, WAIST, 0], 'body');
+  const squash = r.pivot(body, [0, -WAIST, 0], 'squash');
+  const hips = r.pivot(squash, [0, WAIST, 0], 'hips');
+  for (const sd of [1, -1]) {
+    const S = sd > 0 ? 'L' : 'R';
+    const thigh = r.pivot(hips, [sd * 0.1, -0.02, 0], 'thigh' + S);
+    M(CAP(0.085, 0.1), L.pants, thigh);
+    const knee = r.pivot(thigh, [0, -0.16, 0], 'knee' + S);
+    M(CAP(0.08, 0.08), L.boots, knee);
+    const foot = r.pivot(knee, [0, -0.15, 0], 'foot' + S);
+    M(ELL(0.1, 1, 0.72, 1.45, 12, 8), L.boots, foot, [0, -0.02, 0.05]);
+  }
+  const spine = r.pivot(hips, [0, 0.02, 0], 'spine');
+  M(ELL(0.19, 1, 0.95, 0.88, 14, 10), L.tunic, spine, [0, 0.08, 0]);
+  M(new THREE.TorusGeometry(0.19, 0.035, 6, 16), L.belt, spine, [0, 0.03, 0], { rot: [Math.PI / 2, 0, 0], scale: [1, 0.9, 1] });
+  M(new THREE.BoxGeometry(0.07, 0.06, 0.04), '#ffd34a', spine, [0, 0.03, 0.18]);
+  const sk = r.pivot(spine, [0, 0.02, 0], 'skirt');
+  M(new THREE.CylinderGeometry(0.19, L.dress ? 0.3 : 0.25, L.dress ? 0.36 : 0.15, 16, 1, true).translate(0, L.dress ? -0.18 : -0.075, 0), L.tunic2, sk, null, { mat: { side: THREE.DoubleSide } });
+  chain(sk, { kv: 0.07, ka: 0.008, max: 0.45, w: 12, z: 0.35, amp: 0.04 });
+  const chest = r.pivot(spine, [0, 0.13, 0], 'chest');
+  M(ELL(0.18, 1.05, 0.9, 0.85, 14, 10), L.tunic, chest, [0, 0.07, 0]);
+  M(ELL(0.07, 1.4, 0.5, 0.4, 8, 6), L.shirt, chest, [0, 0.12, 0.14]);
+  for (const sd of [1, -1]) {
+    const S = sd > 0 ? 'L' : 'R';
+    const arm = r.pivot(chest, [sd * 0.2, 0.13, 0], 'arm' + S);
+    M(CAP(0.062, 0.08), L.sleeve || L.tunic, arm);
+    const fore = r.pivot(arm, [0, -0.12, 0], 'fore' + S);
+    M(CAP(0.055, 0.06), L.forearm || L.skin, fore);
+    const hand = r.pivot(fore, [0, -0.1, 0], 'hand' + S);
+    M(new THREE.SphereGeometry(0.075, 12, 8), L.glove || L.skin, hand, [0, -0.02, 0]);
+  }
+  // ---- cabeça grande
+  const head = r.pivot(chest, [0, 0.2, 0], 'head');
+  M(ELL(0.34, 1.04, 0.96, 1.0, 22, 16), L.skin, head, [0, 0.3, 0]);
+  M(new THREE.SphereGeometry(0.045, 8, 6), shadeHex(L.skin, 0.95), head, [0, 0.24, 0.335]);
+  for (const sd of [1, -1]) M(ELL(0.06, 0.6, 1.1, 0.8, 8, 6), L.skin, head, [sd * 0.34, 0.28, 0]);
+  for (const sd of [1, -1]) {
+    const eye = r.pivot(head, [sd * 0.12, 0.31, 0.29], null);
+    eye.rotation.y = sd * 0.28;
+    eye.userData.sy = 1;
+    r.eyes.push(eye);
+    r.mesh(ELL(0.1, 0.75, 1.0, 0.3, 14, 10), '#ffffff', eye, null, { cast: false, unlit: true });
+    const pup = r.pivot(eye, [0, -0.005, 0.018], null);
+    r.mesh(ELL(0.056, 0.85, 1.15, 0.3, 12, 8), '#15121e', pup, null, { cast: false, unlit: true });
+    r.mesh(new THREE.SphereGeometry(0.016, 6, 4), '#ffffff', pup, [-0.014, 0.02, 0.012], { cast: false, unlit: true });
+    r.pupils.push(pup);
+    // sobrancelha grossa que flutua por cima do cabelo
+    const b = r.mesh(ELL(0.06, 1.3, 0.35, 0.35, 8, 6), shadeHex(L.hair, 0.6), head, [sd * 0.12, 0.47, 0.39], { cast: false, unlit: true, rot: [0, 0, sd * -0.1] });
+    b.userData.side = sd; b.userData.y = 0.47;
+    r.brows.push(b);
+    r.mesh(ELL(0.045, 1.3, 0.55, 0.3, 8, 6), '#ff9a9a', head, [sd * 0.2, 0.19, 0.27], { cast: false, unlit: true, rot: [0, sd * 0.5, 0] });
+  }
+  r.mouth = r.mesh(ELL(0.04, 1.2, 0.5, 0.3, 8, 6), '#8a2a3a', head, [0, 0.13, 0.31], { cast: false, unlit: true });
+  // ---- cabelo macio em mechas
+  const HS = L.hairStyle || 'spiky';
+  const blob = (x, y, z, rad, sx = 1, sy = 1, sz = 1, col = L.hair, parent = head) => M(ELL(rad, sx, sy, sz, 12, 10), col, parent, [x, y, z]);
+  if (HS !== 'bald') {
+    M(new THREE.SphereGeometry(0.365, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), L.hair, head, [0, 0.31, -0.02], { rot: [-0.45, 0, 0], scale: [1.04, 1.02, 1.05] });
+    if (HS === 'spiky') {
+      // franja em três mechas grossas + topete
+      [[-0.17, 0.52, 0.2, 0.13], [0.0, 0.56, 0.24, 0.14], [0.17, 0.52, 0.2, 0.13]].forEach(([x, y, z, rr]) => M(new THREE.ConeGeometry(rr, 0.3, 8).translate(0, -0.15, 0), L.hair, head, [x, y, z], { rot: [0.55, 0, -x * 1.6] }));
+      [[0.12, 0.66, -0.05, 0.12, -0.9, -0.5], [-0.12, 0.64, -0.1, 0.11, -1.2, 0.5], [0, 0.56, -0.28, 0.12, -1.9, 0]].forEach(([x, y, z, rr, rx, rz]) => M(new THREE.ConeGeometry(rr, 0.3, 8).translate(0, 0.12, 0), L.hair, head, [x, y, z], { rot: [rx, 0, rz] }));
+      const ah = r.pivot(head, [0.04, 0.68, 0.05], 'ahoge');
+      M(new THREE.ConeGeometry(0.04, 0.2, 6).translate(0, 0.1, 0), L.hairL, ah, null, { rot: [0, 0, -0.5] });
+      ah.rotation.x = -0.3;
+      chain(ah, { kv: -0.12, ka: -0.02, max: 0.9, w: 13, z: 0.18, flutter: 4, amp: 0.05 });
+    } else if (HS === 'bun') {
+      blob(0, 0.68, -0.12, 0.15);
+      M(new THREE.CylinderGeometry(0.012, 0.012, 0.36, 5), '#ffd34a', head, [0, 0.7, -0.12], { rot: [0, 0, 1.2] });
+      for (const sd of [1, -1]) blob(sd * 0.3, 0.35, 0.1, 0.09, 0.7, 1.3, 0.8);
+    } else if (HS === 'short') {
+      [[-0.15, 0.52, 0.22], [0.0, 0.55, 0.25], [0.15, 0.52, 0.22]].forEach(([x, y, z]) => blob(x, y, z, 0.11, 1, 0.7, 0.7));
+      for (const sd of [1, -1]) {
+        const tail = r.pivot(head, [sd * 0.33, 0.45, -0.08], 'tail' + sd);
+        M(ELL(0.1, 0.8, 1.5, 0.8, 10, 8).translate(0, -0.14, 0), L.hair, tail);
+        M(new THREE.SphereGeometry(0.045, 8, 6), '#ff5d7a', tail, [0, 0, 0]);
+        tail.rotation.z = sd * 0.6;
+        chain(tail, { kv: 0.12, ka: 0.02, max: 0.9, w: 9, z: 0.25, flutter: 6, amp: 0.1 });
+      }
+    } else if (HS === 'long') {
+      [[-0.15, 0.52, 0.22], [0.0, 0.55, 0.25], [0.15, 0.52, 0.22]].forEach(([x, y, z]) => blob(x, y, z, 0.11, 1, 0.7, 0.7));
+      const pony = r.pivot(head, [0, 0.5, -0.3], 'ponytail');
+      M(ELL(0.12, 0.8, 2.2, 0.7, 10, 8).translate(0, -0.22, 0), L.hair, pony);
+      pony.rotation.x = 0.35;
+      chain(pony, { kv: 0.13, ka: 0.016, max: 1.0, w: 8, z: 0.28, amp: 0.06, flutter: 5 });
+    }
+  }
+  if (L.hat === 'wizard') {
+    M(new THREE.CylinderGeometry(0.5, 0.5, 0.04, 16), L.hatColor || '#5a4a8c', head, [0, 0.6, 0]);
+    const tip = r.pivot(head, [0, 0.61, -0.02], 'hattip');
+    M(new THREE.ConeGeometry(0.28, 0.6, 12).translate(0, 0.3, 0), L.hatColor || '#5a4a8c', tip);
+    chain(tip, { base: [-0.2, 0, 0], kv: -0.08, max: 0.6, w: 8, z: 0.3 });
+  } else if (L.hat === 'bandana') {
+    M(new THREE.SphereGeometry(0.375, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), L.hatColor || '#d4553f', head, [0, 0.31, -0.02], { rot: [-0.3, 0, 0] });
+    const knot = r.pivot(head, [0, 0.4, -0.34], 'knot');
+    M(new THREE.BoxGeometry(0.12, 0.04, 0.22).translate(0, 0, -0.11), L.hatColor || '#d4553f', knot);
+    knot.rotation.x = 0.5;
+    chain(knot, { kv: 0.12, ka: 0.015, max: 1, w: 10, z: 0.3, flutter: 10, amp: 0.15 });
+  } else if (L.hat === 'straw') {
+    M(new THREE.CylinderGeometry(0.6, 0.63, 0.04, 20), '#f2cc5a', head, [0, 0.56, 0]);
+    M(new THREE.CylinderGeometry(0.3, 0.35, 0.2, 16), '#e6bd4a', head, [0, 0.67, 0]);
+    M(new THREE.CylinderGeometry(0.355, 0.355, 0.05, 16), '#d4553f', head, [0, 0.6, 0]);
+  }
+  if (L.beard) { M(ELL(0.22, 1.1, 0.85, 0.6, 14, 10), L.beard, head, [0, 0.12, 0.2]); M(ELL(0.1, 1.6, 0.45, 0.5, 10, 6), L.beard, head, [0, 0.19, 0.31]); }
+  if (L.scarf) {
+    M(new THREE.TorusGeometry(0.15, 0.06, 8, 16), L.scarf, chest, [0, 0.17, 0], { rot: [Math.PI / 2, 0, 0] });
+    let parent = chest, pos = [0.08, 0.16, -0.15];
+    [[0.12, 0.18], [0.11, 0.16], [0.1, 0.14]].forEach(([w, l], i) => {
+      const sg = r.pivot(parent, pos, 'scarf' + i);
+      M(new THREE.BoxGeometry(w, 0.04, l).translate(0, 0, -l / 2), i === 2 ? shadeHex(L.scarf, 0.85) : L.scarf, sg);
+      sg.rotation.x = i === 0 ? -0.5 : 0.2;
+      chain(sg, { kv: 0.16 + i * 0.05, ka: 0.016 + i * 0.006, max: 1.2, flutter: 9 + i * 2, amp: 0.1 + i * 0.06, w: 11 - i * 2, z: 0.3, ph: i * 0.9 });
+      parent = sg; pos = [0, 0, -l + 0.01];
+    });
+  }
+  if (L.cape) {
+    const cape = r.pivot(chest, [0, 0.16, -0.14], 'cape');
+    M(new THREE.BoxGeometry(0.36, 0.42, 0.03).translate(0, -0.21, 0), L.cape, cape);
+    cape.rotation.x = 0.12;
+    chain(cape, { kv: 0.1, ka: 0.012, max: 0.9, w: 8, z: 0.38, amp: 0.05 });
+  }
+  if (L.pack) { M(ELL(0.14, 1.1, 1, 0.6, 10, 8), '#9a6a43', chest, [0, 0.06, -0.19]); }
+  if (L.weapon === 'sword') {
+    const w = r.pivot(r.parts.handR, [0, -0.02, 0.03], 'weapon');
+    M(new THREE.CylinderGeometry(0.028, 0.028, 0.15, 8), '#4a3328', w, [0, 0, -0.02], { rot: [Math.PI / 2, 0, 0] });
+    M(new THREE.SphereGeometry(0.04, 8, 6), '#ffd34a', w, [0, 0, -0.11]);
+    M(new THREE.BoxGeometry(0.26, 0.05, 0.07), '#ffd34a', w, [0, 0, 0.07]);
+    const blade = M(new THREE.BoxGeometry(0.08, 0.03, 0.6), '#eef6ff', w, [0, 0, 0.4]);
+    M(new THREE.ConeGeometry(0.057, 0.14, 4), '#eef6ff', w, [0, 0, 0.77], { rot: [Math.PI / 2, Math.PI / 4, 0], scale: [1, 1, 0.4] });
+    r.parts.blade = blade;
+  } else if (L.weapon === 'staff') {
+    const w = r.pivot(r.parts.handR, [0, 0, 0], 'weapon');
+    M(new THREE.CylinderGeometry(0.03, 0.035, 1.2, 8).translate(0, 0.25, 0), '#8a5a3a', w);
+    M(new THREE.OctahedronGeometry(0.09, 0), '#7fe0c8', w, [0, 0.9, 0], { unlit: true });
+  }
+  for (const c of [...head.children]) void c;
   r.root.userData.rig = r;
   r.animator = new HumanoidAnimator(r);
   return r;

@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 (async () => {
   const out = process.argv[2] || 'shots/frames.png';
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  const p = await b.newPage({ viewport: { width: 480, height: 300 } });
+  const p = await b.newPage({ viewport: { width: Number(process.env.FW || 480), height: Number(process.env.FH || 300) } });
   await p.goto((process.env.URL || 'http://localhost:5180/') + '?hora=tarde');
   await p.waitForFunction(() => window.__game, null, { timeout: 60000 });
   await p.waitForTimeout(2500);

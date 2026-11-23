@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildHumanoid, buildSlime, buildMushroom, buildBeetle, buildStumpBoss, Animator } from './characters.js';
 import { angleSpring, Spring } from './anim.js';
+import { TOON } from './style.js';
 import { toonMat, unlitMat } from './materials.js';
 import { sfx } from './audio.js';
 import { S } from './world.js';
@@ -176,7 +177,17 @@ export class Player extends Actor {
         const prev = this.charge;
         this.charge = Math.min(1, this.charge + dt / 0.65);
         if (mlen > 0.1) { this.facing = Math.atan2(wmv.x, wmv.z); g.world.move(this.pos, wmv.x * 1.6 * dt, wmv.z * 1.6 * dt, this.radius); }
-        if (prev < 1 && this.charge >= 1) { sfx.charged(); g.fx.burst(this.swordTip(), 12, { speed: 2, up: 1, g: 0, life: 0.4, color: [0xfff2a8, 0xffffff], size: 0.07 }); }
+        if (prev < 1 && this.charge >= 1) {
+          sfx.charged();
+          const tip = this.swordTip();
+          g.fx.burst(tip, 12, { speed: 2, up: 1, g: 0, life: 0.4, color: [0xfff2a8, 0xffffff], size: 0.07 });
+          g.fx.impact(tip, { size: 1.1, color: 0xfff2a8, life: 0.22 });
+          g.fx.stars3(tip, 6, { speed: 3, up: 2, color: 0xffe066 });
+          g.pr.zoomKick(1.2);
+          g.lighting.flash(tip, 0xffe08a, 4, 2, 0.3);
+        }
+        // faíscas orbitando a lâmina enquanto carrega
+        if (Math.random() < 0.5) { const tip = this.swordTip(); const a = this.st * 18; g.fx.star({ x: tip.x + Math.cos(a) * 0.3, y: tip.y + 0.1, z: tip.z + Math.sin(a) * 0.3 }, { speed: 0.3, up: 0.6, g: 0, life: 0.3, size: this.charge >= 1 ? 0.14 : 0.08, color: this.charge >= 1 ? 0xffe066 : 0xbfe6ff }); }
         if (Math.random() < (this.charge >= 1 ? 0.8 : 0.3)) g.fx.particle(this.swordTip(), { vy: 1.2, life: 0.3, color: this.charge >= 1 ? 0xfff2a8 : 0xbfe6ff, size: 0.06 });
         this.flash = this.charge >= 1 && Math.floor(this.st * 12) % 4 === 0 ? 0.02 : 0;
         if (!input || !input.isHeld('attack')) {
@@ -217,6 +228,17 @@ export class Player extends Actor {
       case 'talk': break;
     }
 
+    // rastro da espada (segue a lâmina de verdade) e brilho da carga
+    const tr = g.swordTrail;
+    if (tr && this.rig.parts.blade) {
+      const swinging = this.state === 'attack' || this.state === 'spin';
+      tr.active = swinging;
+      if (swinging) {
+        const bl = this.rig.parts.blade;
+        tr.push(bl.localToWorld(new V3(0, 0, -0.05)), bl.localToWorld(new V3(0, 0, 0.62)));
+      }
+      tr.mat.uniforms.uEdge.value.setHex(this.state === 'spin' ? 0xffe38a : 0x9fe3ff);
+    }
     // animação procedural contínua
     const A = this.rig.animator;
     A.setLoop(this.state === 'charge' ? 'charge' : null);
@@ -242,20 +264,29 @@ export class Player extends Actor {
     // mira automática leve: vira para o inimigo mais próximo à frente
     const t = this.game.nearestEnemy(this.pos, 3.2);
     if (t && Math.abs(angDiff(this.angleTo(t.pos), this.facing)) < 1.2) this.facing = this.angleTo(t.pos);
-    sfx.swing(this.combo - 1);
+    sfx.swing(this.combo - 1); sfx.whoosh(this.combo - 1);
+    // avanço com peso: pequeno empurrão de câmera na direção do golpe e poeira no pé de apoio
+    this.game.kickCam(new V3(Math.sin(this.facing), 0, Math.cos(this.facing)), this.combo === 3 ? 0.1 : 0.05);
+    this.game.fx.dust(this.pos, this.combo === 3 ? 4 : 2, this.game.surfaceDust(this.pos));
+    if (this.combo === 3) this.game.pr.zoomKick(0.9);
     const fx = this.game.fx;
     const arcs = [[2.3, 1], [2.3, -1], [1.6, 1]];
     const [arc, dir] = arcs[this.combo - 1];
     setTimeout(() => {
       if (this.state !== 'attack') return;
       if (this.combo === 3) fx.slash(this.pos, this.facing, { radius: 1.75, arc: 1.5, y: 0.35, thick: 0.6, color: 0xffffff, color2: 0xfff2a8, life: 0.16 });
-      else fx.slash(this.pos, this.facing, { radius: 1.45, arc, y: 0.55, dir, life: 0.13 });
+      else if (!TOON) fx.slash(this.pos, this.facing, { radius: 1.45, arc, y: 0.55, dir, life: 0.13 });
     }, 50);
   }
 
   startSpin() {
     this.state = 'spin'; this.st = 0; this.hitSet.clear(); this.rig.animator.play('spin', 0.5);
-    this.game.fx.ring(this.pos, { r0: 0.6, r1: 2.3, color: 0xfff2a8, life: 0.3, y: 0.5, width: 0.18 });
+    this.game.fx.ring(this.pos, { r0: 0.6, r1: 2.6, color: 0xfff2a8, life: 0.35, y: 0.5, width: 0.18 });
+    const gg = this.game;
+    gg.fx.swirl(this.pos, { size: 3.2, s0: 1, y: 0.35, life: 0.55, spin: -9, color: 0xfff6c8 });
+    gg.fx.swirl(this.pos, { size: 2.4, s0: 0.6, y: 0.7, life: 0.45, spin: -12, kind: 1 });
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; gg.fx.puff({ x: this.pos.x + Math.cos(a) * 0.6, y: this.pos.y + 0.15, z: this.pos.z + Math.sin(a) * 0.6 }, { vx: Math.cos(a) * 5, vz: Math.sin(a) * 5, vy: 0.8, size: 0.22, life: 0.5, color: 0xfff6e0 }); }
+    gg.pr.zoomKick(-1.6); gg.shake(2, 0.2);
     this.game.fx.slash(this.pos, this.facing, { radius: 2.0, arc: Math.PI * 2, y: 0.5, thick: 0.55, color: 0xffffff, color2: 0xfff2a8, life: 0.3 });
   }
 
@@ -406,9 +437,13 @@ export class Enemy extends Actor {
     this.think(dt, d, p);
     // dano de contato
     if (this.contact && d < this.radius + p.radius + 0.05 && p.alive) g.damagePlayer(this.contactDmg ?? Math.round(this.dmg * 0.6), this.pos);
-    this.sync(this.lift || 0, dt);
+    // pulinho ao levar golpe
+    this.hopV = (this.hopV || 0) - 24 * dt;
+    this.hopY = Math.max(0, (this.hopY || 0) + this.hopV * dt);
+    if (this.hopY <= 0 && this.hopV < 0) { if (this.hopV < -4) this.jelly.kick(-4); this.hopV = 0; }
+    this.sync((this.lift || 0) + this.hopY, dt);
     // squash & stretch com mola gelatinosa (passa do ponto e treme)
-    const sq = Math.max(0.45, this.jelly.step(this.squash, dt));
+    const sq = Math.max(0.62, Math.min(1.45, this.jelly.step(this.squash, dt)));
     const bs = this.baseScale;
     this.obj.scale.set(bs / Math.sqrt(sq), bs * sq, bs / Math.sqrt(sq));
   }
@@ -819,6 +854,7 @@ export class Projectile {
     const ground = g.world.heightAt(this.pos.x, this.pos.z);
     this.mesh.position.copy(this.pos);
     if (this.spin) this.mesh.rotation.y += this.spin * dt;
+    if (this.onUpdate) this.onUpdate(this, dt);
     if (this.trail && Math.random() < 0.6) g.fx.particle(this.pos, { life: 0.25, color: this.trail, size: 0.07, vy: 0.3 });
     if (this.t > this.life || ground > this.pos.y + 0.1) { this.kill(); return; }
     if (this.owner === 'enemy') {
@@ -830,6 +866,7 @@ export class Projectile {
         if (Math.hypot(e.pos.x - this.pos.x, e.pos.z - this.pos.z) < this.radius + e.radius) {
           this.hit.add(e.id);
           g.hitEnemy(e, this.dmg, this.pos.clone().addScaledVector(this.vel, -0.1), 3, false);
+          if (this.onHit) this.onHit(this, e);
           if (!this.pierce) { this.kill(); return; }
         }
       }

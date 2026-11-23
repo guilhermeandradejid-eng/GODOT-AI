@@ -4,6 +4,7 @@ import { mat, toonMat, unlitMat, setPattern } from './materials.js';
 import { toWorld, toUV, PLACES, PATHS, riverV, LH } from './world.js';
 import { mulberry32, vnoise, fbm } from './noise.js';
 import { getAtlas, cellUV, CELL_U, CELL_V } from './texgen.js';
+import { TOON } from './style.js';
 
 // câmera isométrica fixa (yaw 45°, pitch 33°): cartões de folha ficam sempre de frente
 const PITCH = THREE.MathUtils.degToRad(33);
@@ -178,7 +179,8 @@ export function buildScenery(world, scene) {
   const blocked = (x, z, pad = 0) => occupied.some(([ox, oz, r]) => (x - ox) ** 2 + (z - oz) ** 2 < (r + pad) ** 2);
 
   const trunkMat = toonMat({ color: 0xffffff, outline: 0.8, key: 'trunk', pattern: 5 });
-  const innerMat = toonMat({ color: new THREE.Color(0.62, 0.66, 0.7), wind: 0.02, outline: 0.5, key: 'leafin' });
+  const innerMat = toonMat({ color: TOON ? new THREE.Color(1, 1, 1) : new THREE.Color(0.62, 0.66, 0.7), wind: 0.02, outline: 0.5, key: 'leafin' });
+  const inS = TOON ? 1.0 : 0.8, inShadow = TOON ? {} : { cast: false };
   const atlas = getAtlas();
   const cardMat = toonMat({ color: new THREE.Color(1.2, 1.2, 1.2), wind: 0.035, outline: 0.55, key: 'leafcard', map: atlas, alphaTest: 0.5, side: THREE.DoubleSide });
   const bushCardMat = toonMat({ color: new THREE.Color(1.2, 1.2, 1.2), wind: 0.07, outline: 0.5, key: 'bushcard', map: atlas, alphaTest: 0.5, side: THREE.DoubleSide });
@@ -188,12 +190,12 @@ export function buildScenery(world, scene) {
   const bushSpots = (k) => [[0, 0.34, 0, 0.42], [0.3 * k, 0.27, 0.12, 0.3], [-0.28, 0.26, -0.1 * k, 0.32], [0.05, 0.52, -0.05, 0.28]];
   const sets = {
     oakTrunk: new Instancer(trunkGeo(), trunkMat),
-    oakIn: [new Instancer(crownOak(1).scale(0.8, 0.8, 0.8).translate(0, 0.4, 0), innerMat, noShadow), new Instancer(crownOak(7).scale(0.8, 0.8, 0.8).translate(0, 0.4, 0), innerMat, noShadow)],
+    oakIn: [new Instancer(crownOak(1).scale(inS, inS, inS).translate(0, TOON ? 0 : 0.4, 0), innerMat, inShadow), new Instancer(crownOak(7).scale(inS, inS, inS).translate(0, TOON ? 0 : 0.4, 0), innerMat, inShadow)],
     oak: [new Instancer(cardCloud(OAK_SPOTS(2.05, 1), oakCtr, 1, 30, 11), cardMat), new Instancer(cardCloud(OAK_SPOTS(2.05, -1), oakCtr, 1, 30, 23), cardMat), new Instancer(cardCloud(OAK_SPOTS(2.15, 0.6), oakCtr, 1, 32, 37), cardMat)],
     pineTrunk: new Instancer(trunkGeo(0.9, 0.16, 0.12), trunkMat),
-    pineIn: new Instancer(crownPine().scale(0.85, 0.95, 0.85), innerMat, noShadow),
+    pineIn: new Instancer(TOON ? crownPine() : crownPine().scale(0.85, 0.95, 0.85), innerMat, inShadow),
     pine: [new Instancer(pineCards(5), cardMat), new Instancer(pineCards(17), cardMat)],
-    bushIn: new Instancer(crownBush(2).scale(0.75, 0.75, 0.75), innerMat, noShadow),
+    bushIn: new Instancer(TOON ? crownBush(2) : crownBush(2).scale(0.75, 0.75, 0.75), innerMat, inShadow),
     bush: [new Instancer(cardCloud(bushSpots(1), new THREE.Vector3(0, 0.3, 0), 1, 34, 41, 0.85), bushCardMat), new Instancer(cardCloud(bushSpots(-1), new THREE.Vector3(0, 0.3, 0), 1, 34, 53, 0.85), bushCardMat)],
     rock: [new Instancer(rockGeo(1), rockMat), new Instancer(rockGeo(5), rockMat), new Instancer(rockGeo(9), rockMat)],
   };
@@ -332,7 +334,8 @@ export function buildScenery(world, scene) {
   block(...Object.values(toWorld(0, -30)), 7.5);
 
   // ------------------------------------------------ áreas livres
-  for (const p of [PLACES.spawn, PLACES.plaza, PLACES.meadow, PLACES.hollow, PLACES.plateauW]) { const w = toWorld(...p); block(w.x, w.z, p === PLACES.plaza ? 5.2 : 3); }
+  const nSolid = occupied.length;
+  for (const p of [PLACES.spawn, PLACES.plaza, PLACES.meadow, PLACES.hollow, PLACES.plateauW]) { const w = toWorld(...p); occupied.push([w.x, w.z, p === PLACES.plaza ? 5.2 : 3, true]); }
   const onPath = (u, v, pad) => { const m = world.maskAt(u, v); return m.path > 0.15 - pad || m.plaza > 0.1; };
 
   // ------------------------------------------------ espalhar vegetação
@@ -403,9 +406,13 @@ export function buildScenery(world, scene) {
     if (pl) addRock(pl.x, pl.z, R(0.25, 0.55), false);
   }
 
+  if (TOON) { delete sets.oak; delete sets.pine; delete sets.bush; } // copas redondas sólidas no lugar dos cartões
   for (const s of Object.values(sets)) (Array.isArray(s) ? s : [s]).forEach((x) => x.build(scene));
 
-  return { gate, lamps, cloth, blocked };
+  // para a grama: só objetos sólidos (as áreas livres de vegetação continuam com grama)
+  const blockedSolid = (x, z, pad = 0) => occupied.some(([ox, oz, r, area]) => !area && (x - ox) ** 2 + (z - oz) ** 2 < (r + pad) ** 2);
+  void nSolid;
+  return { gate, lamps, cloth, blocked, blockedSolid };
 }
 
 // =============================================================================

@@ -257,6 +257,7 @@ export class UI {
         <button data-act="pixels">Pixels: ${pr.pixelScaleOverride ? pr.pixelScaleOverride + 'x' : 'auto'}</button>
         <button data-act="outlines">Contornos: ${pr.outlines ? 'sim' : 'não'}</button>
         <button data-act="time">Hora do dia: ${this.game.timeMode || 'ciclo'}</button>
+        <button data-act="style">Estilo: ${this.game.styleName}</button>
         <button data-act="controls">Controles</button>
         <button data-act="restart">Recomeçar do zero</button>
       </div>`, 'pause');

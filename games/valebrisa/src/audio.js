@@ -38,7 +38,10 @@ function noise(dur = 0.2, vol = 0.15, freq = 1200, when = 0, dest = null, q = 0.
 
 export const sfx = {
   swing: (i = 0) => { noise(0.09, 0.14, 1800 + i * 500, 0, null, 1.4); tone(300 + i * 80, 0.07, 'triangle', 0.06, 300); },
-  hit: () => { noise(0.07, 0.25, 700); tone(160, 0.08, 'square', 0.12, -80); },
+  hit: () => { noise(0.07, 0.25, 700); tone(160, 0.08, 'square', 0.12, -80); tone(95, 0.16, 'sine', 0.35, -45); },
+  heavy: () => { noise(0.14, 0.32, 380, 0, null, 0.6); tone(70, 0.28, 'sine', 0.45, -35); tone(220, 0.1, 'square', 0.08, -120); },
+  poof: () => { noise(0.22, 0.22, 900, 0, null, 0.5); tone(520, 0.12, 'triangle', 0.08, 380); },
+  whoosh: (k = 0) => { noise(0.12 + k * 0.05, 0.16 + k * 0.05, 1200 - k * 300, 0, null, 1.1); },
   crit: () => { noise(0.1, 0.3, 900); tone(880, 0.08, 'square', 0.08, 400); },
   hurt: () => { tone(300, 0.15, 'sawtooth', 0.12, -180); noise(0.1, 0.15, 500); },
   die: () => { tone(520, 0.08, 'square', 0.08, -200); tone(260, 0.2, 'square', 0.08, -150, 0.07); noise(0.25, 0.12, 400, 0.05); },

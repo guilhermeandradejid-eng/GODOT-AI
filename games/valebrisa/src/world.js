@@ -339,7 +339,18 @@ vec4 mapMask(vec3 wp) {
   return texture2D(tMask, vec2((u - uMapRect.x) * uMapRect.z, (v - uMapRect.y) * uMapRect.w));
 }
 vec3 pick3(float t, vec3 a, vec3 b, vec3 c) { return t < 0.36 ? a : (t < 0.66 ? b : c); }
+vec3 grassAlbedoAnime(vec3 wp, vec4 m) {
+  // gramado de anime: duas manchas grandes e suaves de verde, sem ruído fino
+  float n = vb_fbm(wp.xz * 0.045 + 3.0);
+  float n2 = vb_noise(wp.xz * 0.12 + 9.0);
+  vec3 a = ${hex('#5fae45')}, b = ${hex('#8cc94e')}, c = ${hex('#4e9a4c')};
+  vec3 g = mix(a, b, smoothstep(0.35, 0.7, n));
+  g = mix(g, c, smoothstep(0.55, 0.85, n2) * 0.45);
+  g = mix(g, ${hex('#3f7f52')}, smoothstep(0.3, 0.75, m.a));
+  return g;
+}
 vec3 grassAlbedo(vec3 wp, vec4 m, float dith) {
+  if (uStyle > 0.5) return grassAlbedoAnime(wp, m);
   float n = vb_fbm(wp.xz * 0.09) + (vb_noise(wp.xz * 0.7) - 0.5) * 0.18 + dith;
   vec3 g = pick3(n, ${hex('#97c257')}, ${hex('#7dad4b')}, ${hex('#659846')});
   vec3 f = pick3(n, ${hex('#6c9c4e')}, ${hex('#578249')}, ${hex('#466d48')});
@@ -353,22 +364,26 @@ vec3 grassAlbedo(vec3 wp, vec4 m, float dith) {
 float pebble(vec2 p, float dens) { return vb_hash2(floor(p * 6.0)) > dens ? 1.0 : 0.0; }
 vec3 terrainAlbedo(vec3 wp, vec3 wn) {
   vec4 m = mapMask(wp);
-  float dith = (vb_bayer(gl_FragCoord.xy) - 0.5) * 0.07;
+  float dith = (vb_bayer(gl_FragCoord.xy) - 0.5) * 0.07 * (1.0 - uStyle);
   float slope = 1.0 - wn.y;
-  vec3 col = grassAlbedo(wp, m, dith) * 0.86;
-  // chão sob a grama: trevos, florzinhas, terra aparecendo
+  vec3 col = grassAlbedo(wp, m, dith) * (uStyle > 0.5 ? 0.78 : 0.86);
+  // chão sob a grama: trevos, florzinhas, terra aparecendo (só no modo pixel)
   vec2 cell = floor(wp.xz * 5.0);
   float h = vb_hash(cell);
-  if (h > 0.993) col = vb_hash(cell + 3.1) > 0.5 ? ${hex('#f4efd8')} : ${hex('#f2cf5b')};
-  else if (vb_noise(wp.xz * 1.1) > 0.8) col = mix(col, ${hex('#8a7a4c')}, 0.35);
+  if (uStyle < 0.5) {
+    if (h > 0.993) col = vb_hash(cell + 3.1) > 0.5 ? ${hex('#f4efd8')} : ${hex('#f2cf5b')};
+    else if (vb_noise(wp.xz * 1.1) > 0.8) col = mix(col, ${hex('#8a7a4c')}, 0.35);
+  }
   // terra batida: pedrinhas com sombra, sulcos
   float pn = (vb_noise(wp.xz * 1.6) - 0.5) * 0.34 + (vb_noise(wp.xz * 5.0) - 0.5) * 0.1;
   if (m.r + pn > 0.5) {
     float t = vb_noise(wp.xz * 0.5) + dith;
     col = t < 0.5 ? ${hex('#c9aa7c')} : ${hex('#bc9d70')};
     if (vb_noise(wp.xz * 2.5) > 0.7) col = ${hex('#ae9066')};
-    if (pebble(wp.xz, 0.93) > 0.5) col = ${hex('#ddc8a2')};
-    else if (pebble(wp.xz - vec2(0.07, 0.07), 0.93) > 0.5) col = ${hex('#9c7a4a')};
+    if (uStyle < 0.5) {
+      if (pebble(wp.xz, 0.93) > 0.5) col = ${hex('#ddc8a2')};
+      else if (pebble(wp.xz - vec2(0.07, 0.07), 0.93) > 0.5) col = ${hex('#9c7a4a')};
+    } else col = mix(${hex('#d2b07c')}, ${hex('#c39d68')}, smoothstep(0.3, 0.7, vb_noise(wp.xz * 0.35)));
     if (m.r + pn < 0.56) col = ${hex('#a9894f')};
     else if (m.r + pn < 0.6) col = mix(col, ${hex('#8f9a4c')}, 0.35);
   }
@@ -441,6 +456,24 @@ void main() {
   float u = (vWPos.x - vWPos.z) * 0.70710678, v = (vWPos.x + vWPos.z) * 0.70710678;
   float dth = vb_bayer(gl_FragCoord.xy);
   float t = floor(uTime * 10.0) / 10.0;
+  if (uStyle > 0.5) {
+    // mar/rio de desenho animado: azul vivo em 2 tons + linhas brancas onduladas
+    float tt = uTime;
+    vec3 c2 = mix(${hex('#3fb4e8')}, ${hex('#1f6fd0')}, smoothstep(0.18, 0.5, depth));
+    float n1 = vb_noise(vec2(u * 0.7 - tt * 0.35, v * 1.4 + sin(u * 0.4 + tt) * 0.3));
+    float n2 = vb_noise(vec2(u * 1.3 + tt * 0.2, v * 2.2 - tt * 0.15) + 5.0);
+    float lines = smoothstep(0.035, 0.0, abs(fract(n1 * 3.0) - 0.5) - 0.012) * smoothstep(0.25, 0.6, n2);
+    c2 = mix(c2, ${hex('#d9f4ff')}, lines * 0.85);
+    float wv = sin(tt * 1.6 + u * 0.7 + vb_noise(vec2(u, v) * 1.2) * 4.0) * 0.04;
+    float foam = smoothstep(0.12 + wv, 0.08 + wv, depth);
+    c2 = mix(c2, vec3(1.0), foam);
+    float sp2 = vb_hash(floor(vec2(u, v) * 3.0) + floor(tt * 2.0));
+    if (sp2 > 0.993 && depth > 0.2) c2 = uSunColor * 2.0 + 0.3;
+    c2 *= mix(vec3(1.0), uSunColor + uSkyColor * 0.25, 0.6);
+    c2 += vb_points(c2, vWPos, vec3(0.0, 1.0, 0.0)) * 0.8;
+    gl_FragColor = vec4(c2, mix(0.82, 0.97, smoothstep(0.1, 0.5, depth)));
+    return;
+  }
   float dd = depth + (dth - 0.5) * 0.12;
   vec3 deep = ${hex('#2f6f9e')}, mid = ${hex('#3f92b8')}, shallow = ${hex('#5cbccb')};
   vec3 col = dd > 0.6 ? deep : (dd > 0.3 ? mid : shallow);

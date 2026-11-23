@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { shared } from './materials.js';
+import { TOON } from './style.js';
 
 // =============================================================================
 // Pipeline de "pixel art 3D":
@@ -35,8 +36,10 @@ uniform float uVignette;
 uniform float uFade;
 uniform vec3 uFadeColor;
 uniform float uOutlines;
+uniform float uPixel;
 // pós
 uniform float uAO;
+uniform float uAOScale;
 uniform float uBloom;
 uniform vec3 uFogColor;
 uniform vec3 uFogParams;   // topo, base, densidade
@@ -90,7 +93,7 @@ void main() {
     dirs[0] = vec2(1.0, 0.0); dirs[1] = vec2(0.0, 1.0); dirs[2] = vec2(0.7, 0.7); dirs[3] = vec2(0.7, -0.7);
     for (int i = 0; i < 4; i++) {
       for (int k = 1; k <= 2; k++) {
-        vec2 o = dirs[i] * texel * float(k * 3);
+        vec2 o = dirs[i] * texel * float(k * 3) * uAOScale;
         float a = lin(uv + o), b = lin(uv - o);
         float crease = (2.0 * d - a - b);
         float rangeOk = step(abs(d - a), 2.5) * step(abs(d - b), 2.5);
@@ -98,7 +101,7 @@ void main() {
       }
     }
     occ = clamp(occ / 4.0, 0.0, 1.0);
-    occ = floor(occ * 3.0 + 0.5 + (dth - 0.5) * 0.5) / 3.0;
+    if (uPixel > 0.5) occ = floor(occ * 3.0 + 0.5 + (dth - 0.5) * 0.5) / 3.0;
     col *= 1.0 - occ * uAO;
   }
 
@@ -145,7 +148,7 @@ void main() {
   fog *= uFogParams.z * (0.65 + 0.7 * noise(wp.xz * 0.18 + vec2(uTime * 0.05, uTime * 0.02)));
   float haze = geo ? clamp((d - uFocusDepth) * uHaze, 0.0, 0.55) : 0.55;
   float f = clamp(fog + haze, 0.0, 0.85);
-  f = floor(f * 10.0 + 0.5 + (dth - 0.5) * 0.5) / 10.0;
+  if (uPixel > 0.5) f = floor(f * 10.0 + 0.5 + (dth - 0.5) * 0.5) / 10.0;
   col = mix(col, uFogColor, f);
 
   // ---- bloom (meia resolução, amostrado no centro do pixel do jogo)
@@ -166,7 +169,7 @@ void main() {
   // vinheta em degraus
   vec2 q = uv - 0.5;
   float v = dot(q * vec2(1.0, 1.25), q * vec2(1.0, 1.25));
-  float vig = floor(smoothstep(0.12, 0.55, v) * 4.0) / 4.0;
+  float vig = uPixel > 0.5 ? floor(smoothstep(0.12, 0.55, v) * 4.0) / 4.0 : smoothstep(0.15, 0.6, v);
   col *= 1.0 - vig * uVignette;
 
   col = mix(col, vec3(1.0, 0.95, 0.9), uHitFlash);
@@ -225,6 +228,7 @@ export class PixelRenderer {
     this.camUp = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1).normalize();
     this.camera.layers.enable(1);
     this.focus = new THREE.Vector3();
+    this.zoom = 1; this.zoomV = 0;
     this.shake = new THREE.Vector2();
     this.offset = new THREE.Vector2();
 
@@ -238,8 +242,8 @@ export class PixelRenderer {
         uLowRes: { value: new THREE.Vector2() }, uOut: { value: new THREE.Vector2() }, uScale: { value: 3 },
         uOffset: { value: new THREE.Vector2() }, uNear: { value: 0.1 }, uFar: { value: 120 }, uDepthK: { value: 120 },
         uHitFlash: { value: 0 }, uVignette: { value: 0.22 }, uFade: { value: 0 }, uFadeColor: { value: new THREE.Color(0.06, 0.05, 0.1) },
-        uOutlines: { value: 1 }, tBloom: { value: null }, uInvViewProj: { value: new THREE.Matrix4() }, uTime: shared.uTime,
-        uAO: { value: 0.32 }, uBloom: { value: 0.8 }, uFogColor: { value: new THREE.Color(0.7, 0.75, 0.85) }, uFogParams: { value: new THREE.Vector3(-0.2, -1.2, 0.0) },
+        uOutlines: { value: 1 }, uPixel: { value: TOON ? 0 : 1 }, tBloom: { value: null }, uInvViewProj: { value: new THREE.Matrix4() }, uTime: shared.uTime,
+        uAO: { value: 0.32 }, uAOScale: { value: 1 }, uBloom: { value: 0.8 }, uFogColor: { value: new THREE.Color(0.7, 0.75, 0.85) }, uFogParams: { value: new THREE.Vector3(-0.2, -1.2, 0.0) },
         uHaze: { value: 0.012 }, uFocusDepth: { value: 50 },
         uExposure: { value: 1 }, uSat: { value: 1.08 }, uContrast: { value: 1.05 }, uLift: { value: new THREE.Color(0.02, 0.012, 0.04) }, uGain: { value: new THREE.Color(1, 0.985, 0.97) },
         uShadowTint: { value: new THREE.Color(0.96, 0.96, 1.06) }, uHighTint: { value: new THREE.Color(1.04, 1.0, 0.95) },
@@ -258,14 +262,15 @@ export class PixelRenderer {
   get pixelScale() { return this._scale; }
 
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, TOON ? 1.5 : 2);
     const W = Math.floor(window.innerWidth * dpr), H = Math.floor(window.innerHeight * dpr);
     this.renderer.setSize(W, H, false);
     this.renderer.domElement.style.width = window.innerWidth + 'px';
     this.renderer.domElement.style.height = window.innerHeight + 'px';
-    const scale = this.pixelScaleOverride || Math.max(1, Math.round(H / 300));
+    const scale = TOON ? 1 : this.pixelScaleOverride || Math.max(1, Math.round(H / 300));
     this._scale = scale;
     const lw = Math.ceil(W / scale) + 2, lh = Math.ceil(H / scale) + 2;
+    if (TOON) this.ppu = lh / 13.5; // mesmo enquadramento em unidades de mundo
     this.lowW = lw; this.lowH = lh;
     for (const rt of [this.rtColor, this.rtNormal]) rt?.dispose();
     this.rtColor = new THREE.WebGLRenderTarget(lw, lh, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: this.hdrType });
@@ -279,6 +284,7 @@ export class PixelRenderer {
     depthTex.type = THREE.UnsignedIntType;
     this.rtNormal = new THREE.WebGLRenderTarget(lw, lh, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, depthTexture: depthTex });
     const viewH = lh / this.ppu, viewW = lw / this.ppu;
+    this.view = { w: viewW, h: viewH };
     Object.assign(this.camera, { left: -viewW / 2, right: viewW / 2, top: viewH / 2, bottom: -viewH / 2 });
     this.camera.updateProjectionMatrix();
     this.texel = 1 / this.ppu;
@@ -286,12 +292,20 @@ export class PixelRenderer {
     u.tColor.value = this.rtColor.texture; u.tNormal.value = this.rtNormal.texture; u.tDepth.value = depthTex;
     u.uLowRes.value.set(lw, lh); u.uOut.value.set(W, H); u.uScale.value = scale;
     u.tBloom.value = this.rtBloomA.texture;
+    u.uAOScale.value = TOON ? lh / 300 : 1;
     u.uNear.value = this.camera.near; u.uFar.value = this.camera.far; u.uDepthK.value = this.camera.far - this.camera.near;
     this.W = W; this.H = H;
   }
 
   /** posiciona a câmera presa ao grid de pixels, olhando para `target` */
-  updateCamera(target) {
+  /** soco de zoom (juice): > 0 aproxima e volta com mola */
+  zoomKick(v) { this.zoomV += v; }
+  updateCamera(target, dt = 1 / 60) {
+    // mola do zoom
+    const zk = 90, zd = 2 * 0.55 * Math.sqrt(zk);
+    this.zoomV += (-(this.zoom - 1) * zk - this.zoomV * zd) * dt;
+    this.zoom = Math.max(0.85, Math.min(1.25, this.zoom + this.zoomV * dt));
+    if (this.view) { const z = this.zoom; Object.assign(this.camera, { left: -this.view.w / 2 / z, right: this.view.w / 2 / z, top: this.view.h / 2 / z, bottom: -this.view.h / 2 / z }); this.camera.updateProjectionMatrix(); }
     const p = target.clone().addScaledVector(this.camDir, this.camDist);
     const t = this.texel;
     const px = p.dot(this.camRight) + this.shake.x * t, py = p.dot(this.camUp) + this.shake.y * t;
@@ -320,7 +334,7 @@ export class PixelRenderer {
   render(scene) {
     const r = this.renderer;
     this.compMat.uniforms.uOffset.value.copy(this.offset);
-    this.compMat.uniforms.uOutlines.value = this.outlines ? 1 : 0;
+    this.compMat.uniforms.uOutlines.value = this.outlines && !TOON ? 1 : 0;
     // 1) cor
     this.camera.layers.enable(1);
     shared.uNormalPass.value = 0;

@@ -93,7 +93,7 @@ kbd { font-family: 'Silkscreen', monospace; font-size: calc(var(--u) * 3.5); bac
 @keyframes pop { 0% { transform: translateX(-50%) scale(0.4); } 60% { transform: translateX(-50%) scale(1.15); } 100% { transform: translateX(-50%) scale(1); } }
 
 .dmg-layer { position: absolute; inset: 0; overflow: hidden; }
-.dmg { position: absolute; left: 0; top: 0; font-family: 'Silkscreen', monospace; font-size: calc(var(--u) * 6); color: #fff; text-shadow: var(--u) 0 0 var(--ink), calc(var(--u) * -1) 0 0 var(--ink), 0 var(--u) 0 var(--ink), 0 calc(var(--u) * -1) 0 var(--ink), var(--u) var(--u) 0 var(--ink); white-space: nowrap; }
+.dmg { animation: dmgpop 0.32s cubic-bezier(.2,1.8,.4,1) both; position: absolute; left: 0; top: 0; font-family: 'Silkscreen', monospace; font-size: calc(var(--u) * 6); color: #fff; text-shadow: var(--u) 0 0 var(--ink), calc(var(--u) * -1) 0 0 var(--ink), 0 var(--u) 0 var(--ink), 0 calc(var(--u) * -1) 0 var(--ink), var(--u) var(--u) 0 var(--ink); white-space: nowrap; }
 .dmg.crit { color: var(--gold); font-size: calc(var(--u) * 8); }
 .dmg.hurt { color: #ff7b8a; }
 .dmg.heal { color: #8ef0a0; }
@@ -167,3 +167,6 @@ kbd { font-family: 'Silkscreen', monospace; font-size: calc(var(--u) * 3.5); bac
 .inv .clock b { color: var(--cream); min-width: calc(var(--u) * 18); }
 .inv .clock .sun { width: calc(var(--u) * 6); height: calc(var(--u) * 6); background: var(--gold); border-radius: 50%; box-shadow: 0 0 0 var(--u) #c98a2e; display: inline-block; }
 .inv .clock.night .sun { background: #dfe6ff; box-shadow: inset calc(var(--u) * -2) calc(var(--u) * -1) 0 0 #8a96c8; }
+
+@keyframes dmgpop { 0% { scale: 0.2; } 60% { scale: 1.5; } 100% { scale: 1; } }
+.dmg.crit { animation-duration: 0.42s; }

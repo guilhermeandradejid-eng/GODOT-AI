@@ -326,6 +326,14 @@ export class HumanoidAnimator {
     for (const e of this.rig.eyes || []) e.scale.y = e.userData.sy * eo;
     const bw = this.brow.step(pose._brow || 0, dt);
     for (const b of this.rig.brows || []) { b.rotation.z = b.userData.side * bw * 0.35; b.position.y = b.userData.y - Math.max(0, bw) * 0.02 + Math.max(0, -bw) * 0.02; }
+    // pupilas: olham para o alvo, com pequenas sacadas (olhar vivo)
+    if (this.rig.pupils) {
+      this.sacT = (this.sacT ?? 1) - dt;
+      if (this.sacT <= 0) { this.sacT = 0.6 + Math.random() * 1.8; this.sac = [(Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.012]; }
+      const lx = clamp((ctx.look || 0) * 0.035, -0.03, 0.03) + (this.sac ? this.sac[0] : 0);
+      const ly = (this.sac ? this.sac[1] : 0) - (pose._brow > 0.5 ? 0.006 : 0);
+      for (const pp of this.rig.pupils) { pp.position.x += (lx - pp.position.x) * Math.min(1, dt * 18); pp.position.y += (ly - 0.005 - pp.position.y) * Math.min(1, dt * 18); }
+    }
     if (this.rig.mouth) { const m = clamp(this.mouth.step(pose._mouth || 0, dt), 0, 1.2); this.rig.mouth.scale.set(1 - m * 0.3, 0.4 + m * 1.6, 1); }
 
     // ---- física secundária (cachecol, cabelo, saia, capa): reage à velocidade e à aceleração

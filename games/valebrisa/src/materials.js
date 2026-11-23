@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TOON } from './style.js';
 
 // =============================================================================
 // Materiais "pixel-toon" com iluminação própria.
@@ -18,6 +19,7 @@ import * as THREE from 'three';
 export const MAXL = 12;
 export const shared = {
   uTime: { value: 0 },
+  uStyle: { value: TOON ? 1 : 0 },
   uNormalPass: { value: 0 },
   uCloud: { value: 1 },
   uSunColor: { value: new THREE.Color(0.9, 0.88, 0.82) },
@@ -35,6 +37,7 @@ export const shared = {
 
 export const GLSL_COMMON = /* glsl */ `
 uniform float uTime;
+uniform float uStyle;
 uniform float uNormalPass;
 uniform float uCloud;
 uniform vec3 uSunColor, uSkyColor, uBounceColor, uHiColor, uRimColor;
@@ -81,7 +84,7 @@ vec3 vb_points(vec3 albedo, vec3 wp, vec3 wn) {
     float a = clamp(1.0 - dist / P.w, 0.0, 1.0);
     a *= a;
     float facing = clamp(dot(wn, L / max(dist, 0.001)) * 0.6 + 0.55, 0.0, 1.0);
-    a = floor(a * facing * 4.0 + 0.5 + (dth - 0.5) * 0.35) / 4.0;
+    a = uStyle > 0.5 ? a * facing : floor(a * facing * 4.0 + 0.5 + (dth - 0.5) * 0.35) / 4.0;
     acc += C.rgb * C.a * a;
   }
   return albedo * acc;
@@ -99,10 +102,16 @@ vec3 vb_toon(vec3 albedo, float sun, vec3 wn, vec3 nView, float rim, float cel) 
   float b = sun + d;
   vec3 c = b < 0.16 ? shade : (b < 0.66 ? lit : hi);
   // cel anime: 2 tons com corte seco (sem dither) e sombra um pouco mais saturada
-  if (cel > 0.5) c = sun < 0.3 ? albedo * mix(amb, amb * vec3(0.92, 0.86, 1.08), 0.6) : albedo * (uSunColor + amb * 0.22);
+  if (cel > 0.5 || uStyle > 0.5) {
+    // toon de desenho animado: 2 tons com borda limpa (antialias no corte), sombra fria e saturada
+    float e = uStyle > 0.5 ? smoothstep(0.17, 0.25, sun) : step(0.3, sun);
+    vec3 sh = albedo * mix(amb, amb * vec3(0.9, 0.86, 1.1), 0.6);
+    vec3 lt = albedo * (uSunColor + amb * 0.22);
+    c = mix(sh, lt, e);
+  }
   // contorno de luz (rim) em degrau
   float fr = 1.0 - clamp(nView.z, 0.0, 1.0);
-  c += albedo * uRimColor * step(0.62, fr + d) * rim * 0.45;
+  c += albedo * uRimColor * (uStyle > 0.5 ? smoothstep(0.6, 0.72, fr) * 0.35 : step(0.62, fr + d) * 0.45) * rim;
   c += vb_points(albedo, vWPos, wn);
   return c;
 }

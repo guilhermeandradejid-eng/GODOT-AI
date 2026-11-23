@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { shared, MAXL } from './materials.js';
 import { S } from './world.js';
+import { TOON } from './style.js';
 
 // =============================================================================
 // Iluminação dinâmica: ciclo de dia (sol/lua que se movem, cores do céu, névoa, color grading
@@ -106,11 +107,11 @@ export class Lighting {
     shared.uCloud.value = k.cloud;
     const u = this.pr.compMat.uniforms;
     u.uFogColor.value.copy(k.fog);
-    u.uFogParams.value.set(k.fogP[0], k.fogP[1], k.fogP[2]);
-    u.uHaze.value = k.haze;
+    u.uFogParams.value.set(k.fogP[0], k.fogP[1], k.fogP[2] * (TOON ? 0.6 : 1));
+    u.uHaze.value = k.haze * (TOON ? 0.35 : 1);
     u.uBloom.value = k.bloom;
     this.pr.brightMat.uniforms.uThreshold.value = k.thr;
-    u.uExposure.value = k.exp; u.uSat.value = k.sat; u.uContrast.value = k.con;
+    u.uExposure.value = k.exp; u.uSat.value = k.sat * (TOON ? 1.2 : 1); u.uContrast.value = k.con * (TOON ? 1.03 : 1);
     u.uLift.value.copy(k.lift); u.uGain.value.copy(k.gain); u.uShadowTint.value.copy(k.sh); u.uHighTint.value.copy(k.hl);
     u.uFocusDepth.value = this.pr.camDist - 6;
     this.shaftAmt = k.shafts;
