@@ -14,6 +14,10 @@ com cenário em "diorama" e linguagem visual de JRPG 16-bit. Versão de teste jo
 |---|---|---|
 | ![noite](docs/noite.jpg) | ![amanhecer](docs/amanhecer.jpg) | ![celular](docs/celular.jpg) |
 
+Quadros da animação (caminhada, combo com antecipação e follow-through, rolamento):
+
+![animação](docs/animacao.jpg)
+
 | Título (pôr do sol) | Final |
 |---|---|
 | ![titulo](docs/titulo.jpg) | ![final](docs/final.jpg) |
@@ -118,9 +122,23 @@ em [`docs/referencias.md`](docs/referencias.md).
 - Água transparente por profundidade, reflexo de céu e nuvens, correnteza, **cáusticas no leito**,
   **brilhos de sol** (bloom) e **espuma que vai e volta** na margem.
 
-**Personagens e game feel**
-- Chibi de primitivas, direção em 8 lados, poses a 12 quadros/s; hitstop, tremor em pixels inteiros,
-  partículas cúbicas, números de dano, avisos vermelhos que enchem até o impacto.
+**Personagens e animação fluida (12 princípios da Disney, `anim.js`)**
+- Rig articulado (quadril, coluna, peito, cabeça, braço/antebraço/mão, coxa/canela/pé) com formas arredondadas,
+  olhos grandes com brilho, sobrancelhas e boca expressivas; inclinação "de sprite" para a câmera, para o rosto
+  ler bem de cima.
+- **Tweens com easing por segmento** (slow in/slow out) e **antecipação → golpe → follow-through → recuperação**
+  em todos os ataques, giro, rolamento, magia, dano, morte, aceno e comemoração.
+- **Molas amortecidas por articulação** (overlapping action): cada parte tem rigidez própria, então quadril, peito,
+  mãos e cabeça chegam em tempos diferentes; virar é suave (sem travar em 8 direções).
+- **Squash & stretch** com volume preservado em mola "gelatina" (herói, gosmas, fungões).
+- **Caminhada procedural** com contato/passagem, quadril subindo e descendo, torção e contra-rotação dos ombros,
+  braços e pés em arco; vira corrida com a velocidade; inclinação na aceleração e nas curvas.
+- **Ação secundária**: cachecol em corrente, antena de cabelo, maria-chiquinha, saia, capa, nó da bandana e chapéu
+  de mago com física; respiração, troca de peso, piscadas, NPCs que acompanham o herói com o olhar.
+
+**Game feel**
+- Hitstop, tremor de câmera em pixels inteiros, partículas cúbicas, números de dano, avisos vermelhos que enchem
+  até o impacto.
 - Interface de JRPG 16-bit (fonte pixel embutida, retratos e ícones desenhados no código, relógio do dia) e
   áudio 100% sintetizado.
 
@@ -135,7 +153,8 @@ em [`docs/referencias.md`](docs/referencias.md).
 | `src/world.js` | campo de alturas em terraços, trilhas/rampas, rio, ponte, colisão, shaders do terreno e da água |
 | `src/props.js` | árvores e arbustos de cartões de folha, pedras, casas, poço, barraca, cercas, portão, ruínas, fogueira, tochas |
 | `src/grass.js` | grama em sprites (vento, rajadas, dobra ao passar), flores, juncos e samambaias |
-| `src/characters.js` | personagens chibi (herói, NPCs, gosma, fungão, besouro, Toco Ancião) e poses |
+| `src/characters.js` | personagens articulados (herói, NPCs) e inimigos (gosma, fungão, besouro, Toco Ancião) |
+| `src/anim.js` | animação procedural: molas, easing, trilhas de poses-chave, caminhada, física secundária |
 | `src/entities.js` | herói (combo, carga, giro, rolamento, magia), IA dos inimigos e do chefe, coletáveis, projéteis |
 | `src/fx.js` | partículas, cortes, ondas de choque, avisos no chão, números de dano |
 | `src/ui.js` · `src/pixelart.js` | HUD, diálogos com máquina de escrever, menus, toque; pixel art em strings |

@@ -217,13 +217,12 @@ class Game {
       this.interactables.push({ obj: n, pos: n.pos, label: 'Falar', r: 1.7, action: () => this.talkTo(n) });
       return n;
     };
-    this.amora = npc({ name: 'Vó Amora', id: 'amora', wave: true, look: { skin: '#eec4a0', hair: '#cfc9dc', hairStyle: 'bun', tunic: '#7d5aa0', tunic2: '#5a3f78', pants: '#5a3f78', boots: '#4a3a3a', weapon: 'staff', belt: '#e8c36a', cape: '#5a3f78' } }, P.elder, Math.PI * 0.75);
-    this.tiao = npc({ name: 'Tião', id: 'tiao', look: { skin: '#d9a47a', hair: '#3a2a2a', hairStyle: 'bald', hat: 'bandana', hatColor: '#d4553f', beard: '#4a3426', tunic: '#7a9a4a', tunic2: '#567034', pants: '#5e4a3a' } }, [P.merchant[0] + 0.4, P.merchant[1] + 2.1], Math.PI * 0.25);
-    this.pipa = npc({ name: 'Pipa', id: 'pipa', mode: 'wander', look: { skin: '#f3c9a1', hair: '#e8b04a', hairStyle: 'short', tunic: '#e85d75', tunic2: '#b3405a', pants: '#4f7fa0', scarf: '#f6f1e0' } }, [3, 28]);
-    this.bento = npc({ name: 'Seu Bento', id: 'bento', mode: 'sit', look: { skin: '#e0b088', hair: '#6b5a4a', hairStyle: 'bald', hat: 'bandana', hatColor: '#c9b48c', beard: '#e9e2cf', tunic: '#4f7fa0', tunic2: '#3a5f78', pants: '#5e4a3a' } }, (() => { const f = toUV(this.fire.position.x, this.fire.position.z); return [f.u + 1.1, f.v - 0.5]; })(), Math.PI * 0.95);
-    this.rubi = npc({ name: 'Rubi', id: 'rubi', look: { skin: '#c98d6a', hair: '#2a2235', hairStyle: 'long', tunic: '#8a8fa8', tunic2: '#5f6480', pants: '#4b3d5e', weapon: 'sword', cape: '#d4553f', sleeve: '#8a8fa8' } }, [2.6, -13.2], Math.PI * 0.5);
+    this.amora = npc({ name: 'Vó Amora', id: 'amora', wave: true, look: { skin: '#eec4a0', hair: '#cfc9dc', hairStyle: 'bun', scale: 1.08, dress: true, tunic: '#7d5aa0', tunic2: '#5a3f78', pants: '#5a3f78', boots: '#4a3a3a', weapon: 'staff', belt: '#e8c36a', cape: '#5a3f78' } }, P.elder, Math.PI * 0.75);
+    this.tiao = npc({ name: 'Tião', id: 'tiao', look: { skin: '#d9a47a', hair: '#3a2a2a', hairStyle: 'bald', hat: 'bandana', hatColor: '#d4553f', beard: '#4a3426', scale: 1.18, tunic: '#7a9a4a', tunic2: '#567034', pants: '#5e4a3a' } }, [P.merchant[0] + 0.4, P.merchant[1] + 2.1], Math.PI * 0.25);
+    this.pipa = npc({ name: 'Pipa', id: 'pipa', mode: 'wander', look: { skin: '#f3c9a1', hair: '#e8b04a', hairStyle: 'short', scale: 0.95, tunic: '#e85d75', tunic2: '#b3405a', pants: '#4f7fa0', scarf: '#f6f1e0' } }, [3, 28]);
+    this.bento = npc({ name: 'Seu Bento', id: 'bento', mode: 'sit', look: { skin: '#e0b088', hair: '#6b5a4a', hairStyle: 'bald', hat: 'straw', scale: 1.15, beard: '#e9e2cf', tunic: '#4f7fa0', tunic2: '#3a5f78', pants: '#5e4a3a' } }, (() => { const f = toUV(this.fire.position.x, this.fire.position.z); return [f.u + 1.1, f.v - 0.5]; })(), Math.PI * 0.95);
+    this.rubi = npc({ name: 'Rubi', id: 'rubi', look: { skin: '#c98d6a', hair: '#2a2235', hairStyle: 'long', scale: 1.2, tunic: '#8a8fa8', tunic2: '#5f6480', pants: '#4b3d5e', weapon: 'sword', cape: '#d4553f', sleeve: '#8a8fa8' } }, [2.6, -13.2], Math.PI * 0.5);
     this.pipa.radius = 0.3;
-    this.pipa.obj.scale.setScalar(0.82);
 
     // placas
     this.signs = [
@@ -536,6 +535,7 @@ class Game {
 
   onLevelUp() {
     sfx.levelup();
+    this.player.rig.animator.squash(3);
     this.lighting.flash(this.player.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xffd060, 5.5, 1.8, 1.0, null);
     this.ui.bigText(`Nível ${this.player.stats.level}!`, '', 2.2);
     const p = this.player.pos;
@@ -558,6 +558,7 @@ class Game {
     const p = this.player, s = p.stats;
     s.hp = s.maxHp; s.ep = s.maxEp; s.gold = Math.floor(s.gold * 0.8);
     p.state = 'free'; p.invuln = 1.5; p.kb.set(0, 0, 0);
+    p.rig.animator.action = null;
     const w = W(...PLACES.spawn); p.place(w.x, w.z);
     this.resetBoss();
     for (const pr of this.projectiles) pr.kill();
@@ -614,6 +615,7 @@ class Game {
     this.ui.hideBoss();
     for (const pr of this.projectiles) pr.kill();
     this.ui.bigText('Vitória!', '', 3);
+    this.player.rig.animator.play('victory');
     for (const e of this.enemies) if (e.summoned && e.alive) this.killEnemy(e);
     this.arenaLock.off = true; this.arenaVines.visible = false;
     this.bossFight = false;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { buildHumanoid, buildSlime, buildMushroom, buildBeetle, buildStumpBoss, Animator, poseHumanoid, snap8 } from './characters.js';
+import { buildHumanoid, buildSlime, buildMushroom, buildBeetle, buildStumpBoss, Animator } from './characters.js';
+import { angleSpring, Spring } from './anim.js';
 import { toonMat, unlitMat } from './materials.js';
 import { sfx } from './audio.js';
 import { S } from './world.js';
@@ -11,6 +12,8 @@ import { S } from './world.js';
 
 const V3 = THREE.Vector3;
 const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+const ZERO = new V3();
+const TILT_AXIS = new V3(Math.SQRT1_2, 0, -Math.SQRT1_2);
 export const screenToWorld = (sx, sy) => ({ x: (sx + sy) * S, z: (sy - sx) * S });
 
 // ---------------------------------------------------------------- base
@@ -24,25 +27,42 @@ class Actor {
     this.kb = new V3();
     this.facing = Math.PI / 4;
     this.drawFacing = this.facing;
+    this.faceS = angleSpring(15, 0.88);
+    this.faceS.value = this.facing;
+    this.vel = new V3();
+    this.prevPos = null;
     this.radius = 0.35;
     this.flash = 0;
     this.y = 0;
     this.shadow = blobShadow(this.radius * 1.4);
-    game.scene.add(this.obj);
+    // inclinação "de sprite": o personagem tomba um pouco para a câmera (rosto legível de cima)
+    this.tilt = new THREE.Group();
+    this.tilt.quaternion.setFromAxisAngle(TILT_AXIS, -0.38);
+    this.tilt.add(this.obj);
+    game.scene.add(this.tilt);
     game.scene.add(this.shadow);
   }
-  place(x, z) { this.pos.set(x, 0, z); this.y = this.game.world.heightAt(x, z); this.pos.y = this.y; this.sync(); }
-  sync(extraY = 0) {
+  place(x, z) { this.pos.set(x, 0, z); this.y = this.game.world.heightAt(x, z); this.pos.y = this.y; this.prevPos = null; this.faceS.value = this.facing; this.sync(); }
+  sync(extraY = 0, dt = 1 / 60) {
     const gy = this.game.world.heightAt(this.pos.x, this.pos.z);
-    this.y += (gy - this.y) * 0.5;
+    this.y += (gy - this.y) * Math.min(1, dt * 20);
     this.pos.y = this.y;
-    this.obj.position.set(this.pos.x, this.y + extraY, this.pos.z);
-    this.drawFacing = snap8(this.facing);
+    // velocidade suavizada (alimenta inclinação, passada e física secundária)
+    if (this.prevPos && dt > 0) {
+      const k = Math.min(1, dt * 14);
+      this.vel.x += ((this.pos.x - this.prevPos.x) / dt - this.vel.x) * k;
+      this.vel.z += ((this.pos.z - this.prevPos.z) / dt - this.vel.z) * k;
+    }
+    this.prevPos = this.prevPos || new V3();
+    this.prevPos.copy(this.pos);
+    this.tilt.position.set(this.pos.x, this.y, this.pos.z);
+    this.obj.position.set(0, extraY, 0);
+    this.drawFacing = this.faceS.step(this.facing, dt);
     this.obj.rotation.y = this.drawFacing;
     this.shadow.position.set(this.pos.x, gy + 0.03, this.pos.z);
     this.rig.flash.value = this.flash > 0 ? 1 : 0;
   }
-  remove() { this.game.scene.remove(this.obj); this.game.scene.remove(this.shadow); }
+  remove() { this.game.scene.remove(this.tilt); this.game.scene.remove(this.shadow); }
   distTo(p) { return Math.hypot(p.x - this.pos.x, p.z - this.pos.z); }
   angleTo(p) { return Math.atan2(p.x - this.pos.x, p.z - this.pos.z); }
 }
@@ -58,7 +78,7 @@ function blobShadow(r) {
 }
 
 // ---------------------------------------------------------------- herói
-export const HERO_LOOK = { skin: '#f3c9a1', hair: '#8a4a30', hairStyle: 'spiky', tunic: '#3f86b8', tunic2: '#2c628c', pants: '#4b3d5e', boots: '#6b4433', scarf: '#e0533d', weapon: 'sword', pack: true, belt: '#6b4433', sleeve: '#3f86b8' };
+export const HERO_LOOK = { scale: 1.22, skin: '#f3c9a1', hair: '#8a4a30', hairStyle: 'spiky', tunic: '#3f86b8', tunic2: '#2c628c', pants: '#4b3d5e', boots: '#6b4433', scarf: '#e0533d', weapon: 'sword', pack: true, belt: '#6b4433', sleeve: '#3f86b8' };
 
 export class Player extends Actor {
   constructor(game) {
@@ -121,10 +141,9 @@ export class Player extends Actor {
           this.facing = Math.atan2(wmv.x, wmv.z);
           speed = 4.6 * mlen;
           g.world.move(this.pos, wmv.x * speed * dt, wmv.z * speed * dt, this.radius);
-          this.anim.set('walk');
           this.stepT += dt * mlen;
           if (this.stepT > 0.3) { this.stepT = 0; g.fx.dust(this.pos, 1, g.surfaceDust(this.pos)); sfx.step(); }
-        } else this.anim.set('idle');
+        }
         if (locked) break;
         if (input.consume('attack')) { if (!g.tryInteract()) this.startAttack(); }
         else if (input.consume('interact')) g.tryInteract();
@@ -147,7 +166,7 @@ export class Player extends Actor {
         if (input && input.consume('roll')) { this.startRoll(wmv, mlen); break; }
         if (k >= 1) {
           if (this.queued && this.combo < 3) { this.startAttack(); }
-          else if (input && input.isHeld('attack') && this.combo === 1 && this.heldSince > 0.25) { this.state = 'charge'; this.st = 0; this.charge = 0; this.anim.set('charge'); sfx.charge(); }
+          else if (input && input.isHeld('attack') && this.combo === 1 && this.heldSince > 0.25) { this.state = 'charge'; this.st = 0; this.charge = 0; sfx.charge(); }
           else { this.state = 'free'; this.comboTimer = 0.45; }
         }
         if (input && input.isHeld('attack')) this.heldSince += dt; else this.heldSince = 0;
@@ -175,7 +194,6 @@ export class Player extends Actor {
           g.fx.particle({ x: this.pos.x + Math.sin(a) * 1.6, y: this.pos.y + 0.5, z: this.pos.z + Math.cos(a) * 1.6 }, { vy: 0.6, life: 0.25, color: 0xfff2a8, size: 0.09 });
         }
         if (k >= 1) { this.state = 'free'; this.comboTimer = 0; }
-        this.anim.k = k;
         break;
       }
       case 'roll': {
@@ -196,20 +214,16 @@ export class Player extends Actor {
         break;
       }
       case 'dead': break;
-      case 'talk': this.anim.set('idle'); break;
+      case 'talk': break;
     }
 
-    // animação
-    const stepped = this.anim.update(dt);
-    if (stepped || this.state === 'roll') {
-      const name = this.state === 'attack' ? 'attack' + this.combo : this.state === 'free' || this.state === 'talk' ? this.anim.state : this.state;
-      const dur = this.state === 'attack' ? (this.combo === 3 ? 0.42 : 0.3) : this.state === 'roll' ? 0.36 : this.state === 'spin' ? 0.5 : this.state === 'cast' ? 0.34 : 1;
-      const tt = this.state === 'roll' ? this.st : this.anim.frameT;
-      poseHumanoid(this.rig, name, tt, Math.min(1, (this.state === 'free' ? 0 : this.st) / dur));
-    }
+    // animação procedural contínua
+    const A = this.rig.animator;
+    A.setLoop(this.state === 'charge' ? 'charge' : null);
+    this.sync(0, dt);
+    A.update(dt, { vel: this.state === 'roll' || this.state === 'spin' ? ZERO : this.vel, facing: this.drawFacing, charge: this.charge });
     // piscar quando invulnerável
     this.obj.visible = !(this.invuln > 0 && this.state !== 'roll' && Math.floor(this.invuln * 16) % 2 === 0);
-    this.sync();
   }
 
   swordTip() {
@@ -224,7 +238,7 @@ export class Player extends Actor {
     this.combo = chaining && this.combo < 3 ? this.combo + 1 : 1;
     this.state = 'attack'; this.st = 0; this.queued = false; this.hitSet.clear();
     this.heldSince = 0;
-    this.anim.set('attack' + this.combo, true);
+    this.rig.animator.play('attack' + this.combo, this.combo === 3 ? 0.42 : 0.3);
     // mira automática leve: vira para o inimigo mais próximo à frente
     const t = this.game.nearestEnemy(this.pos, 3.2);
     if (t && Math.abs(angDiff(this.angleTo(t.pos), this.facing)) < 1.2) this.facing = this.angleTo(t.pos);
@@ -240,7 +254,7 @@ export class Player extends Actor {
   }
 
   startSpin() {
-    this.state = 'spin'; this.st = 0; this.hitSet.clear(); this.anim.set('spin', true);
+    this.state = 'spin'; this.st = 0; this.hitSet.clear(); this.rig.animator.play('spin', 0.5);
     this.game.fx.ring(this.pos, { r0: 0.6, r1: 2.3, color: 0xfff2a8, life: 0.3, y: 0.5, width: 0.18 });
     this.game.fx.slash(this.pos, this.facing, { radius: 2.0, arc: Math.PI * 2, y: 0.5, thick: 0.55, color: 0xffffff, color2: 0xfff2a8, life: 0.3 });
   }
@@ -250,7 +264,7 @@ export class Player extends Actor {
     const dir = mlen > 0.1 ? new V3(wmv.x, 0, wmv.z).normalize() : new V3(Math.sin(this.facing), 0, Math.cos(this.facing));
     this.rollDir = dir;
     this.facing = Math.atan2(dir.x, dir.z);
-    this.state = 'roll'; this.st = 0; this.anim.set('roll', true);
+    this.state = 'roll'; this.st = 0; this.rig.animator.play('roll', 0.36); this.faceS.value = this.facing;
     this.invuln = Math.max(this.invuln, 0.3);
     sfx.roll();
   }
@@ -261,7 +275,7 @@ export class Player extends Actor {
     s.ep -= 12;
     const t = this.game.nearestEnemy(this.pos, 9);
     if (t) this.facing = this.angleTo(t.pos);
-    this.state = 'cast'; this.st = 0; this.casted = false; this.anim.set('cast', true);
+    this.state = 'cast'; this.st = 0; this.casted = false; this.rig.animator.play('cast', 0.34);
     sfx.cast();
   }
 
@@ -291,8 +305,8 @@ export class Player extends Actor {
     this.kb.set(Math.sin(a) * 7, 0, Math.cos(a) * 7);
     this.game.fx.text(this.pos, String(dmg), 'hurt');
     sfx.hurt();
-    if (s.hp <= 0) { this.state = 'dead'; this.st = 0; this.anim.set('dead', true); this.game.onPlayerDeath(); }
-    else if (this.state !== 'charge' || dmg > 10) { this.state = 'hurt'; this.st = 0; this.anim.set('hurt', true); }
+    if (s.hp <= 0) { this.state = 'dead'; this.st = 0; this.rig.animator.play('dead'); this.game.onPlayerDeath(); }
+    else if (this.state !== 'charge' || dmg > 10) { this.state = 'hurt'; this.st = 0; this.rig.animator.play('hurt', 0.32); }
     return true;
   }
 }
@@ -333,9 +347,12 @@ export class NPC extends Actor {
       if (this.def.wave && this.distTo(p.pos) < 3.2 && !this.waved) { this.waved = true; this.waveT = 1.4; }
     }
     if (this.waveT > 0) { this.waveT -= dt; st = 'wave'; }
-    this.anim.set(st);
-    if (this.anim.update(dt)) poseHumanoid(this.rig, st, this.anim.frameT, 0);
-    this.sync();
+    const A = this.rig.animator;
+    A.setLoop(st === 'sit' ? 'sit' : st === 'talk' ? 'talk' : null);
+    if (st === 'wave' && !this.wavePlayed) { this.wavePlayed = true; A.play('wave'); }
+    const look = this.distTo(p.pos) < 5 && this.mode !== 'wander' ? Math.max(-1, Math.min(1, angDiff(this.angleTo(p.pos), this.drawFacing))) : 0;
+    this.sync(0, dt);
+    A.update(dt, { vel: this.vel, facing: this.drawFacing, look });
   }
 }
 
@@ -361,6 +378,7 @@ export class Enemy extends Actor {
     this.camp = o.camp;
     this.leash = o.leash ?? 11;
     this.baseScale = 1;
+    this.jelly = new Spring(17, 0.22, 1);
   }
   hurtReact() {}
   update(dt) {
@@ -378,7 +396,7 @@ export class Enemy extends Actor {
       const k = Math.min(1, this.deathT / 0.35), bs = this.baseScale;
       this.obj.scale.set(bs * (1 + k * 0.5), bs * Math.max(0.01, 1 - k), bs * (1 + k * 0.5));
       this.flash = Math.floor(this.deathT * 20) % 2 ? 0.05 : 0;
-      this.sync();
+      this.sync(0, dt);
       if (k >= 1 && !this.gone) { this.gone = true; this.remove(); }
       return;
     }
@@ -388,9 +406,11 @@ export class Enemy extends Actor {
     this.think(dt, d, p);
     // dano de contato
     if (this.contact && d < this.radius + p.radius + 0.05 && p.alive) g.damagePlayer(this.contactDmg ?? Math.round(this.dmg * 0.6), this.pos);
-    this.sync(this.lift || 0);
+    this.sync(this.lift || 0, dt);
+    // squash & stretch com mola gelatinosa (passa do ponto e treme)
+    const sq = Math.max(0.45, this.jelly.step(this.squash, dt));
     const bs = this.baseScale;
-    this.obj.scale.set(bs / Math.sqrt(this.squash), bs * this.squash, bs / Math.sqrt(this.squash));
+    this.obj.scale.set(bs / Math.sqrt(sq), bs * sq, bs / Math.sqrt(sq));
   }
   wander(dt, speed) {
     if (!this.wTarget || this.distTo(this.wTarget) < 0.3 || this.st > 3) {
@@ -490,6 +510,7 @@ export class Mushroom extends Enemy {
         parts.cap.scale.setScalar(1 + k * 0.3 + Math.sin(this.st * 30) * 0.03);
         if (this.st > 0.7) {
           parts.cap.scale.setScalar(0.85);
+          this.squash = 0.7;
           for (const off of [-0.32, 0, 0.32]) g.spawnSpore(this, this.facing + off);
           g.fx.burst({ x: this.pos.x, y: this.pos.y + 0.9, z: this.pos.z }, 8, { speed: 1.5, up: 1, g: 0.5, color: [0xb98ad6, 0xd9b8ef], life: 0.5, size: 0.1 });
           sfx.shoot();
@@ -504,7 +525,10 @@ export class Mushroom extends Enemy {
       parts.legL.rotation.x = walking ? Math.sin(t) * 0.6 : 0;
       parts.legR.rotation.x = walking ? -Math.sin(t) * 0.6 : 0;
       parts.body.position.y = walking ? Math.abs(Math.cos(t)) * 0.05 : 0;
-      parts.cap.rotation.z = walking ? Math.sin(t) * 0.08 : Math.sin(this.anim.frameT * 2) * 0.04;
+      // chapéu com mola: balança atrasado em relação ao corpo (follow-through)
+      this.capS = this.capS || new Spring(9, 0.2);
+      parts.cap.rotation.z = this.capS.step(walking ? Math.sin(t) * 0.18 : Math.sin(this.anim.frameT * 2) * 0.04, dt);
+      parts.body.rotation.z = walking ? Math.sin(t) * 0.12 : 0;
     }
   }
 }
@@ -699,8 +723,8 @@ export class StumpBoss extends Enemy {
     this.st = 0; this.lastWave = -1; this.slammed = false;
     if (this.state === 'seeds') this.game.fx.text(this.pos, '!', 'warn');
   }
-  sync(extraY = 0) {
-    super.sync(extraY);
+  sync(extraY = 0, dt = 1 / 60) {
+    super.sync(extraY, dt);
     if (this.state === 'seeds') this.obj.rotation.y = this.spin = (this.spin || 0) + 0.25;
   }
 }
