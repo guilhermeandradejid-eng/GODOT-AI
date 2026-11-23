@@ -6,13 +6,17 @@ com cenário em "diorama" e linguagem visual de JRPG 16-bit. Versão de teste jo
 
 ![vila](docs/vila.jpg)
 
-| Combate no campo | Vale dos Cogumelos (giro carregado) | Toco Ancião (chefe) |
+| Combate no fim de tarde | Vale dos Cogumelos (giro carregado) | Toco Ancião (chefe) |
 |---|---|---|
 | ![combate](docs/combate.jpg) | ![cogumelos](docs/cogumelos.jpg) | ![chefe](docs/chefe.jpg) |
 
-| Título | Final | Celular (toque) |
+| Noite na vila (lampiões, janelas, bloom) | Amanhecer com névoa | Celular (toque) |
 |---|---|---|
-| ![titulo](docs/titulo.jpg) | ![final](docs/final.jpg) | ![celular](docs/celular.jpg) |
+| ![noite](docs/noite.jpg) | ![amanhecer](docs/amanhecer.jpg) | ![celular](docs/celular.jpg) |
+
+| Título (pôr do sol) | Final |
+|---|---|
+| ![titulo](docs/titulo.jpg) | ![final](docs/final.jpg) |
 
 ## Rodar
 
@@ -43,7 +47,8 @@ npm test
 | Falar / ler / abrir | E · Enter (ou atacar perto) | A | **ATK** |
 | Pausa · música | Esc · M | Start | **II** |
 
-Na pausa dá para trocar o tamanho do pixel (auto/2x/3x/4x) e ligar/desligar os contornos.
+Na pausa dá para trocar o tamanho do pixel (auto/2x/3x/4x), ligar/desligar os contornos e fixar a **hora do dia**
+(ciclo, manhã, meio-dia, tarde, pôr do sol, noite). Também dá para abrir direto numa hora: `?hora=noite`.
 O progresso é salvo no navegador (nível, moedas, poções e etapa da missão).
 
 ### A missão da versão de teste (~15 min)
@@ -72,36 +77,64 @@ reaparecem depois de um tempo (bom para subir de nível).
 ## Direção de arte — "pixel art 3D"
 
 O objetivo é parecer pixel art desenhada à mão, não um 3D genérico com filtro. Pesquisa e referências
-em [`docs/referencias.md`](docs/referencias.md). O que faz o visual funcionar:
+em [`docs/referencias.md`](docs/referencias.md).
 
-- **Resolução interna baixa** (~300 px de altura, escala inteira na tela) e câmera ortográfica isométrica
-  **presa ao grid de pixels**; o resto subpixel vira deslocamento na ampliação → nada "nada" ao andar.
-- **Contornos por pós-processamento** (profundidade + normais em um segundo passe): silhueta escurecida na
-  *própria cor* (não preta) e **brilho só nas arestas convexas** — a técnica popularizada por t3ssel8r.
-- **Sombreamento em 3 faixas com hue shift**: a faixa do meio é exatamente o hex da paleta (gestão de cor
-  desligada), a sombra puxa para azul/lilás e a luz para amarelo; dither Bayer 4x4 de 1–2 px na fronteira.
-- **Paleta escolhida à mão** por material (grama em 3 tons, terra, areia, pedra, telhados) e terreno com
-  padrões em espaço de mundo (pedrinhas, trevos, juntas da praça, estratos do penhasco com musgo no topo).
-- **Grama de verdade**: ~22 mil tufos (≈90 mil lâminas) instanciados que usam a cor e a luz do chão na raiz (parecem parte do
-  chão) e balançam no vento, sem contorno. Sombras de nuvens passando.
-- **Copas "fofas"**: bolhas de icosaedro deformadas com normais esféricas → sombreado redondo e limpo.
-- **Personagens chibi** de primitivas, direção travada em 8 lados e poses amostradas a **12 quadros/s**
-  ("animação em 2s"), como sprites; o deslocamento continua suave.
-- **Game feel**: hitstop, tremor de câmera em pixels inteiros, partículas cúbicas, números de dano saltando,
-  corte em crescente, flash branco, avisos vermelhos que **enchem até o impacto**.
-- **Interface de JRPG 16-bit**: janelas com moldura dupla, fonte pixel (Pixelify Sans / Silkscreen, embutidas),
-  retratos e ícones desenhados pixel a pixel no código, tudo medido em "pixels do jogo".
-- **Áudio 100% sintetizado** (WebAudio): efeitos estilo 16-bit e três temas (vila, campo, chefe).
+**Base do pixel**
+- Resolução interna baixa (~300 px de altura, escala inteira) e câmera ortográfica isométrica **presa ao grid
+  de pixels**; o resto subpixel vira deslocamento na ampliação → nada "nada" ao andar.
+- Contornos por profundidade + normais (silhueta na *própria cor* escurecida, brilho só em arestas convexas).
+
+**Grama e folhagem em sprites (técnica t3ssel8r)**
+- Atlas de pixel art 16x16 desenhado proceduralmente (`texgen.js`): 8 tufos de grama (com flores e trevos),
+  8 cachos de folhas, 8 de agulhas de pinheiro, juncos com taboa e samambaias.
+- ~50 mil tufos virados para a câmera em escala **1:1 com o pixel do jogo**, cor tirada do terreno na raiz,
+  luz e sombra do chão, **rajadas de vento** que passam em ondas clareando as pontas, e a grama **se dobra**
+  quando o herói passa. Densidade varia (gramado alto × chão aparecendo).
+- Copas de árvores e arbustos são nuvens de **cartões de folhas** sobre um miolo escuro, com normais esféricas
+  (sombreado redondo) e **sombra salpicada** no chão (o recorte das folhas vai para o shadow map).
+
+**Iluminação dinâmica**
+- **Ciclo de dia** (24 min reais): sol que nasce à direita e se põe à esquerda (sombras giram), cores de céu,
+  rebatida, sol e realce interpoladas por hora; **lua** à noite.
+- Sombreamento toon próprio: N·L × shadow map × sombra de nuvem → 3 faixas com hue shift (sombra fria vinda
+  do céu, rebatida quente embaixo, luz na cor do sol, realce mais quente), dither Bayer só na fronteira.
+- **Luzes pontuais em anéis** (até 12 por quadro, escolhidas pela distância): lampiões, janelas, fogueira e
+  tochas que acendem ao anoitecer e tremulam; luz da lâmina de vento, dos golpes, do level up, do baú, da
+  pancada do chefe e da poção; lanterna do herói à noite. **Rim light** nos personagens.
+- **Raios de sol** entre as árvores alinhados à direção do sol (manhã e fim de tarde).
+
+**Pós-processamento (HDR)**
+- Cor em meio-float → **bloom** (limiar + borrão separável) em janelas, lampiões, fogo, vagalumes e brilhos da água.
+- **Oclusão de ambiente** por vincos na profundidade (base de paredes, árvores e penhascos), em degraus.
+- **Névoa de altura** com fiapos animados (amanhecer/noite no vale do rio) + **neblina de profundidade**.
+- **Color grading por hora**: exposição, split toning (sombras/realces), contraste, saturação, lift/gain;
+  compressão de altos que preserva o matiz; vinheta em degraus.
+
+**Texturas e acabamento**
+- Padrões procedurais em pixel por material: tábuas com veios e nós, reboco com manchas e sujeira na base,
+  blocos de pedra com chanfro, telhas em escama, casca com sulcos, rocha com rachaduras e **musgo no topo**.
+- Terreno: grama em 3 tons com manchas secas, terra com pedrinhas (luz + sombra), areia com marolas e conchas,
+  praça com pedras chanfradas, penhascos com estratos, raízes penduradas e musgo na borda.
+- Água transparente por profundidade, reflexo de céu e nuvens, correnteza, **cáusticas no leito**,
+  **brilhos de sol** (bloom) e **espuma que vai e volta** na margem.
+
+**Personagens e game feel**
+- Chibi de primitivas, direção em 8 lados, poses a 12 quadros/s; hitstop, tremor em pixels inteiros,
+  partículas cúbicas, números de dano, avisos vermelhos que enchem até o impacto.
+- Interface de JRPG 16-bit (fonte pixel embutida, retratos e ícones desenhados no código, relógio do dia) e
+  áudio 100% sintetizado.
 
 ## Código
 
 | Arquivo | O quê |
 |---|---|
-| `src/render.js` | pipeline pixel-art: alvos de baixa resolução, passe de normais, contornos, câmera presa ao grid |
-| `src/materials.js` | material toon (Lambert remendado): faixas, hue shift, dither, nuvens, vento, saída de normais |
+| `src/render.js` | pipeline pixel-art: alvos de baixa resolução (HDR), passe de normais, contornos, AO, névoa, bloom, color grading |
+| `src/lighting.js` | ciclo de dia (sol/lua, cores, névoa, grading por hora) e luzes pontuais dinâmicas |
+| `src/texgen.js` | atlas de sprites em pixel art (grama, flores, folhas, agulhas, juncos, samambaias) |
+| `src/materials.js` | material toon com iluminação própria: faixas com hue shift, luzes em anéis, rim, padrões de textura, vento |
 | `src/world.js` | campo de alturas em terraços, trilhas/rampas, rio, ponte, colisão, shaders do terreno e da água |
-| `src/props.js` | árvores, arbustos, pedras, casas em enxaimel, poço, barraca, cercas, portão, ruínas; junção estática |
-| `src/grass.js` | grama instanciada em blocos + florzinhas |
+| `src/props.js` | árvores e arbustos de cartões de folha, pedras, casas, poço, barraca, cercas, portão, ruínas, fogueira, tochas |
+| `src/grass.js` | grama em sprites (vento, rajadas, dobra ao passar), flores, juncos e samambaias |
 | `src/characters.js` | personagens chibi (herói, NPCs, gosma, fungão, besouro, Toco Ancião) e poses |
 | `src/entities.js` | herói (combo, carga, giro, rolamento, magia), IA dos inimigos e do chefe, coletáveis, projéteis |
 | `src/fx.js` | partículas, cortes, ondas de choque, avisos no chão, números de dano |

@@ -18,7 +18,7 @@ export class Rig {
   }
   m(color, opts = {}) {
     const k = color + JSON.stringify(opts);
-    if (!this.mats.has(k)) this.mats.set(k, toonMat({ color, flash: this.flash, outline: 0.95, ...opts }));
+    if (!this.mats.has(k)) this.mats.set(k, toonMat({ color, flash: this.flash, outline: 0.95, rim: 1, ...opts }));
     return this.mats.get(k);
   }
   mesh(geo, color, parent, pos, opts = {}) {

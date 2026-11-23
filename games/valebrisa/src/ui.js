@@ -36,9 +36,10 @@ export class UI {
     const inv = h('div', 'inv frame');
     const c1 = h('span', 'it'); c1.appendChild(icon('coin')); this.goldEl = h('b', '', '0'); c1.appendChild(this.goldEl);
     const c2 = h('span', 'it'); c2.appendChild(icon('potion')); this.potEl = h('b', '', 'x2'); c2.appendChild(this.potEl); c2.appendChild(h('kbd', 'hint-k', 'Q'));
+    this.clockEl = h('span', 'it clock', '<i class="sun"></i><b>08:00</b>');
     const c3 = h('span', 'it rune hidden'); c3.appendChild(icon('rune')); c3.appendChild(h('b', '', 'Runa'));
     this.runeEl = c3;
-    inv.append(c1, c2, c3);
+    inv.append(this.clockEl, c1, c2, c3);
     this.hud.appendChild(inv);
     root.appendChild(this.hud);
     this.hpFill = bars.querySelector('.hp .fill'); this.hpTrail = bars.querySelector('.hp .trail'); this.hpTxt = bars.querySelector('.hp b');
@@ -126,6 +127,10 @@ export class UI {
     this.quest.querySelector('h4').textContent = title;
     this.quest.querySelector('p').innerHTML = text;
     this.quest.classList.remove('pulse'); void this.quest.offsetWidth; this.quest.classList.add('pulse');
+  }
+  setClock(label, night) {
+    if (this._clock !== label) { this._clock = label; this.clockEl.querySelector('b').textContent = label; }
+    this.clockEl.classList.toggle('night', night);
   }
   setRune(on) { this.runeEl.classList.toggle('hidden', !on); }
 
@@ -251,6 +256,7 @@ export class UI {
         <button data-act="music">Música: ${this.game.musicOn ? 'ligada' : 'desligada'}</button>
         <button data-act="pixels">Pixels: ${pr.pixelScaleOverride ? pr.pixelScaleOverride + 'x' : 'auto'}</button>
         <button data-act="outlines">Contornos: ${pr.outlines ? 'sim' : 'não'}</button>
+        <button data-act="time">Hora do dia: ${this.game.timeMode || 'ciclo'}</button>
         <button data-act="controls">Controles</button>
         <button data-act="restart">Recomeçar do zero</button>
       </div>`, 'pause');

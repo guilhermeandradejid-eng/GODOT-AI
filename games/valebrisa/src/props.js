@@ -1,8 +1,60 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { mat, toonMat, unlitMat } from './materials.js';
+import { mat, toonMat, unlitMat, setPattern } from './materials.js';
 import { toWorld, toUV, PLACES, PATHS, riverV, LH } from './world.js';
 import { mulberry32, vnoise, fbm } from './noise.js';
+import { getAtlas, cellUV, CELL_U, CELL_V } from './texgen.js';
+
+// câmera isométrica fixa (yaw 45°, pitch 33°): cartões de folha ficam sempre de frente
+const PITCH = THREE.MathUtils.degToRad(33);
+const CAM_R = new THREE.Vector3(Math.SQRT1_2, 0, -Math.SQRT1_2);
+const CAM_U = new THREE.Vector3(-Math.sin(PITCH) * Math.SQRT1_2, Math.cos(PITCH), -Math.sin(PITCH) * Math.SQRT1_2);
+const CAM_D = new THREE.Vector3(Math.cos(PITCH) * Math.SQRT1_2, Math.sin(PITCH), Math.cos(PITCH) * Math.SQRT1_2);
+const CARD = 16 / 22;
+
+/** nuvem de cartões de folha (sprites 16x16 do atlas) sobre esferas `spots` */
+function cardCloud(spots, center, row, density, seed, squash = 0.9) {
+  const rng = mulberry32(seed);
+  const pos = [], uv = [], nor = [], idx = [];
+  const hw = CARD / 2;
+  const nn = new THREE.Vector3(), dv = new THREE.Vector3();
+  for (const [x, y, z, r] of spots) {
+    const n = Math.max(3, Math.round(r * r * density));
+    for (let i = 0; i < n; i++) {
+      let dx, dy, dz;
+      do { dx = rng() * 2 - 1; dy = rng() * 2 - 1; dz = rng() * 2 - 1; } while (dx * dx + dy * dy + dz * dz > 1 || dx * dx + dy * dy + dz * dz < 0.05);
+      dv.set(dx, dy, dz).normalize();
+      if (dv.dot(CAM_D) < -0.35 && rng() < 0.7) continue;
+      const rr = r * (0.7 + rng() * 0.32);
+      const cx = x + dv.x * rr, cy = y + dv.y * rr * squash, cz = z + dv.z * rr;
+      nn.set(cx - center.x, cy - center.y, cz - center.z).normalize().lerp(dv, 0.35).normalize();
+      const [u0, v0] = cellUV(Math.floor(rng() * 8), row);
+      const base = pos.length / 3;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        pos.push(cx + (CAM_R.x * sx + CAM_U.x * sy) * hw, cy + (CAM_R.y * sx + CAM_U.y * sy) * hw, cz + (CAM_R.z * sx + CAM_U.z * sy) * hw);
+        nor.push(nn.x, nn.y, nn.z);
+      }
+      uv.push(u0, v0 + CELL_V, u0 + CELL_U, v0 + CELL_V, u0 + CELL_U, v0, u0, v0);
+      idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  return g;
+}
+const OAK_SPOTS = (top, k) => [[0, top, 0, 0.95], [0.55 * k, top - 0.25, 0.25, 0.62], [-0.5, top - 0.2, -0.3 * k, 0.66], [0.15, top + 0.5, -0.1, 0.62], [-0.2 * k, top - 0.35, 0.55, 0.55], [0.3, top - 0.3, -0.55 * k, 0.55]];
+function pineCards(seed) {
+  const rng = mulberry32(seed);
+  const spots = [];
+  const tiers = [[1.0, 1.05, 0.95], [0.78, 0.95, 1.65], [0.52, 0.85, 2.3], [0.28, 0.6, 2.85]];
+  for (const [r, h, y] of tiers) spots.push([0, y - h * 0.15, 0, r * 0.95]);
+  void rng;
+  return cardCloud(spots, new THREE.Vector3(0, 1.6, 0), 2, 30, seed, 0.55);
+}
 
 // =============================================================================
 // Cenário: árvores (copas "fofas" com normais esféricas), arbustos, pedras, casas
@@ -125,16 +177,24 @@ export function buildScenery(world, scene) {
   const block = (x, z, r) => occupied.push([x, z, r]);
   const blocked = (x, z, pad = 0) => occupied.some(([ox, oz, r]) => (x - ox) ** 2 + (z - oz) ** 2 < (r + pad) ** 2);
 
-  const trunkMat = toonMat({ color: 0xffffff, outline: 0.8, key: 'trunk' });
-  const leafMat = toonMat({ color: 0xffffff, wind: 0.025, outline: 0.65, key: 'leaf' });
-  const bushMat = toonMat({ color: 0xffffff, wind: 0.05, outline: 0.6, key: 'bush' });
-  const rockMat = toonMat({ color: 0xffffff, flat: true, outline: 0.8, key: 'rock' });
+  const trunkMat = toonMat({ color: 0xffffff, outline: 0.8, key: 'trunk', pattern: 5 });
+  const innerMat = toonMat({ color: new THREE.Color(0.62, 0.66, 0.7), wind: 0.02, outline: 0.5, key: 'leafin' });
+  const atlas = getAtlas();
+  const cardMat = toonMat({ color: new THREE.Color(1.2, 1.2, 1.2), wind: 0.035, outline: 0.55, key: 'leafcard', map: atlas, alphaTest: 0.5, side: THREE.DoubleSide });
+  const bushCardMat = toonMat({ color: new THREE.Color(1.2, 1.2, 1.2), wind: 0.07, outline: 0.5, key: 'bushcard', map: atlas, alphaTest: 0.5, side: THREE.DoubleSide });
+  const rockMat = toonMat({ color: 0xffffff, flat: true, outline: 0.8, key: 'rock', pattern: 6 });
+  const noShadow = { cast: false };
+  const oakCtr = new THREE.Vector3(0, 2.1, 0);
+  const bushSpots = (k) => [[0, 0.34, 0, 0.42], [0.3 * k, 0.27, 0.12, 0.3], [-0.28, 0.26, -0.1 * k, 0.32], [0.05, 0.52, -0.05, 0.28]];
   const sets = {
     oakTrunk: new Instancer(trunkGeo(), trunkMat),
-    oak: [new Instancer(crownOak(1), leafMat), new Instancer(crownOak(7), leafMat)],
+    oakIn: [new Instancer(crownOak(1).scale(0.8, 0.8, 0.8).translate(0, 0.4, 0), innerMat, noShadow), new Instancer(crownOak(7).scale(0.8, 0.8, 0.8).translate(0, 0.4, 0), innerMat, noShadow)],
+    oak: [new Instancer(cardCloud(OAK_SPOTS(2.05, 1), oakCtr, 1, 30, 11), cardMat), new Instancer(cardCloud(OAK_SPOTS(2.05, -1), oakCtr, 1, 30, 23), cardMat), new Instancer(cardCloud(OAK_SPOTS(2.15, 0.6), oakCtr, 1, 32, 37), cardMat)],
     pineTrunk: new Instancer(trunkGeo(0.9, 0.16, 0.12), trunkMat),
-    pine: new Instancer(crownPine(), leafMat),
-    bush: [new Instancer(crownBush(2), bushMat), new Instancer(crownBush(9), bushMat)],
+    pineIn: new Instancer(crownPine().scale(0.85, 0.95, 0.85), innerMat, noShadow),
+    pine: [new Instancer(pineCards(5), cardMat), new Instancer(pineCards(17), cardMat)],
+    bushIn: new Instancer(crownBush(2).scale(0.75, 0.75, 0.75), innerMat, noShadow),
+    bush: [new Instancer(cardCloud(bushSpots(1), new THREE.Vector3(0, 0.3, 0), 1, 34, 41, 0.85), bushCardMat), new Instancer(cardCloud(bushSpots(-1), new THREE.Vector3(0, 0.3, 0), 1, 34, 53, 0.85), bushCardMat)],
     rock: [new Instancer(rockGeo(1), rockMat), new Instancer(rockGeo(5), rockMat), new Instancer(rockGeo(9), rockMat)],
   };
 
@@ -142,12 +202,17 @@ export function buildScenery(world, scene) {
     const y = world.heightAt(x, z) - 0.05;
     const rot = R(0, Math.PI * 2);
     if (kind === 'pine') {
+      const c = C((colors || PINE)[Math.floor(rng() * (colors || PINE).length)]);
       sets.pineTrunk.add(x, y, z, rot, s, C('#6e5040'));
-      sets.pine.add(x, y, z, rot, s, C((colors || PINE)[Math.floor(rng() * (colors || PINE).length)]));
+      sets.pineIn.add(x, y, z, 0, s, c);
+      sets.pine[rng() < 0.5 ? 0 : 1].add(x, y, z, 0, s, c);
     } else {
       sets.oakTrunk.add(x, y, z, rot, s, C(rng() < 0.5 ? '#7b5b45' : '#6f513f'));
       const pal = colors || OAK;
-      sets.oak[rng() < 0.5 ? 0 : 1].add(x, y, z, rot, s, C(pal[Math.floor(rng() * pal.length)]));
+      const c = C(pal[Math.floor(rng() * pal.length)]);
+      const v = Math.floor(rng() * 3);
+      sets.oakIn[v % 2].add(x, y, z, 0, s, c);
+      sets.oak[v].add(x, y, z, 0, s, c);
     }
     if (collide) world.addCircle(x, z, 0.32 * s);
     block(x, z, 1.1 * s);
@@ -155,7 +220,9 @@ export function buildScenery(world, scene) {
   const addBush = (x, z, s = 1, dark = false) => {
     const y = world.heightAt(x, z) - 0.04;
     const pal = dark ? ['#4a7a45', '#3f6f46'] : ['#5d9447', '#6aa04a', '#548a45'];
-    sets.bush[rng() < 0.5 ? 0 : 1].add(x, y, z, R(0, 6.28), s, C(pal[Math.floor(rng() * pal.length)]));
+    const c = C(pal[Math.floor(rng() * pal.length)]);
+    sets.bushIn.add(x, y, z, 0, s, c);
+    sets.bush[rng() < 0.5 ? 0 : 1].add(x, y, z, 0, s, c);
     block(x, z, 0.5 * s);
   };
   const addRock = (x, z, s = 1, collide = true) => {
@@ -282,7 +349,7 @@ export function buildScenery(world, scene) {
     return { ...w, h, mk };
   };
   // borda (planaltos fora da área jogável): floresta densa
-  for (let v = -47; v < 46; v += 1.25) for (let u = -40; u < 40; u += 1.25) {
+  for (let v = -56; v < 56; v += 1.25) for (let u = -46; u < 46; u += 1.25) {
     const uu = u + R(-0.5, 0.5), vv = v + R(-0.5, 0.5);
     const w = toWorld(uu, vv);
     const h = world.heightAt(w.x, w.z);
@@ -293,7 +360,7 @@ export function buildScenery(world, scene) {
     const pl = tryPlace(uu, vv, 0.3);
     if (!pl) continue;
     const pine = vv < -12 || (deep > 0.6 && rng() < 0.5);
-    addTree(pl.x, pl.z, pine ? 'pine' : 'oak', R(0.85, 1.35), pine ? null : (rng() < 0.4 ? OAK_DARK : OAK), false);
+    addTree(pl.x, pl.z, pine ? 'pine' : 'oak', R(0.9, 1.2), pine ? null : (rng() < 0.4 ? OAK_DARK : OAK), false);
   }
   // árvores dentro da área jogável (bosquetes)
   const groves = [
@@ -345,9 +412,13 @@ export function buildScenery(world, scene) {
 // Construtores de peças
 // =============================================================================
 const WOOD = '#7a5642', WOOD_D = '#5e3f31', WOOD_L = '#9a7050', STONE = '#a59a93', STONE_D = '#8b7f7c';
+setPattern([WOOD, WOOD_D, WOOD_L, '#8d6548', '#6d4a3a', '#6a4534', '#b98a57', '#8a6141', '#8a6043', '#a07a55'], 1);
+setPattern([STONE, STONE_D, '#b8aca3', '#b3a9a6'], 3);
 
 function house({ w, d, roof, wall, floors = 1 }) {
   const g = new THREE.Group();
+  setPattern([wall], 2);
+  setPattern([roof, shade(roof, 0.88), shade(roof, 0.75)], 4);
   const wh = floors === 2 ? 2.5 : 1.65;
   g.add(box(w + 0.24, 0.38, d + 0.24, STONE, { base: true }));
   g.add(box(w, wh, d, wall, { base: true, p: [0, 0.38, 0] }));
@@ -372,7 +443,7 @@ function house({ w, d, roof, wall, floors = 1 }) {
   const win = (x, y, z, ry) => {
     const wg = new THREE.Group();
     wg.add(box(0.62, 0.6, 0.08, WOOD_D));
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.44, 0.06), unlitMat(0xffd98a, { outline: 0.6 }));
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.44, 0.06), unlitMat(0xffd98a, { outline: 0.6, glow: 1 }));
     glass.position.z = 0.03; wg.add(glass);
     wg.add(box(0.06, 0.44, 0.04, WOOD_D, { p: [0, 0, 0.07] }));
     wg.add(box(0.46, 0.06, 0.04, WOOD_D, { p: [0, 0, 0.07] }));
@@ -457,7 +528,7 @@ function lamp() {
   g.add(box(0.12, 1.9, 0.12, '#4b4256', { base: true }));
   g.add(box(0.26, 0.14, 0.26, '#4b4256', { base: true }));
   g.add(box(0.5, 0.06, 0.06, '#4b4256', { p: [0.2, 1.85, 0] }));
-  const lan = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.22), unlitMat(0xffd27a, { outline: 0.7 }));
+  const lan = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.22), unlitMat(0xffd27a, { outline: 0.7, glow: 1 }));
   lan.position.set(0.4, 1.66, 0); g.add(lan);
   g.add(box(0.28, 0.06, 0.28, '#4b4256', { p: [0.4, 1.83, 0] }));
   g.userData.light = new THREE.Vector3(0.4, 1.66, 0);
@@ -605,7 +676,7 @@ function forestGate(world) {
     leaf.add(box(2.0, 0.14, 0.08, WOOD_D, { p: [-s * 1.0, 1.4, 0.1] }));
   }
   // cadeado com runa
-  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.4, 0.14), unlitMat(0xf2c14e, { outline: 0.8 }));
+  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.4, 0.14), unlitMat(0xf2c14e, { outline: 0.8, glow: 0.5 }));
   lock.position.set(0, 1.05, 0.2); g.add(lock);
   // trepadeiras com espinhos
   const vines = new THREE.Group(); g.add(vines);
@@ -633,7 +704,7 @@ function pillar(h, seed) {
   // pedra caída
   if (h < 1.5) { const r = box(0.6, 0.4, 0.5, '#b3a9a6', { p: [0.8, 0.2, 0.3], r: [0.2, 0.5, 0.1] }); g.add(r); }
   // runa brilhante
-  const rune = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.05), unlitMat(0x7fe0c8, { outline: 0.5 }));
+  const rune = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.05), unlitMat(0x7fe0c8, { outline: 0.5, glow: 0.8 }));
   rune.position.set(0, 0.3 + h * 0.55, 0.39); rune.userData.dynamic = true; g.add(rune);
   g.userData.rune = rune;
   return g;
@@ -671,4 +742,32 @@ export function mergeStatic(root) {
     root.add(mesh);
   }
   return buckets.size;
+}
+
+
+/** fogueira do pescador: pedras em anel + lenha (o fogo é partícula + luz) */
+export function campfire() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.13, 0), mat('#8b7f7c', { flat: true }));
+    r.position.set(Math.cos(a) * 0.42, 0.06, Math.sin(a) * 0.42); r.castShadow = true; g.add(r);
+  }
+  for (let i = 0; i < 3; i++) {
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.6, 5), mat('#6d4a3a'));
+    l.rotation.set(Math.PI / 2 - 0.35, (i / 3) * Math.PI * 2, 0); l.position.y = 0.14; l.castShadow = true; g.add(l);
+  }
+  const ember = new THREE.Mesh(new THREE.OctahedronGeometry(0.16, 0), unlitMat(0xff8a3a, { glow: 1 }));
+  ember.position.y = 0.12; ember.scale.y = 0.5; g.add(ember);
+  return g;
+}
+/** tocha de poste (portão) */
+export function torch() {
+  const g = new THREE.Group();
+  g.add(box(0.12, 1.5, 0.12, WOOD_D, { base: true }));
+  g.add(box(0.22, 0.18, 0.22, '#55505e', { p: [0, 1.55, 0] }));
+  const f = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), unlitMat(0xffb347, { glow: 1 }));
+  f.position.y = 1.72; f.scale.y = 1.4; g.add(f);
+  g.userData.flame = f;
+  return g;
 }

@@ -14,7 +14,7 @@ export const toWorld = (u, v) => ({ x: (u + v) * S, z: (v - u) * S });
 export const toUV = (x, z) => ({ u: (x - z) * S, v: (x + z) * S });
 export const LH = 1.2;           // altura de um nível
 export const WATER_Y = -0.45;
-const U0 = -40, U1 = 40, V0 = -48, V1 = 46, CELL = 0.4;
+const U0 = -46, U1 = 46, V0 = -56, V1 = 56, CELL = 0.4;
 
 export const hex = (h) => { const c = new THREE.Color(h); return `vec3(${c.r.toFixed(3)},${c.g.toFixed(3)},${c.b.toFixed(3)})`; };
 
@@ -313,7 +313,7 @@ export class World {
   }
 
   buildWaterMesh() {
-    const g = new THREE.PlaneGeometry(130, 130, 1, 1);
+    const g = new THREE.PlaneGeometry(170, 170, 1, 1);
     g.rotateX(-Math.PI / 2);
     const mat = new THREE.ShaderMaterial({
       uniforms: { ...shared, ...this.textures(), uWaterY: { value: WATER_Y } },
@@ -321,6 +321,7 @@ export class World {
         varying vec3 vWPos; varying vec3 vWNormal;
         void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vWPos = wp.xyz; vWNormal = vec3(0.0,1.0,0.0); gl_Position = projectionMatrix * viewMatrix * wp; }`,
       fragmentShader: GLSL_COMMON + WATER_FS,
+      transparent: true, depthWrite: false,
     });
     const m = new THREE.Mesh(g, mat);
     m.position.y = WATER_Y;
@@ -340,61 +341,85 @@ vec4 mapMask(vec3 wp) {
 vec3 pick3(float t, vec3 a, vec3 b, vec3 c) { return t < 0.36 ? a : (t < 0.66 ? b : c); }
 vec3 grassAlbedo(vec3 wp, vec4 m, float dith) {
   float n = vb_fbm(wp.xz * 0.09) + (vb_noise(wp.xz * 0.7) - 0.5) * 0.18 + dith;
-  vec3 g = pick3(n, ${hex('#93bf55')}, ${hex('#7aab4a')}, ${hex('#639545')});
-  vec3 f = pick3(n, ${hex('#6a9a4d')}, ${hex('#557f48')}, ${hex('#446b47')});
+  vec3 g = pick3(n, ${hex('#97c257')}, ${hex('#7dad4b')}, ${hex('#659846')});
+  vec3 f = pick3(n, ${hex('#6c9c4e')}, ${hex('#578249')}, ${hex('#466d48')});
   float dk = m.a + (vb_noise(wp.xz * 0.4) - 0.5) * 0.25;
   g = dk > 0.55 ? f : (dk > 0.3 ? mix(g, f, 0.5) : g);
-  // pontinhos: florzinhas e trevos
-  vec2 cell = floor(wp.xz * 5.0);
-  float h = vb_hash(cell);
-  if (h > 0.992) g = vb_hash(cell + 3.1) > 0.5 ? ${hex('#f4efd8')} : ${hex('#f2cf5b')};
-  else if (h > 0.95) g *= 1.08;
+  // manchas secas/amareladas espalhadas
+  float dry = vb_noise(wp.xz * 0.13 + 11.0);
+  if (dry > 0.72 && dk < 0.4) g = mix(g, ${hex('#b3b45a')}, 0.45);
   return g;
 }
+float pebble(vec2 p, float dens) { return vb_hash2(floor(p * 6.0)) > dens ? 1.0 : 0.0; }
 vec3 terrainAlbedo(vec3 wp, vec3 wn) {
   vec4 m = mapMask(wp);
   float dith = (vb_bayer(gl_FragCoord.xy) - 0.5) * 0.07;
   float slope = 1.0 - wn.y;
-  vec3 col = grassAlbedo(wp, m, dith);
-  // terra batida
+  vec3 col = grassAlbedo(wp, m, dith) * 0.86;
+  // chão sob a grama: trevos, florzinhas, terra aparecendo
+  vec2 cell = floor(wp.xz * 5.0);
+  float h = vb_hash(cell);
+  if (h > 0.993) col = vb_hash(cell + 3.1) > 0.5 ? ${hex('#f4efd8')} : ${hex('#f2cf5b')};
+  else if (vb_noise(wp.xz * 1.1) > 0.8) col = mix(col, ${hex('#8a7a4c')}, 0.35);
+  // terra batida: pedrinhas com sombra, sulcos
   float pn = (vb_noise(wp.xz * 1.6) - 0.5) * 0.34 + (vb_noise(wp.xz * 5.0) - 0.5) * 0.1;
   if (m.r + pn > 0.5) {
     float t = vb_noise(wp.xz * 0.5) + dith;
-    col = t < 0.5 ? ${hex('#cba46b')} : ${hex('#bf975f')};
-    float pb = vb_hash(floor(wp.xz * 6.0));
-    if (pb > 0.93) col = ${hex('#dcc08c')}; else if (pb < 0.05) col = ${hex('#a7814f')};
+    col = t < 0.5 ? ${hex('#c9aa7c')} : ${hex('#bc9d70')};
+    if (vb_noise(wp.xz * 2.5) > 0.7) col = ${hex('#ae9066')};
+    if (pebble(wp.xz, 0.93) > 0.5) col = ${hex('#ddc8a2')};
+    else if (pebble(wp.xz - vec2(0.07, 0.07), 0.93) > 0.5) col = ${hex('#9c7a4a')};
     if (m.r + pn < 0.56) col = ${hex('#a9894f')};
+    else if (m.r + pn < 0.6) col = mix(col, ${hex('#8f9a4c')}, 0.35);
   }
-  // areia
+  // areia com marolas e conchinhas
   if (m.g + pn * 0.8 > 0.5) {
-    col = vb_noise(wp.xz * 0.8) + dith < 0.55 ? ${hex('#e7d49c')} : ${hex('#d9c288')};
-    if (vb_hash(floor(wp.xz * 7.0)) > 0.95) col = ${hex('#c7ab78')};
+    col = vb_noise(wp.xz * 0.8) + dith < 0.55 ? ${hex('#e9d6a0')} : ${hex('#dcc58b')};
+    float rip = sin((wp.x - wp.z) * 9.0 + vb_noise(wp.xz * 1.5) * 4.0);
+    if (rip > 0.82) col *= 0.93;
+    if (pebble(wp.xz, 0.975) > 0.5) col = ${hex('#f6eee0')};
+    else if (pebble(wp.xz - vec2(0.07, 0.07), 0.975) > 0.5) col = ${hex('#b8a070')};
   }
-  // pedras da praça
+  // pedras da praça com chanfro (luz em cima/esq., sombra embaixo/dir.)
   if (m.b + pn * 0.5 > 0.5) {
     vec2 q = wp.xz * 1.25;
     float row = floor(q.y);
     q.x += mod(row, 2.0) * 0.5;
     vec2 f = fract(q), id = floor(q);
-    float tone = fract(sin(dot(id, vec2(12.9898, 78.233))) * 43758.5453);
+    float tone = vb_hash2(id);
     col = tone < 0.4 ? ${hex('#d6c9b0')} : (tone < 0.8 ? ${hex('#c8b9a0')} : ${hex('#b9a990')});
-    if (f.x < 0.08 || f.y < 0.1) col = ${hex('#9c8c7e')};
-    else if (f.y > 0.88) col *= 1.05;
+    if (vb_hash2(id + 7.0) > 0.85) col = mix(col, ${hex('#9fb07a')}, 0.25);
+    if (f.x < 0.07 || f.y < 0.09) col = ${hex('#8a7b6e')};
+    else if (f.x < 0.14 || f.y < 0.16) col *= 0.88;
+    else if (f.x > 0.88 || f.y > 0.88) col *= 1.07;
+    if (vb_hash2(floor(wp.xz * 9.0)) > 0.97) col *= 0.92;
   }
-  // penhasco
+  // penhasco: estratos, rachaduras, raízes penduradas, musgo na borda
   if (slope > 0.32) {
     float y = wp.y + (vb_noise(wp.xz * 1.3) - 0.5) * 0.35;
     float band = floor(y * 2.6);
+    float fb = fract(y * 2.6);
     float alt = mod(band, 2.0);
-    col = alt < 0.5 ? ${hex('#a08f8c')} : ${hex('#8c7b80')};
-    float cr = vb_noise(vec2((wp.x - wp.z) * 3.0, y * 0.8));
+    col = alt < 0.5 ? ${hex('#a6948d')} : ${hex('#8f7d80')};
+    if (fb > 0.84) col *= 1.12;
+    else if (fb < 0.12) col *= 0.82;
+    float side = (wp.x - wp.z);
+    float cr = vb_noise(vec2(side * 3.0, y * 0.8));
     if (cr > 0.78) col = ${hex('#6c5e6e')};
     float lv = fract(wp.y / ${LH.toFixed(2)} + 0.02);
-    if (lv > 0.8 && vb_noise(wp.xz * 2.0) > 0.35) col = m.a > 0.5 ? ${hex('#4f7b4a')} : ${hex('#6e9d4c')};
+    float vine = vb_noise(vec2(side * 4.5, 1.0));
+    if (lv > 0.86 && vb_noise(wp.xz * 2.0) > 0.3) col = m.a > 0.5 ? ${hex('#4f7b4a')} : ${hex('#72a14e')};
+    else if (vine > 0.7 && lv > 1.0 - (vine - 0.7) * 2.6) col = vb_hash2(floor(vec2(side * 12.0, wp.y * 12.0))) > 0.6 ? ${hex('#5a8a46')} : ${hex('#3f6a45')};
+    if (lv < 0.1) col *= 0.85;
     if (wp.y < ${(WATER_Y + 0.2).toFixed(2)}) col = ${hex('#7d7a7c')};
   }
-  // leito do rio
-  if (wp.y < ${(WATER_Y - 0.05).toFixed(2)}) col = mix(col, ${hex('#5a7c74')}, 0.6);
+  // leito do rio com cáusticas
+  if (wp.y < ${(WATER_Y - 0.03).toFixed(2)}) {
+    col = mix(col, ${hex('#6f8f80')}, 0.55);
+    vec2 cq = wp.xz * 1.4 + vec2(uTime * 0.25, uTime * 0.1);
+    float ca = abs(vb_noise(cq) - vb_noise(cq * 1.3 + 4.0 - uTime * 0.2));
+    if (ca < 0.05) col = mix(col, ${hex('#d8f2e8')}, 0.6);
+  }
   return col;
 }
 `;
@@ -404,7 +429,6 @@ uniform sampler2D tHeight;
 uniform vec4 uMapRect;
 uniform vec2 uHRange;
 uniform float uWaterY;
-uniform float uOutline;
 float terrainH(vec3 wp) {
   float u = (wp.x - wp.z) * 0.70710678, v = (wp.x + wp.z) * 0.70710678;
   vec4 t = texture2D(tHeight, vec2((u - uMapRect.x) * uMapRect.z, (v - uMapRect.y) * uMapRect.w));
@@ -415,20 +439,31 @@ void main() {
   float depth = uWaterY - terrainH(vWPos);
   if (depth < -0.02) discard;
   float u = (vWPos.x - vWPos.z) * 0.70710678, v = (vWPos.x + vWPos.z) * 0.70710678;
-  float dith = (vb_bayer(gl_FragCoord.xy) - 0.5) * 0.12;
-  float t = floor(uTime * 8.0) / 8.0;
-  vec3 col = depth + dith > 0.6 ? ${hex('#3a7db0')} : (depth + dith > 0.32 ? ${hex('#4b9cc4')} : ${hex('#69c2cf')});
-  // correnteza
+  float dth = vb_bayer(gl_FragCoord.xy);
+  float t = floor(uTime * 10.0) / 10.0;
+  float dd = depth + (dth - 0.5) * 0.12;
+  vec3 deep = ${hex('#2f6f9e')}, mid = ${hex('#3f92b8')}, shallow = ${hex('#5cbccb')};
+  vec3 col = dd > 0.6 ? deep : (dd > 0.3 ? mid : shallow);
+  float alpha = dd > 0.6 ? 0.94 : (dd > 0.3 ? 0.82 : 0.62);
+  // reflexo do céu e das nuvens
+  vec3 sky = uSkyColor * 1.15 + uSunColor * 0.12;
+  col = mix(col, col * sky * 1.25, 0.3);
+  float cl = vb_cloud(vWPos.xz * 0.9 + vec2(9.0, 3.0));
+  if (cl > 0.5) col = mix(col, uSkyColor * 1.4 + 0.1, 0.22);
+  // correnteza e ondinhas
   float s = vb_noise(vec2(u * 0.55 - t * 0.9, v * 2.4));
-  if (s > 0.76 && depth > 0.15) col = ${hex('#7cc9d6')};
-  // espuma animada na margem
-  float wob = sin(t * 2.2 + vb_noise(vec2(u, v) * 1.5) * 6.28) * 0.04;
-  if (depth < 0.11 + wob) col = ${hex('#e9f6ef')};
-  else if (depth < 0.17 + wob && mod(floor(gl_FragCoord.x + gl_FragCoord.y), 2.0) < 1.0) col = ${hex('#a8dcd9')};
-  // brilhos
-  float sp = vb_hash(floor(vec2(u, v) * 3.0) + floor(uTime * 2.0));
-  if (sp > 0.996 && depth > 0.2) col = ${hex('#ffffff')};
+  float s2 = vb_noise(vec2(u * 1.3 - t * 1.4, v * 4.0) + 7.0);
+  if (s > 0.74 && depth > 0.12) col = mix(col, ${hex('#a6e0e6')} * (uSunColor + 0.2), 0.7);
+  else if (s2 > 0.8) col *= 1.08;
+  // brilho do sol nas ondas (vira bloom)
+  float sp = vb_hash(floor(vec2(u, v) * 4.0) + floor(uTime * 3.0));
+  if (sp > 0.985 && s2 > 0.55) { col = uSunColor * 2.4 + 0.3; alpha = 1.0; }
+  // espuma que vai e volta na margem
+  float wave = sin(uTime * 1.6 + u * 0.7 + vb_noise(vec2(u, v) * 1.2) * 4.0) * 0.05;
+  if (depth < 0.1 + wave) { col = ${hex('#eef8f2')} * (uSunColor * 0.6 + uSkyColor * 0.5); alpha = 0.95; }
+  else if (depth < 0.17 + wave && mod(floor(gl_FragCoord.x + gl_FragCoord.y), 2.0) < 1.0) { col = mix(col, ${hex('#c6ece8')}, 0.6); alpha = 0.85; }
   float cloud = vb_cloud(vWPos.xz) * uCloud;
-  col *= 1.0 - cloud * 0.18;
-  gl_FragColor = vec4(col, 1.0);
+  col *= 1.0 - cloud * 0.15;
+  col += vb_points(col, vWPos, vec3(0.0, 1.0, 0.0)) * 0.8;
+  gl_FragColor = vec4(col, alpha);
 }`;

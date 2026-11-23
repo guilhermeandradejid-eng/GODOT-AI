@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { PixelRenderer } from './render.js';
 import { shared, toonMat, unlitMat } from './materials.js';
 import { World, toWorld, toUV, PLACES } from './world.js';
-import { buildScenery, mergeStatic } from './props.js';
-import { buildGrass, buildFlowers } from './grass.js';
+import { buildScenery, mergeStatic, campfire, torch } from './props.js';
+import { buildGrass } from './grass.js';
+import { Lighting, TIME_PRESETS } from './lighting.js';
 import { FX } from './fx.js';
 import { UI } from './ui.js';
 import { Input } from './input.js';
@@ -22,7 +23,9 @@ const storage = {
   clear() { try { localStorage.removeItem(SAVE_KEY); } catch { /* */ } },
 };
 const W = (u, v) => toWorld(u, v);
-const FAST = new URLSearchParams(location.search).has('fast'); // só para testes automatizados
+const QS = new URLSearchParams(location.search);
+const FAST = QS.has('fast'); // só para testes automatizados
+const FIREFLY = new THREE.Color(1.5, 2.0, 0.7), FIRE_HOT = new THREE.Color(2.2, 1.5, 0.5), FIRE_COOL = new THREE.Color(0.9, 0.25, 0.1);
 
 class Game {
   constructor() {
@@ -62,6 +65,10 @@ class Game {
     this.clock = new THREE.Timer();
     this.ui.titleScreen(!!storage.get());
     this.titleT = 0;
+    const hq = QS.get('hora');
+    this.lighting.fixed = hq && TIME_PRESETS[hq] !== undefined ? TIME_PRESETS[hq] : 18.0;
+    this.lighting.hour = this.lighting.fixed ?? 8.5;
+    if (hq) this.timeMode = hq;
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
     const unlock = () => { initAudio(); if (this.state === 'title') playMusic('vila'); };
@@ -74,17 +81,23 @@ class Game {
     sc.add(world.buildTerrainMesh());
     sc.add(world.buildWaterMesh());
     this.scenery = buildScenery(world, sc);
-    this.grassCount = buildGrass(world, sc, (x, z) => this.scenery.blocked(x, z, -0.45));
-    buildFlowers(world, sc, [
-      { c: [-6, -3], r: 5, n: 120, colors: [0, 1] }, { c: [8, 4], r: 4, n: 90, colors: [2, 0] }, { c: [-14, 7], r: 4, n: 80, colors: [3, 0] },
-      { c: [4, -9], r: 4, n: 70, colors: [1, 4] }, { c: [-6, 22], r: 3, n: 50, colors: [2, 5] }, { c: [7, 33], r: 3, n: 40, colors: [1, 3] },
-      { c: [16, -6], r: 6, n: 70, colors: [3, 2] }, { c: [-16, -5], r: 5, n: 60, colors: [1, 0] }, { c: [0, -29], r: 7, n: 60, colors: [0, 3] },
-      { c: [-24, 5], r: 4, n: 50, colors: [3, 0] }, { c: [12, 15], r: 4, n: 50, colors: [4, 1] },
-    ], (x, z) => this.scenery.blocked(x, z, -0.6));
+    // fogueira do pescador e tochas do portão
+    let fireAt = W(-21.2, 4.6);
+    for (let r = 0; r < 4; r += 0.4) { let ok = false; for (let a = 0; a < 6.28 && !ok; a += 0.5) { const c = W(-21.2 + Math.cos(a) * r, 4.6 + Math.sin(a) * r); if (world.freeCircle(c.x, c.z, 0.9) && world.heightAt(c.x, c.z) > -0.1) { fireAt = c; ok = true; } } if (ok) break; }
+    this.fire = campfire(); this.fire.position.set(fireAt.x, world.heightAt(fireAt.x, fireAt.z), fireAt.z); sc.add(this.fire);
+    world.addCircle(fireAt.x, fireAt.z, 0.5);
+    this.torches = [[-3.1, -15.0], [3.1, -15.0], [-2.6, -22.4], [2.6, -22.4]].map((at) => {
+      const w = W(...at), t = torch(); t.position.set(w.x, world.heightAt(w.x, w.z), w.z); sc.add(t); world.addCircle(w.x, w.z, 0.15); return t;
+    });
+    this.grassCount = buildGrass(world, sc, (x, z) => this.scenery.blocked(x, z, -0.45) || Math.hypot(x - fireAt.x, z - fireAt.z) < 1, this.pr, [
+      { c: [-6, -3], r: 5, colors: [0, 1] }, { c: [8, 4], r: 4, colors: [2, 0] }, { c: [-14, 7], r: 4, colors: [3, 0, 6] },
+      { c: [4, -9], r: 4, colors: [1, 4] }, { c: [-6, 22], r: 3, colors: [2, 5] }, { c: [7, 33], r: 3, colors: [1, 3] },
+      { c: [16, -6], r: 6, colors: [3, 2, 6] }, { c: [-16, -5], r: 5, colors: [1, 0] }, { c: [0, -29], r: 7, colors: [0, 3, 6] },
+      { c: [-24, 5], r: 4, colors: [3, 0] }, { c: [12, 15], r: 4, colors: [4, 1] }, { c: [-12, 30], r: 3, colors: [2, 1] },
+    ]);
 
     sc.updateMatrixWorld(true);
     // luz: sol de fim de tarde + ambiente
-    sc.add(new THREE.AmbientLight(0xffffff, 0.5));
     const sun = new THREE.DirectionalLight(0xffffff, 1.0);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -93,17 +106,14 @@ class Game {
     sun.shadow.normalBias = 0.02;
     sc.add(sun, sun.target);
     this.sun = sun;
-    this.sunOffset = new THREE.Vector3(-5, 15, 12).normalize().multiplyScalar(30);
-    // lampiões: dois com luz real (o resto só brilha)
-    this.lampLights = [];
-    this.scenery.lamps.forEach((g, i) => {
-      if (i > 1) return;
-      const l = new THREE.PointLight(0xffb85a, 2.2, 5.5, 1.6);
-      const p = g.userData.light.clone(); g.localToWorld(p);
-      l.position.copy(p);
-      sc.add(l);
-      this.lampLights.push(l);
-    });
+    // iluminação dinâmica: ciclo de dia + luzes pontuais
+    this.lighting = new Lighting(sc, this.pr, sun);
+    this.scenery.lamps.forEach((g) => { const p = g.userData.light.clone(); g.localToWorld(p); this.lighting.addStatic(p, 0xffa850, 6, 2.0, { flicker: 0.4 }); });
+    sc.getObjectByName('Vila').children.forEach((h) => { if (h.userData.chimney) { const p = new THREE.Vector3(0, 1.0, 1.9); h.localToWorld(p); this.lighting.addStatic(p, 0xffc070, 3.2, 0.7); } });
+    this.lighting.addStatic(new THREE.Vector3(fireAt.x, world.heightAt(fireAt.x, fireAt.z) + 0.5, fireAt.z), 0xff9a40, 5.5, 2.0, { flicker: 1, night: false });
+    this.torches.forEach((t) => { const p = new THREE.Vector3(0, 1.75, 0); t.localToWorld(p); this.lighting.addStatic(p, 0xffa64a, 5, 1.9, { flicker: 1 }); });
+    this.shafts = this.makeShafts();
+    this.heroLight = this.lighting.addStatic(new THREE.Vector3(), 0xffd9a0, 3.2, 0.7, { flicker: 0.3 });
     // chaminés
     this.chimneys = [];
     sc.getObjectByName('Vila').children.forEach((h) => { if (h.userData.chimney) { const p = h.userData.chimney.clone(); h.localToWorld(p); this.chimneys.push(p); } });
@@ -127,6 +137,53 @@ class Game {
     const ac = W(0, -30);
     this.arenaCenter = new THREE.Vector3(ac.x, this.world.heightAt(ac.x, ac.z), ac.z);
     this.butterflies = this.makeButterflies();
+  }
+
+  // raios de luz entre as árvores (somados, em degraus de pixel), alinhados ao sol
+  makeShafts() {
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      uniforms: { uColor: { value: new THREE.Color() }, uAmt: { value: 0 }, uTime: shared.uTime, uNormalPass: shared.uNormalPass },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: `uniform vec3 uColor; uniform float uAmt; uniform float uTime; uniform float uNormalPass; varying vec2 vUv;
+        float bayer(vec2 fc){ ivec2 p = ivec2(mod(fc,4.0)); int i = p.x + p.y*4; int m[16] = int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5); return (float(m[i])+0.5)/16.0; }
+        void main(){
+          if (uNormalPass > 0.5) discard;
+          float edge = smoothstep(0.0, 0.25, vUv.x) * smoothstep(1.0, 0.75, vUv.x);
+          float len = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.55, vUv.y);
+          float stripe = 0.65 + 0.35 * step(0.5, fract(vUv.x * 2.5 + sin(uTime * 0.3 + vUv.y * 2.0) * 0.2));
+          float a = edge * len * stripe * uAmt * (0.75 + 0.25 * sin(uTime * 0.8 + vUv.x * 6.0));
+          a = floor(a * 4.0 + bayer(gl_FragCoord.xy) * 0.9) / 4.0;
+          if (a <= 0.0) discard;
+          gl_FragColor = vec4(uColor * a * 0.32, 1.0);
+        }`,
+    });
+    const spots = [[-3, -17, 1.4], [3.5, -19, 1.1], [-5, -27, 1.6], [4, -31, 1.3], [-1, -34, 1.0], [6, -26, 0.9], [-14, -8, 1.2], [-19, 0, 1.0], [18, -9, 1.3], [21, 0, 1.0], [-12, 22, 1.0], [13, 29, 1.1], [-24, 7, 1.2], [9, -11, 1.0], [-7, -10, 0.9]];
+    return spots.map(([u, v, w]) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), mat);
+      m.layers.set(1); m.renderOrder = 3; m.frustumCulled = false;
+      const p = W(u, v);
+      m.userData.base = new THREE.Vector3(p.x, this.world.heightAt(p.x, p.z), p.z);
+      m.userData.w = w;
+      this.scene.add(m);
+      return m;
+    });
+  }
+  updateShafts() {
+    const L = this.lighting, d = L.sunDir, cam = this.pr.camDir;
+    const amt = L.shaftAmt * (d.y > 0.1 ? 1 : 0);
+    const m0 = this.shafts[0].material;
+    m0.uniforms.uAmt.value = amt;
+    m0.uniforms.uColor.value.copy(shared.uSunColor.value);
+    if (amt <= 0) { this.shafts.forEach((s) => { s.visible = false; }); return; }
+    const X = new THREE.Vector3().crossVectors(d, cam).normalize(), Z = new THREE.Vector3().crossVectors(X, d).normalize();
+    const len = 7;
+    for (const s of this.shafts) {
+      s.visible = true;
+      const m = new THREE.Matrix4().makeBasis(X.clone().multiplyScalar(s.userData.w), d.clone().multiplyScalar(len), Z);
+      m.setPosition(s.userData.base);
+      s.matrixAutoUpdate = false; s.matrix.copy(m); s.matrixWorldNeedsUpdate = true;
+    }
   }
 
   makeButterflies() {
@@ -163,7 +220,7 @@ class Game {
     this.amora = npc({ name: 'Vó Amora', id: 'amora', wave: true, look: { skin: '#eec4a0', hair: '#cfc9dc', hairStyle: 'bun', tunic: '#7d5aa0', tunic2: '#5a3f78', pants: '#5a3f78', boots: '#4a3a3a', weapon: 'staff', belt: '#e8c36a', cape: '#5a3f78' } }, P.elder, Math.PI * 0.75);
     this.tiao = npc({ name: 'Tião', id: 'tiao', look: { skin: '#d9a47a', hair: '#3a2a2a', hairStyle: 'bald', hat: 'bandana', hatColor: '#d4553f', beard: '#4a3426', tunic: '#7a9a4a', tunic2: '#567034', pants: '#5e4a3a' } }, [P.merchant[0] + 0.4, P.merchant[1] + 2.1], Math.PI * 0.25);
     this.pipa = npc({ name: 'Pipa', id: 'pipa', mode: 'wander', look: { skin: '#f3c9a1', hair: '#e8b04a', hairStyle: 'short', tunic: '#e85d75', tunic2: '#b3405a', pants: '#4f7fa0', scarf: '#f6f1e0' } }, [3, 28]);
-    this.bento = npc({ name: 'Seu Bento', id: 'bento', mode: 'sit', look: { skin: '#e0b088', hair: '#6b5a4a', hairStyle: 'bald', hat: 'bandana', hatColor: '#c9b48c', beard: '#e9e2cf', tunic: '#4f7fa0', tunic2: '#3a5f78', pants: '#5e4a3a' } }, [-22.4, 6.6], Math.PI * 0.95);
+    this.bento = npc({ name: 'Seu Bento', id: 'bento', mode: 'sit', look: { skin: '#e0b088', hair: '#6b5a4a', hairStyle: 'bald', hat: 'bandana', hatColor: '#c9b48c', beard: '#e9e2cf', tunic: '#4f7fa0', tunic2: '#3a5f78', pants: '#5e4a3a' } }, (() => { const f = toUV(this.fire.position.x, this.fire.position.z); return [f.u + 1.1, f.v - 0.5]; })(), Math.PI * 0.95);
     this.rubi = npc({ name: 'Rubi', id: 'rubi', look: { skin: '#c98d6a', hair: '#2a2235', hairStyle: 'long', tunic: '#8a8fa8', tunic2: '#5f6480', pants: '#4b3d5e', weapon: 'sword', cape: '#d4553f', sleeve: '#8a8fa8' } }, [2.6, -13.2], Math.PI * 0.5);
     this.pipa.radius = 0.3;
     this.pipa.obj.scale.setScalar(0.82);
@@ -348,6 +405,7 @@ class Game {
     }
     this.chest.open();
     sfx.chest();
+    this.lighting.flash(this.chest.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0x7fe0c8, 5, 2, 1.6);
     this.fx.burst({ x: this.chest.pos.x, y: this.chest.pos.y + 0.6, z: this.chest.pos.z }, 24, { speed: 2.5, up: 3, g: -4, color: [0x7fe0c8, 0xffffff, 0xf2c14e], life: 0.9 });
     this.quest.rune = true;
     this.ui.setRune(true);
@@ -410,6 +468,7 @@ class Game {
       if (e.state === 'windup' || e.state === 'puff') { e.state = 'chase'; e.cd = 0.8; e.st = 0; if (e.rig.parts.cap) e.rig.parts.cap.scale.setScalar(1); }
     }
     const hp = { x: e.pos.x, y: e.pos.y + (e.kind === 'boss' ? 1.4 : 0.5), z: e.pos.z };
+    this.lighting.flash(new THREE.Vector3(hp.x, hp.y, hp.z), crit ? 0xffd27a : 0xfff0d0, crit ? 3.4 : 2.6, crit ? 1.6 : 1.0, 0.14);
     this.fx.hitSpark(hp, crit ? 0xfff2a8 : 0xffffff);
     this.fx.text(new THREE.Vector3(e.pos.x, e.pos.y + (e.kind === 'boss' ? 1.6 : 0), e.pos.z), String(dmg), crit ? 'crit' : '');
     this.hitstop = Math.max(this.hitstop, crit ? 0.085 : 0.05);
@@ -463,6 +522,7 @@ class Game {
     const heal = Math.round(s.maxHp * 0.5);
     s.hp = Math.min(s.maxHp, s.hp + heal);
     sfx.potion();
+    this.lighting.flash(this.player.pos.clone().add(new THREE.Vector3(0, 0.6, 0)), 0x8ef0a0, 3.5, 1.4, 0.8, this.player.pos);
     this.fx.text(this.player.pos, '+' + heal, 'heal');
     this.fx.burst({ x: this.player.pos.x, y: this.player.pos.y + 0.3, z: this.player.pos.z }, 14, { speed: 1.2, up: 2.5, g: 1, color: [0x8ef0a0, 0xffffff, 0xef8fa8], life: 0.8, size: 0.08 });
   }
@@ -476,6 +536,7 @@ class Game {
 
   onLevelUp() {
     sfx.levelup();
+    this.lighting.flash(this.player.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), 0xffd060, 5.5, 1.8, 1.0, null);
     this.ui.bigText(`Nível ${this.player.stats.level}!`, '', 2.2);
     const p = this.player.pos;
     this.fx.ring(p, { r0: 0.3, r1: 2.5, color: 0xf2c14e, life: 0.5, y: 0.1 });
@@ -584,6 +645,7 @@ class Game {
   }
   bossSlam(b) {
     sfx.slam(); this.shake(7, 0.5);
+    this.lighting.flash(b.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffc070, 6, 1.4, 0.35);
     this.fx.ring(b.pos, { r0: 1, r1: 4.6, color: 0xfff2a8, life: 0.4, y: 0.15, width: 0.15 });
     this.fx.ring(b.pos, { r0: 0.5, r1: 3.6, color: 0xffffff, life: 0.3, y: 0.2, width: 0.25 });
     for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; this.fx.dust({ x: b.pos.x + Math.cos(a) * 2.5, y: b.pos.y, z: b.pos.z + Math.sin(a) * 2.5 }, 1, 0x8a6a50); }
@@ -606,7 +668,9 @@ class Game {
     g.add(m, m2); g.rotation.y = p.facing - Math.PI / 2;
     g.traverse((o) => o.layers.set(1));
     const dir = new THREE.Vector3(Math.sin(p.facing), 0, Math.cos(p.facing));
-    this.projectiles.push(new Projectile(this, { owner: 'player', mesh: g, pos: p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)).addScaledVector(dir, 0.5), vel: dir.multiplyScalar(12), life: 0.75, radius: 0.6, pierce: true, dmg: Math.round(p.stats.atk * 1.4), trail: 0xbff5e8 }));
+    const blade = new Projectile(this, { owner: 'player', mesh: g, pos: p.pos.clone().add(new THREE.Vector3(0, 0.6, 0)).addScaledVector(dir, 0.5), vel: dir.multiplyScalar(12), life: 0.75, radius: 0.6, pierce: true, dmg: Math.round(p.stats.atk * 1.4), trail: 0xbff5e8 });
+    this.projectiles.push(blade);
+    this.lighting.flash(blade.pos, 0x7fe0c8, 4, 1.6, 0.75, blade.pos);
   }
   spawnSpore(e, ang) {
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), toonMat({ color: '#b98ad6', outline: 0.9, emissive: 0.5 }));
@@ -665,6 +729,14 @@ class Game {
       case 'music': this.musicOn = toggleMusic(); this.ui.pauseScreen(); break;
       case 'pixels': { const o = [0, 2, 3, 4]; const pr = this.pr; pr.pixelScaleOverride = o[(o.indexOf(pr.pixelScaleOverride) + 1) % o.length]; pr.resize(); this.ui.applyScale(); this.ui.pauseScreen(); break; }
       case 'outlines': this.pr.outlines = !this.pr.outlines; this.ui.pauseScreen(); break;
+      case 'time': {
+        const keys = Object.keys(TIME_PRESETS);
+        const i = (keys.indexOf(this.timeMode || 'ciclo') + 1) % keys.length;
+        this.timeMode = keys[i];
+        this.lighting.fixed = TIME_PRESETS[this.timeMode];
+        this.ui.pauseScreen();
+        break;
+      }
       case 'restart': storage.clear(); location.reload(); break;
       case 'revive': this.revive(); break;
       case 'explore': this.ui.hideScreen(); this.state = 'play'; break;
@@ -676,6 +748,7 @@ class Game {
     this.ui.hideScreen();
     await this.ui.fadeTo(true, 350);
     if (load) this.loadOrNew(true);
+    if (!this.timeMode) { this.lighting.fixed = null; this.lighting.hour = 8.0; }
     this.state = 'play';
     this.camTarget.copy(this.player.pos);
     this.area = null;
@@ -737,7 +810,12 @@ class Game {
     const texel = (sc.right - sc.left) / this.sun.shadow.mapSize.x;
     const c = this.camTarget;
     this.sun.target.position.set(Math.round(c.x / texel) * texel, 0, Math.round(c.z / texel) * texel);
-    this.sun.position.copy(this.sun.target.position).add(this.sunOffset);
+    this.sun.position.copy(this.sun.target.position).addScaledVector(this.lighting.sunDir, 30);
+    this.lighting.update(dt, this.camTarget);
+    shared.uPlayer.value.copy(p.pos);
+    this.heroLight.pos.set(p.pos.x, p.pos.y + 1.1, p.pos.z);
+    this.updateShafts();
+    this.ui.setClock(this.lighting.label(), this.lighting.isNight);
     // brilho de dano no pós
     const hf = this.pr.compMat.uniforms.uHitFlash;
     hf.value = Math.max(0, hf.value - dt * 2);
@@ -774,15 +852,24 @@ class Game {
       const leaf = Math.random() < 0.35;
       this.fx.particle(p, { vx: 0.6 + Math.random() * 0.4, vy: leaf ? -0.4 : -0.1, vz: -0.3, life: 4, size: leaf ? 0.08 : 0.05, color: leaf ? [0x8bc45a, 0xe2b448, 0xd6913c][Math.floor(Math.random() * 3)] : 0xfff6d0, shrink: false });
     }
-    // vagalumes no bosque
+    // vagalumes (no bosque sempre, em todo lugar à noite) — brilham com bloom
     const { v } = toUV(this.camTarget.x, this.camTarget.z);
-    if (v < -12 && Math.random() < dt * 6) {
+    const ffRate = (v < -12 ? 6 : 0) + this.lighting.lampsOn * 10;
+    if (Math.random() < dt * ffRate) {
       const f = this.camTarget;
-      this.fx.particle({ x: f.x + (Math.random() - 0.5) * 16, y: f.y + Math.random() * 1.5, z: f.z + (Math.random() - 0.5) * 16 }, { vx: (Math.random() - 0.5) * 0.4, vy: 0.15, vz: (Math.random() - 0.5) * 0.4, life: 2.5, size: 0.06, color: 0xe8ff9a, shrink: false });
+      this.fx.particle({ x: f.x + (Math.random() - 0.5) * 18, y: f.y + Math.random() * 1.5 - 0.3, z: f.z + (Math.random() - 0.5) * 18 }, { vx: (Math.random() - 0.5) * 0.4, vy: 0.15, vz: (Math.random() - 0.5) * 0.4, life: 3, size: 0.06, color: FIREFLY, shrink: false });
+    }
+    // fogo da fogueira e das tochas
+    const fp = this.fire.position;
+    if (Math.random() < dt * 30) this.fx.particle({ x: fp.x + (Math.random() - 0.5) * 0.3, y: fp.y + 0.15, z: fp.z + (Math.random() - 0.5) * 0.3 }, { vy: 1.4 + Math.random(), vx: (Math.random() - 0.5) * 0.3, life: 0.5, size: 0.14, color: FIRE_HOT, color2: FIRE_COOL, drag: 1 });
+    if (Math.random() < dt * 4) this.fx.particle({ x: fp.x, y: fp.y + 0.6, z: fp.z }, { vy: 1.2, vx: 0.3, life: 1.6, size: 0.05, color: FIRE_HOT, drag: 0.5, shrink: false });
+    if (Math.random() < dt * 3) this.fx.particle({ x: fp.x, y: fp.y + 0.8, z: fp.z }, { vy: 0.6, vx: 0.2, life: 2.5, size: 0.2, color: 0x8a8498, color2: 0x4a4658, drag: 0.3, shrink: false });
+    for (const tc of this.torches) {
+      if (Math.random() < dt * 14) { const q = tc.position; this.fx.particle({ x: q.x + (Math.random() - 0.5) * 0.1, y: q.y + 1.78, z: q.z + (Math.random() - 0.5) * 0.1 }, { vy: 1.0, life: 0.35, size: 0.09, color: FIRE_HOT, color2: FIRE_COOL }); }
+      tc.userData.flame.scale.set(1 + Math.sin(t * 20 + tc.position.x) * 0.15, 1.4 + Math.sin(t * 13) * 0.25, 1);
     }
     // roupas no varal e luzes dos lampiões
     this.scenery.cloth.forEach((c, i) => { c.rotation.x = Math.sin(t * 2.2 + i) * 0.25 + 0.15; });
-    this.lampLights.forEach((l, i) => { l.intensity = 2.0 + Math.sin(t * 9 + i * 3) * 0.15 + (Math.random() < 0.02 ? -0.5 : 0); });
     // borboletas
     for (const b of this.butterflies) {
       const k = t * 0.6 + b.ph;

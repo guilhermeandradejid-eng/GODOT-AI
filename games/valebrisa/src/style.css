@@ -163,3 +163,7 @@ kbd { font-family: 'Silkscreen', monospace; font-size: calc(var(--u) * 3.5); bac
 .touch .b-skill { right: 100px; bottom: 82px; width: 58px; height: 58px; background: var(--teal); }
 .touch .b-potion { right: 26px; bottom: 126px; width: 54px; height: 54px; background: #ff9aa8; }
 .touch .b-pause { right: auto; left: 50%; top: 10px; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 8px; background: var(--cream); }
+
+.inv .clock b { color: var(--cream); min-width: calc(var(--u) * 18); }
+.inv .clock .sun { width: calc(var(--u) * 6); height: calc(var(--u) * 6); background: var(--gold); border-radius: 50%; box-shadow: 0 0 0 var(--u) #c98a2e; display: inline-block; }
+.inv .clock.night .sun { background: #dfe6ff; box-shadow: inset calc(var(--u) * -2) calc(var(--u) * -1) 0 0 #8a96c8; }
