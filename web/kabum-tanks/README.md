@@ -14,15 +14,24 @@ python3 -m http.server 8000   # abra http://localhost:8000
 
 ## O que tem
 
-- **Turnos por atraso**: cada tiro e cada metro andado somam "atraso"; quem tem o menor atraso joga em seguida.
-  Tiros fortes custam mais turno.
-- **Mira 3D**: casco e torre giram separados, o ângulo vai de −5° a 88° e a força é carregada segurando Espaço.
-  Uma prévia curta da trajetória mostra o começo do arco, e um traço branco marca a força do último tiro.
-- **Vento** que muda a cada turno e empurra projéteis, fumaça, nuvens e o pólen do ar.
-- **Terreno destrutível** (heightmap 161×161): crateras, túneis da broca e queimaduras.
-  Tanques caem nos buracos (dano de queda), escorregam em encostas íngremes e afundam no mar.
-- **Física dos tanques**: alinhamento ao relevo, limite de subida, combustível, empurrão das explosões,
-  pouso com squash & stretch.
+- **Gráficos realistas sem baixar nada**: todas as texturas (grama, terra, rocha, areia, casca, folhas,
+  agulhas, fumaça, nuvens, normal maps da água e "sujeira/arranhões" dos tanques) são geradas no navegador
+  com ruído fBm/Worley. Materiais PBR (`MeshStandardMaterial`) com shaders estendidos.
+- **Terreno**: mistura de 4 materiais por altura e inclinação, com rocha triplanar nas encostas, normal maps,
+  areia molhada na costa, fundo visível sob a água rasa, queimaduras e crateras que brilham em brasa.
+- **Céu físico** (`Sky`, espalhamento de Rayleigh/Mie) usado como mapa de ambiente (PMREM) para os reflexos
+  dos tanques. **Água** com reflexo do céu, Fresnel, brilho do sol, espuma na costa e ondas.
+- **Vegetação**: até 70 mil tufos de grama instanciados que leem altura e queimado direto na GPU e balançam
+  com o vento do turno. Árvores e pinheiros com folhas em cartões alpha (com sombra), arbustos, rochas com musgo
+  e nuvens volumétricas. Árvores voam e pegam fogo nas explosões.
+- **Tanques mecânicos**: corpo rígido com suspensão independente por roda (raycast mola-amortecedor),
+  braços oscilantes, molas helicoidais que comprimem, esteiras articuladas (44 elos por lado contornando rodas,
+  roda motriz e tensora), direção por diferença de esteiras, atrito por roda, coice do canhão que balança
+  o casco, antena com mola e bandeira, faróis, fumaça do escapamento e de dano.
+- **Propulsores**: segure `E` para saltar, planar ou subir rampas. Há estabilização de atitude no ar, chamas,
+  sopro de poeira no chão e consumo de combustível. Quedas altas causam dano; tanques capotados se desviram.
+- **Turnos por atraso**: atirar e andar acumulam atraso; quem tem o menor atraso joga primeiro.
+  O vento muda a cada turno e afeta projéteis, fumaça, grama e árvores.
 - **4 tanques**, cada um com 2 tiros e 1 Ultra. O Ultra carrega quando você causa ou sofre dano.
 
 | Tanque | Tiro 1 | Tiro 2 | Ultra |
@@ -32,15 +41,15 @@ python3 -m http.server 8000   # abra http://localhost:8000
 | Geada | Estilhaço (congela) | Granizo (divide em 5 no ar) | Avalanche (chuva de pingentes) |
 | Vespa | Ferrão (míssil teleguiado) | Broca (cava túnel e explode) | Enxame (8 mini-mísseis) |
 
-- **VFX e game juice**: bolas de fogo toon que viram fumaça, faíscas, detritos com física, anéis de choque,
-  flashes de luz, raios, árvores que voam, tremor de câmera por "trauma", hitstop, câmera lenta no abate,
-  "impact frame" em 2 tons, aberração cromática, soco de FOV, onomatopeias e números de dano.
-  O áudio é todo sintetizado com WebAudio.
-- **Câmera em 3ª pessoa**: fica atrás da torre, persegue o projétil, foca o impacto e desvia de morros.
-  Arrastar gira a câmera, a roda do mouse dá zoom e o Tab abre a visão geral.
-- **Modos**: 1×1 contra bot, todos contra todos (4 tanques) e 2 jogadores no mesmo PC.
-  A IA tem 3 níveis e mira simulando trajetórias com o vento.
-- **Celular**: controles de toque e layouts para retrato e paisagem.
+- **VFX e game juice**: bola de fogo aditiva, coluna de fumaça texturizada (ordenada por profundidade),
+  saia de poeira, detritos com rastro, faíscas, brasas, anel de choque, luz dinâmica, tremor de câmera por
+  trauma, hitstop, câmera lenta no abate, aberração cromática, soco de FOV, onomatopeias e números de dano.
+  O áudio é sintetizado com WebAudio (motor, jato, tiros, explosões).
+- **Câmera em 3ª pessoa**: fica atrás da torre, persegue o projétil, foca o impacto, desvia de morros e
+  "atravessa" a folhagem próxima. Arrastar gira, a roda dá zoom e o Tab abre a visão geral.
+- **Qualidade adaptativa**: se o FPS cair, o jogo reduz grama, resolução e sombras.
+  Para forçar o modo leve, use `?q=low` na URL.
+- **Modos**: 1×1 contra bot, todos contra todos (4) e 2 jogadores no mesmo PC. A IA mira simulando trajetórias.
 
 ## Controles
 
@@ -48,6 +57,7 @@ python3 -m http.server 8000   # abra http://localhost:8000
 |---|---|
 | W / S | andar / ré |
 | A / D | girar o casco |
+| E | propulsores (segure) |
 | ← / → | girar a torre |
 | ↑ / ↓ | ângulo (Shift = ajuste fino) |
 | Espaço | segurar = força, soltar = tiro |
