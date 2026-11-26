@@ -41,9 +41,11 @@ python3 -m http.server 8000   # abra http://localhost:8000
 | Geada | Estilhaço (congela) | Granizo (divide em 5 no ar) | Avalanche (chuva de pingentes) |
 | Vespa | Ferrão (míssil teleguiado) | Broca (cava túnel e explode) | Enxame (8 mini-mísseis) |
 
-- **VFX e game juice**: bola de fogo aditiva, coluna de fumaça texturizada (ordenada por profundidade),
-  saia de poeira, detritos com rastro, faíscas, brasas, anel de choque, luz dinâmica, tremor de câmera por
-  trauma, hitstop, câmera lenta no abate, aberração cromática, soco de FOV, onomatopeias e números de dano.
+- **Efeitos realistas (nada de cartoon)**: bola de fogo que vira coluna de fumaça escura texturizada (ordenada
+  por profundidade), poeira em anel e névoa de poeira que fica no ar, detritos com rastro de fumaça, faíscas,
+  focos de incêndio que continuam queimando no chão, crateras em brasa, luz dinâmica, faíscas e fumaça no ponto
+  atingido do tanque, geada que cobre a pintura no tanque congelado, tremor de câmera e câmera lenta no abate.
+  O HUD é tático e discreto, com números de dano sóbrios.
   O áudio é sintetizado com WebAudio (motor, jato, tiros, explosões).
 - **Câmera em 3ª pessoa**: fica atrás da torre, persegue o projétil, foca o impacto, desvia de morros e
   "atravessa" a folhagem próxima. Arrastar gira, a roda dá zoom e o Tab abre a visão geral.
